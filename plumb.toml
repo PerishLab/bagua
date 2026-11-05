@@ -1,6 +1,19 @@
 [identity]
 ns = "bagua"
 
+[[layout.seat]]
+path = "crates/*"
+anchor = ["Cargo.toml"]
+note = "The seven terminal workspace responsibility boundaries."
+
+[[layout.seat]]
+path = ".cargo"
+note = "The published domain SDK registry declaration."
+
+[[layout.file]]
+name = ["Cargo.toml", "Cargo.lock"]
+note = "The actual Rust workspace and locked dependency graph."
+
 [[layout.file]]
 name = ["README.md"]
 note = "Public product introduction and contribution entry."

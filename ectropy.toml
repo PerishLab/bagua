@@ -1,6 +1,14 @@
 [comment]
 allow = false
 
+[[grant]]
+paths = ["crates/*/src/**/*.rs", "crates/*/tests/**/*.rs"]
+syntax = "test"
+
+[[grant]]
+paths = ["crates/*/tests/**/*.rs", "crates/cli/src/main.rs"]
+syntax = "environment"
+
 [limit]
 block = 4
 fanout = 10
@@ -10,11 +18,11 @@ param = 4
 path = 3
 
 [module]
-roots = []
+roots = ["crates/*/src", "crates/*/tests"]
 
 [scan]
-exclude = []
-include = []
+exclude = ["**/target/**"]
+include = ["crates/**/*.rs"]
 
 [word]
 single = true
