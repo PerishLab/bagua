@@ -1,0 +1,6 @@
+[identity]
+ns = "bagua"
+
+[[layout.file]]
+name = ["README.md"]
+note = "Public product introduction and contribution entry."
