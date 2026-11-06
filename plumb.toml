@@ -1,6 +1,21 @@
 [identity]
 ns = "bagua"
 
+[release]
+authority = "https://releases.bagua.perish.uk"
+binaries = ["bagua"]
+targets = ["x86_64-unknown-linux-gnu"]
+skill = false
+
+[windtun]
+cases = ["bagua-workspace", "bagua-lifecycle", "bagua-flow"]
+image = "ghcr.io/perishlab/images:stable"
+
+[windtun.scenes]
+authority = "https://depot.seatrial.perish.uk"
+product = "seatrial"
+channel = "stable"
+
 [[layout.seat]]
 path = "crates/*"
 anchor = ["Cargo.toml"]

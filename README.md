@@ -17,6 +17,79 @@ operations without a host connection. Linux x86_64 has a persistent local host
 and machine-control CLI, plus interactive clients. Formal artifact qualification
 and installation remain separate delivery work.
 
+## Distribution and runtime
+
+The first distribution target is Linux x86_64 GNU, delivered as a `tar.gz`
+containing one executable named `bagua` at its root. No resource directory,
+runtime Cargo invocation, development checkout or internal Rust SDK is needed.
+macOS, Windows, musl, package-manager media and automatic host startup are not
+declared distribution targets. MIT licensing covers Bagua's source; dependencies
+retain their own licenses.
+
+The release authority is `https://releases.bagua.perish.uk`. Plumb defines the
+immutable marker, and Wharf builds, binds and publishes the executable. A
+declaration or tag alone is not an available release. For an exact non-stable
+marker, require the authority's
+`v1/releases/<channel>/<marker>/distribution.json` to report `state: complete`
+for that repository, commit, tree and publication attempt. Its matching
+`seal.json` binds the archive's URL, size and SHA-256. Verify these before
+extracting into a private directory; its `bagua` is the executable entry point.
+`bagua -V` reports the bound marker, while an ordinary development build reports
+its source build identity. Use the same artifact for the host and its clients.
+
+The selected ABI requires the Linux ELF loader, glibc and the executable's
+declared native shared libraries. Wharf builds the GNU target on its declared
+Linux runner; this is not a static or arbitrary-old-glibc portability promise.
+For the exact artifact, retain its ELF interpreter, `DT_NEEDED` entries and
+required symbol versions as runtime dependency evidence. PTYs require a usable
+`/dev/ptmx` and `devpts`; interactive clients also require their own controlling
+`/dev/tty` and the terminal profile below. Hosted executables, their dependencies,
+working directories and environment are explicit consumer inputs. Bagua does
+not bundle a shell, terminal emulator, terminfo database or application.
+
+Archive extraction does not start a host or alter PATH. The marker's seal also
+references Wharf's generated manager for versioned installation. Non-stable
+installation requires an exact marker plus explicit, isolated `--install-root`
+and `--bin-dir` paths outside the stable defaults (`~/.local/share/bagua` and
+`~/.local/bin`). Keep the executable installation apart
+from the private runtime directory. The foreground `serve` command receives an
+absolute socket path under an existing, canonical, user-owned mode-0700
+directory. The CLI neither selects a default runtime home nor creates persistent
+application state or logs there; the socket is the only file Bagua creates in
+that directory. Use a fresh directory for each isolated scene, and explicit
+homes/data for its hosted programs. No production session is a test fixture.
+
+## Published-artifact qualification
+
+`plumb.toml` declares Linux cases `bagua-workspace`, `bagua-lifecycle` and
+`bagua-flow`, with the official Seatrial runner and Depot scene channel following
+stable and the Images runtime following stable. The exact resolved generations,
+runner, image, source, marker, publication attempt and content digests belong in
+each run's evidence. Declarations neither publish scenes nor qualify a product.
+
+| Required case | Public behavior to qualify |
+| --- | --- |
+| `bagua-workspace` | Create/start, shell input, splits/windows/focus, keyboard/mouse/paste and local copy, different viewports, readonly refusal, explicit control transfer, fixed/automatic geometry, detach/reconnect and terminal restoration |
+| `bagua-lifecycle` | Client loss preserves host/programs; process exit, EOF, pane/session close and host shutdown remain distinct; owned resources are reclaimed and lane cleanup succeeds |
+| `bagua-flow` | Fragmented UTF-8, output floods and slow/disappearing clients preserve admitted bytes; narrow/tiny viewport clipping is bounded; reconnect/obsolete revisions require correct full state and bounded resources |
+
+Seatrial owns the independently distributed scene and assertions. It drives the
+public CLI or wire v2 using case-owned PTYs, programs, sockets and storage, with
+no source checkout, private crate links, runtime Cargo builds or production test
+switch. `control` provides persistent JSON requests/results; `watch` provides
+subscriptions and `inspect` provides full screens/process facts. The host and
+client commands below are the same consumer entry points the scene uses.
+
+Bagua issue #12 establishes distribution and this entry contract; Seatrial #66
+delivers and executes the required scenes. Until that evidence exists, declared
+cases remain unqualified. A complete distribution, source tests or green ship
+workflow does not imply a Windtun pass. Inspect the latest attempt under
+`v1/releases/<channel>/<marker>/windtun/` and use `plumb windtun check` for current
+public qualification. Missing, pending, failed or unsupported evidence remains
+nonpositive. Qualification, content association, stable promotion enforcement
+and installed consumption are separate facts; no active Bagua promotion gate or
+stable/install qualification is claimed by this declaration.
+
 ## Workspace and control
 
 `workspace::World` owns one session/window/pane tree. IDs are nonzero and never

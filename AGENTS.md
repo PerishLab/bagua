@@ -120,6 +120,15 @@ These exclusions do not change how applications use their own shells.
 
 ## Verification
 
+The first declared release contains only the Linux x86_64 GNU `bagua` executable.
+Wharf owns its archive, manager, identity binding and complete distribution under
+`releases.bagua.perish.uk`; internal crates remain unpublished. Source builds keep
+version 0.0.0. Product source carries no generated installer or release workflow.
+The required Windtun case names in `plumb.toml` are the consumer contract for
+Seatrial #66. Declaration validity does not prove those scenes are published,
+executed or qualified, or that stable promotion enforcement is active. Issue #12
+retains the actual non-stable distribution obligation after its source merge.
+
 Use focused tests while developing and the complete applicable Guard at
 coherent delivery boundaries. Keep models and self-contained behavior here,
 with thin executable smoke checks. Formally distributed-artifact multi-process
