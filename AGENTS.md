@@ -137,7 +137,12 @@ Full grapheme shaping, history reflow, DECAWM switching and extended keyboard
 protocols are outside the current profile. Actual application needs may
 challenge that selection before the first Linux closure. Preserve explicit
 unsupported reports and refusals rather than reporting full VT coverage.
-The terminal capability remains a model until actual hosting exists. A PTY
-adapter, IPC host, interactive renderer and native platform qualification
-require their own evidence. Do not turn the model tests into claims of process
-persistence or real terminal rendering.
+The terminal capability remains a model until actual hosting exists. The PTY
+component is available on Linux x86_64, with explicit launch data, bounded
+nonblocking IO and direct-child retirement/reaping. EOF, exit and closure are
+independent facts. Retirement closes the master and signals the owned child;
+it does not promise arbitrary descendant reclamation. The host must drive
+observation after retirement and retain unwritten bytes across backpressure.
+An IPC host, interactive renderer and other native platforms require their own
+evidence. Do not turn component tests into claims of process persistence or
+real terminal rendering.

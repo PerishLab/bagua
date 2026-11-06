@@ -20,3 +20,5 @@ clap = { version = "4", features = ["derive"] }
 plumb = { version = "0", registry = "perish", default-features = false }
 serde_json = "1"
 vt100 = { version = "0.18", default-features = false }
+radicula-process = { version = "0", registry = "perish" }
+rustix = { version = "1", features = ["event", "fs", "process", "pty", "termios"] }

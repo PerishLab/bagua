@@ -101,6 +101,11 @@ dependencies = [
 [[package]]
 name = "bagua-pty"
 version = "0.0.0"
+dependencies = [
+ "radicula-process",
+ "rustix",
+ "tempfile",
+]
 
 [[package]]
 name = "bagua-terminal"
@@ -362,9 +367,9 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "plumb"
-version = "0.135.0"
+version = "0.136.0"
 source = "sparse+https://cargo.perish.uk/"
-checksum = "07903add8db8ba62a5c3b43777c91c67d73c1095d78c14fbb59c9b7d0c4b2690"
+checksum = "1e4e380a2892e01a7b4348d0373271a88110b57cb0d82b851917d1f21d4f487f"
 dependencies = [
  "base64",
  "clap",
@@ -389,9 +394,9 @@ dependencies = [
 
 [[package]]
 name = "plumb-macro"
-version = "0.135.0"
+version = "0.136.0"
 source = "sparse+https://cargo.perish.uk/"
-checksum = "da523eac53842d40fd506318d4f929b6421c44b5804d1c6addf8f75e4f4ab990"
+checksum = "175b6017d0095f81bce8bea455604bcbcafffd8ff3bfa9791ce4f4681c54b5e9"
 dependencies = [
  "proc-macro2",
  "quote",

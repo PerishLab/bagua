@@ -1,40 +1,20 @@
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum State {
-    #[default]
-    Absent,
-    Running,
-    Exited(Option<i32>),
-    Closed,
-}
+mod error;
+mod launch;
+mod lifecycle;
+mod types;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Event {
-    Started,
-    Exited(Option<i32>),
-    Closed,
-}
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+mod linux;
+#[cfg(not(all(target_os = "linux", target_arch = "x86_64")))]
+mod unsupported;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Transition;
+pub use error::{Failure, Stage};
+pub use launch::Launch;
+pub use lifecycle::{Event, Lifecycle, State, Transition};
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+pub use linux::Process;
+pub use types::{CHUNK, Exit, GRACE, Interest, Ready, Size, Status, Transfer};
+#[cfg(not(all(target_os = "linux", target_arch = "x86_64")))]
+pub use unsupported::Process;
 
-#[derive(Debug, Default)]
-pub struct Lifecycle {
-    state: State,
-}
-
-impl Lifecycle {
-    pub fn state(&self) -> State {
-        self.state
-    }
-
-    pub fn observe(&mut self, event: Event) -> Result<State, Transition> {
-        let next = match (self.state, event) {
-            (State::Absent, Event::Started) => State::Running,
-            (State::Running, Event::Exited(code)) => State::Exited(code),
-            (State::Exited(_), Event::Closed) => State::Closed,
-            _ => return Err(Transition),
-        };
-        self.state = next;
-        Ok(next)
-    }
-}
+pub const SUPPORTED: bool = cfg!(all(target_os = "linux", target_arch = "x86_64"));

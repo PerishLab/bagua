@@ -13,7 +13,8 @@ The seven-crate workspace implements model contracts for control ownership,
 geometry, process lifecycle and revision synchronization. The terminal model
 also interprets a declared UTF-8/VT subset and encodes mode-dependent input.
 The CLI provides capability inspection and explicit refusal of unavailable
-operations. A PTY host and interactive client are not implemented yet.
+operations. The PTY component runs native Linux x86_64 processes; a persistent
+host and interactive client are not implemented yet.
 
 ## Workspace and control
 
@@ -76,6 +77,42 @@ access to the `perish` Cargo registry; registry declaration is included, while
 credentials are supplied by the developer's environment. Unauthenticated
 registry access has not been qualified. No private SDK source or credentials
 are copied into this repository.
+
+## Native PTY
+
+`pty::Process` owns a Linux x86_64 PTY master and its direct child. It requires
+Linux 4.13 or later with a working `/dev/pts` mount. Other targets return
+`Unsupported`; macOS and Windows have no qualified adapter yet.
+
+Launch specifies an absolute executable, literal argv, absolute working
+directory, complete environment and nonzero dimensions. The environment uses
+the published `radicula-process` contract and inherits no variables. There is
+no implicit shell or working-directory fallback. Arguments and environment
+each have at most 256 entries, with a combined 65,536-byte launch budget.
+Rustix supplies syscall wrappers; no upstream implementation is copied.
+
+The child starts a new session with its slave as controlling terminal and
+stdin/stdout/stderr. Reads and writes are nonblocking and transfer at most
+4096 bytes per call. `Pending` preserves caller custody of unwritten bytes;
+callers drain output without dropping bytes. Poll waits are capped at one
+second. Hangup readiness requires draining reads; PTY EOF, child exit and
+resource closure remain separate observations. Resize updates the kernel PTY
+and delivers its native foreground-group notification.
+
+`retire` closes the master and requests SIGHUP of the owned direct child.
+Kernel terminal hangup also affects the terminal's foreground process group.
+Driving `observe` escalates a surviving direct child to SIGKILL after a
+250 ms grace period and reaps its actual exit status. `close` drives this to
+completion synchronously; `Drop` provides the same cleanup fallback. Neither
+is a hard wall-clock deadline. A host should drive retirement through its
+event loop. Client disconnect does not imply retirement. Detached descendants
+and arbitrary process trees are outside this cleanup guarantee.
+
+Native tests cover controlling-terminal setup, explicit launch data, binary
+IO, output and input backpressure, SIGWINCH resize, exit status versus EOF,
+forced cleanup, launch failure, descriptor custody and cancellation. These
+qualify the component on the tested Linux machine; persistent hosting and
+distributed-artifact application scenes require their own evidence.
 
 ## Terminal profile
 

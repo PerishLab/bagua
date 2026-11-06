@@ -49,7 +49,7 @@ fn profile() {
             .iter()
             .filter(|c| c.state == protocol::State::Available)
             .count(),
-        1
+        1 + usize::from(pty::SUPPORTED)
     );
     assert!(
         profile
