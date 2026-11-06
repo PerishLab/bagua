@@ -31,7 +31,7 @@ fn profile() {
             .iter()
             .filter(|c| c.state == protocol::State::Available)
             .count(),
-        if pty::SUPPORTED { 6 } else { 1 }
+        if pty::SUPPORTED { 7 } else { 1 }
     );
     assert!(
         profile

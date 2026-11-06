@@ -104,7 +104,10 @@ impl Host {
             Message::Event(protocol::Event::Subscribed {
                 request,
                 target,
-                revision: terminal::Revision::new(self.world.revision()),
+                revision: match target {
+                    Target::Pane(id) => self.panes[&id].engine.revision(),
+                    _ => terminal::Revision::new(self.world.revision()),
+                },
             }),
         )?;
         self.complete(actor, request, Ok(()))

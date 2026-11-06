@@ -89,5 +89,5 @@ fn help() {
     assert!(output.status.success());
     let text = String::from_utf8(output.stdout).unwrap();
     assert!(text.contains("machine control"));
-    assert!(text.contains("not implemented"));
+    assert!(text.contains("interactive"));
 }

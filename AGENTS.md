@@ -15,8 +15,8 @@ Keep supported subsets, deliberate exclusions and unverified behavior distinct.
 
 Share mechanisms through their existing domain owners; terminal semantics and
 workspace policy belong to Bagua. Linux x86_64 has a source-level persistent
-local host and machine-control CLI; interactive rendering and release remain
-separate work. Executable capability output distinguishes models from available
+local host, machine-control CLI and interactive clients; release and installed
+qualification remain separate work. Executable capability output distinguishes models from available
 behavior; neither a compiling interface nor an unavailable-operation refusal
 proves terminal execution. Issue #6 establishes this source boundary; the
 first Linux product closure is tracked by Issue #5.
@@ -154,6 +154,17 @@ screen and process facts before finishing. Current runtime screens have zero
 scrollback; larger terminal-model history is not a runtime capability claim.
 The socket lives in an explicitly supplied canonical private user directory;
 peer UID comes from the kernel. Never replace an unknown existing endpoint.
-The interactive renderer and other native platforms require their own evidence.
+The interactive client consumes typed full snapshots over the same local protocol.
+Its replica validates target, dimensions, cells and revision before installing.
+Pane retirement never resurrects a display. Selection freezes a local copy;
+it never writes host state. The local copy buffer is not an OS clipboard claim.
+Client output is generated from typed cells/styles and clips with checked bounds.
+Raw PTY data and host escape strings never pass through to the outer terminal.
+Keep input, pending requests and output bounded independently; only presentation
+coalesces; adjacent unsent text may batch without changing byte order. Normal/error cleanup restores
+terminal modes; a client death cannot retire hosted processes. Ordinary modern
+UTF-8 VT/SGR-mouse behavior is the selected outer-terminal profile. It does not
+qualify every emulator, extended key protocol or unsupported shaping behavior.
+Other native platforms require their own evidence.
 Keep source composition/smoke evidence distinct from formal distributed-artifact
 host/client scenes and installed product qualification.

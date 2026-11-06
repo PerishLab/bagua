@@ -1,3 +1,18 @@
+mod app;
+mod draw;
+mod keyboard;
+mod keys;
+mod mouse;
+pub use keyboard::Keyboard;
+mod select;
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+mod tty;
+
+pub use app::App;
+pub use keys::{Gesture, translate};
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+pub use tty::Terminal;
+
 use protocol::{Failure, Frame, Packet, Replica};
 use terminal::{Extent, Revision};
 

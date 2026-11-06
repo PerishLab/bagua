@@ -13,3 +13,9 @@ name = "client"
 terminal.workspace = true
 protocol.workspace = true
 workspace.workspace = true
+
+crossterm.workspace = true
+unicode-width.workspace = true
+
+[target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dependencies]
+rustix.workspace = true

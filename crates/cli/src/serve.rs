@@ -8,7 +8,7 @@ use std::{
     sync::{Arc, atomic::AtomicBool},
 };
 
-struct Signals(Vec<SigId>);
+pub(crate) struct Signals(Vec<SigId>);
 
 impl Drop for Signals {
     fn drop(&mut self) {
@@ -18,7 +18,7 @@ impl Drop for Signals {
     }
 }
 
-pub(crate) fn run(path: &Path) -> Result<(), Error> {
+pub(crate) fn listen() -> Result<(Signals, Arc<AtomicBool>), Error> {
     let stop = Arc::new(AtomicBool::new(false));
     let mut signals = Signals(Vec::new());
     for signal in [SIGINT, SIGTERM] {
@@ -26,6 +26,11 @@ pub(crate) fn run(path: &Path) -> Result<(), Error> {
             .0
             .push(signal_hook::flag::register(signal, Arc::clone(&stop))?);
     }
+    Ok((signals, stop))
+}
+
+pub(crate) fn run(path: &Path) -> Result<(), Error> {
+    let (_signals, stop) = listen()?;
     let mut service = bagua::ipc::Service::bind(path)?;
     service.run(&stop)?;
     Ok(())

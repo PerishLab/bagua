@@ -15,6 +15,10 @@ pub struct Connection {
 }
 
 impl Connection {
+    pub fn channel(self) -> io::Result<super::Channel> {
+        super::Channel::new(self.stream)
+    }
+
     pub fn connect(path: &Path) -> io::Result<Self> {
         super::socket::namespace(path)?;
         let stream = UnixStream::connect(path)?;

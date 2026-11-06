@@ -14,8 +14,8 @@ geometry, process lifecycle and revision synchronization. The terminal model
 also interprets a declared UTF-8/VT subset and encodes mode-dependent input.
 The CLI provides capability inspection and explicit refusal of unavailable
 operations without a host connection. Linux x86_64 has a persistent local host
-and machine-control CLI. Interactive rendering and formal artifact qualification
-remain separate delivery work.
+and machine-control CLI, plus interactive clients. Formal artifact qualification
+and installation remain separate delivery work.
 
 ## Workspace and control
 
@@ -66,7 +66,7 @@ connection-local metadata set admits at most 64 exact targets and treats a
 duplicate subscription idempotently. Observers must be joined to the target's
 session. Cancelling a retired target remains possible. A resume revision is a
 hint, not permission to invent a delta without its baseline. The host sends
-complete snapshots and retains no incremental history. Wire version 1 uses a
+complete snapshots and retains no incremental history. Wire version 2 uses a
 four-byte big-endian JSON length followed by that many UTF-8 JSON bytes.
 Request numbers strictly increase within a connection; reused or older numbers
 are refused without replay. There is no cross-connection exactly-once claim.
@@ -154,7 +154,7 @@ it refuses if another connection controls the session. These setup operations
 consume request numbers beginning at `--request`. Neither option transfers
 custody of hosted processes to the CLI. Command exit releases its connection
 and control. `attach` is currently a machine join operation; the interactive
-renderer is not implemented yet.
+interface is available through `open` and `connect` below.
 
 `control` accepts one JSON `protocol::Request` per stdin line, on one persistent
 connection. It writes JSON messages to stdout and waits for each request's
@@ -163,7 +163,7 @@ on its own connection. Both consume the same commands as other callers.
 For example, a first request can be:
 
 ```json
-{"version":1,"id":1,"command":{"Workspace":{"Create":{"columns":80,"rows":24}}}}
+{"version":2,"id":1,"command":{"Workspace":{"Create":{"columns":80,"rows":24}}}}
 ```
 
 Replies distinguish model application or admission from `Finished`. Input is
@@ -219,6 +219,104 @@ Source tests qualify the protocol codec, native socket/component ownership and
 host composition. Formal independently distributed host/client application
 scenes, pressure and installed behavior remain with the later Seatrial/release
 leaves. No special Codex or tmux execution path exists.
+
+## Interactive clients
+
+The Linux x86_64 client requires a modern UTF-8 VT terminal with ANSI indexed/RGB
+color, alternate screen, cursor positioning, line-wrap control, bracketed paste
+and SGR mouse reports. This is an explicit terminal profile, not automatic
+capability negotiation or qualification of every terminal emulator.
+Wire v2 adds the host canvas bound to Hello and target-scoped pane subscription
+revisions. Use a matching host/client build; wire v1 is not an accepted request
+version in this source.
+
+Run the explicit host described above. Open a new session with a complete
+program specification, or join an existing session. `connect` observes by
+default; `--take` explicitly acquires control. Optional `--fixed` with `--take`
+preserves the existing host canvas while acquiring control, including from a
+viewport too narrow for automatic acquisition.
+
+```sh
+bagua --socket /absolute/private/bagua/host.sock open \
+  --executable /bin/sh --cwd / --arg=-i \
+  --env PATH=/usr/bin:/bin --env TERM=xterm-256color
+bagua --socket /absolute/private/bagua/host.sock connect 1
+bagua --socket /absolute/private/bagua/host.sock connect 1 --take --fixed
+```
+
+`open` declares creation, joining, acquiring and launching as separate protocol
+operations. A launch failure leaves its failed pane observable in the host.
+Nothing inherits the host environment. Provide any additional application
+variables explicitly. Supply the same optional executable/cwd/argv/environment
+flags to `connect` when that client will create further panes. Split/window
+creation from the interactive client refuses without an explicit program;
+it does not infer a shell or reconstruct another process's launch data.
+
+Press Ctrl-G followed by one command. This prefix is a Bagua choice, not a
+tmux compatibility contract.
+
+| Key | Action |
+| --- | --- |
+| `d` or `q` | Detach; hosted programs persist |
+| `v` / `h` | Split into columns / rows and launch the configured program |
+| `n` | Add a window and launch its first pane |
+| Tab / `w` | Cycle panes / windows |
+| `a` | Explicitly acquire released control |
+| `t` | Transfer control to the first other joined client by ID |
+| `f` / `u` | Fix the canvas to this viewport / resume automatic sizing |
+| `x` / `!` | Explicitly close the focused pane / entire session |
+| Arrows | Pan the local viewport without changing host geometry |
+| `[` / `c` / `p` | Begin selection / copy / paste the local buffer |
+| `?` | Show the command hints |
+
+Ordinary keys go to the focused pane only for the controller. The profile
+includes UTF-8 text, ASCII control keys, printable Alt characters, arrows,
+navigation, F1–F12 and Backtab. Modified navigation/function keys and extended
+keyboard protocols are refused. Escape uses a 50 ms disambiguation interval.
+Bracketed paste accepts at most 4096 UTF-8 bytes; overflow is drained to its
+terminator and refused, with bounded storage. Unsupported or oversized CSI
+input is refused. The client uses a bounded decoder instead of an unbounded
+event-reader paste accumulator.
+
+Mouse presses focus panes for the controller. Mouse reports otherwise follow
+the application's declared tracking mode and encoding. Shift-left-drag selects
+locally in either role. Selection freezes one pane snapshot while the host and
+live replica continue. In selection mode arrows extend the range, Escape cancels
+and Ctrl-G c copies. Copy omits continuation cells and physical row padding,
+joins soft wraps and preserves hard row breaks. The buffer is local to the
+client, at most 4096 UTF-8 bytes, and is lost on exit. Ctrl-G p submits it through
+the normal paste contract. No OS clipboard or OSC 52 effect is claimed.
+Runtime scrollback remains zero; selection covers the current screen.
+
+One terminal row is reserved for status. The local drawable viewport is bounded
+to 512×255, with the host's narrower 256×64 canvas limits applied separately.
+Observers crop and pan independently. A physical terminal smaller than two
+columns/two rows suspends drawing and application input until resized; detach
+remains available. Fixed canvas reporting never adopts observer geometry.
+Cell contents are validated before installation; malformed control text and
+foreign/retired panes cannot create a display authority. Wide cells crossing a
+clip boundary render as blanks. Unsupported shaping widths also render as
+blanks instead of shifting later cells. Styles are emitted from typed values;
+arbitrary host escape bytes are never forwarded to the outer terminal.
+
+The client reads at most 4096 TTY bytes and handles 16 decoded input events per
+turn, and polls up to eight 65,536-byte transport reads. Keyboard staging is
+8 KiB; paste storage is 4 KiB plus its terminator. A queue holds at most 64
+unsent operations and 64 KiB of text/paste, batching adjacent unsent text for
+one pane. At most 16 requests await completion; the channel independently bounds
+64 frames/256 KiB. Budget refusal is explicit and does not claim host admission.
+Detach drains queued operations and waits for results, with a ten-second bound;
+an unfinished operation remains uncertain on timeout or connection loss.
+
+Repaints are limited to one per 16 ms. Output holds one active frame and one
+latest replacement, each at most 4 MiB; each turn writes at most 65,536 TTY bytes.
+The client opens its own nonblocking `/dev/tty` descriptor, preserving inherited
+file-description flags. Normal detach, startup errors and handled SIGINT/SIGTERM
+restore raw mode and the selected display modes. Native tests compare the exact
+before/after termios state. SIGKILL and a disappeared terminal are not normal
+restoration paths. Client loss releases control while the host and its programs
+continue. Source-native tests use real PTYs and the actual CLI against an
+in-process Service; independent formal artifacts remain a later qualification.
 
 ## Terminal profile
 

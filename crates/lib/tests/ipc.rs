@@ -33,7 +33,10 @@ fn connection() {
     let mut connection = Connection::connect(&path).unwrap();
     assert!(matches!(
         connection.receive().unwrap(),
-        Message::Hello { version: 1, .. }
+        Message::Hello {
+            version: protocol::VERSION,
+            ..
+        }
     ));
     connection
         .send(&Request {
