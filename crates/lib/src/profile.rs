@@ -24,7 +24,11 @@ pub fn profile() -> Profile {
         .into_iter()
         .map(|component| Capability {
             component,
-            state: State::Model,
+            state: if component == Component::Pty && pty::SUPPORTED {
+                State::Available
+            } else {
+                State::Model
+            },
         })
         .collect::<Vec<_>>();
     components.push(Capability {

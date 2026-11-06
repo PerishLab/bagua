@@ -2,6 +2,11 @@
 allow = false
 
 [[boundary]]
+allow = ["comment"]
+note = "Local SAFETY explanation for the audited post-fork pre_exec closure; only owned close-on-exec slave and async-signal-safe setsid/ioctl operations enter it."
+paths = ["crates/pty/src/linux/spawn.rs"]
+
+[[boundary]]
 allow = ["word", "param"]
 note = "This isolated vt100::Callbacks adapter must implement upstream method names and the fixed five-argument CSI callback. Bagua event and query policy stays in events.rs."
 paths = ["crates/terminal/src/callback.rs"]
