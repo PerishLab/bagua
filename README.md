@@ -15,6 +15,58 @@ also interprets a declared UTF-8/VT subset and encodes mode-dependent input.
 The CLI provides capability inspection and explicit refusal of unavailable
 operations. A PTY host and interactive client are not implemented yet.
 
+## Workspace and control
+
+`workspace::World` owns one session/window/pane tree. IDs are nonzero and never
+reused within that world's lifetime. Clients join as observers. Acquiring or
+transferring control is explicit and checks the connected client and layout
+before committing. Observers can report their own viewport without changing
+session geometry. Automatic sizing follows the controller's accepted viewport;
+fixed sizing preserves an explicit canvas. A narrow observer can acquire with
+an explicit fixed size when automatic sizing cannot fit the current layout.
+
+Column and row splits use a ratio of 1–999 thousandths and one separator cell.
+Panes need at least two columns and one row. A failed split, handoff or resize
+preserves the previous tree, focus, policy, revision and ID allocator. Closing
+a pane collapses its split; an empty window is removed, while an empty session
+remains until explicitly closed. Focus falls back to the lowest surviving ID.
+New windows and splits select their newly created object. Process exit retains
+the pane and its outcome. Disconnect releases control without closing objects.
+
+The model limits one world to 32 sessions and 4096 panes, one session to
+32 windows and 64 attached clients, and one window to 64 panes and 16 tree
+levels. Catalog snapshots own immutable bounded model state. Workspace geometry
+uses nonzero 16-bit dimensions; the host must additionally enforce the terminal
+engine's narrower profile before creating actual terminal resources.
+
+CLI grammar, interactive request constructors and programmatic callers share
+`protocol::Request`. Request numbers are nonzero; the default constructor uses
+1 for a single request, while a persistent caller supplies its own numbers.
+Connection identity is supplied by the host, never accepted from a command.
+IDs and object kinds are exact; human names and tmux target syntax are absent.
+
+The pure `bagua::evaluate` composition applies model changes. Input and pane
+retirement return accepted intents; they perform no native IO and do not
+produce completion evidence. Native completion/failure, process outcomes and
+presentation revisions have separate event types. Late outcomes for retired
+IDs cannot recreate objects. The actual CLI still refuses hosting operations
+with structured `unavailable`; its command grammar does not prove a live host.
+JSON capability and semantic error output includes the request number.
+
+Synchronization binds target, baseline and payload revision. A replica installs
+both state and revision only after validation and successful delta merging;
+gaps require a full snapshot. `Latest` keeps one pending versioned presentation
+per subscription and coalesces it into a complete snapshot. Reliable events
+and PTY bytes do not implement that contract. Payload size belongs to its model
+owner, and subscribers own their retention. Host restart creates a fresh
+connection/cursor lifetime. Subscribe/unsubscribe are explicit intents; the
+connection-local metadata set admits at most 64 exact targets and treats a
+duplicate subscription idempotently. Observers must be joined to the target's
+session. Cancelling a retired target remains possible. A resume revision is a
+hint, not permission to invent a delta without its baseline. Serialization,
+request deduplication, byte-budget enforcement and runtime subscription
+admission still need host qualification.
+
 ```sh
 cargo run --locked -p bagua-cli -- capabilities --json
 ```

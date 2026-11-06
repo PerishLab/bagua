@@ -11,6 +11,7 @@ name = "bagua"
 path = "src/main.rs"
 
 [dependencies]
+workspace.workspace = true
 bagua.workspace = true
 client.workspace = true
 protocol.workspace = true

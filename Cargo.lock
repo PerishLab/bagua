@@ -75,6 +75,7 @@ dependencies = [
  "bagua",
  "bagua-client",
  "bagua-protocol",
+ "bagua-workspace",
  "clap",
  "plumb",
  "serde_json",

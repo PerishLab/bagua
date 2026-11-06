@@ -4,9 +4,40 @@ use crate::Id;
 pub enum Failure {
     Busy,
     Observer,
+    Missing,
+    Capacity,
+    Geometry,
+    State,
+    Exhausted,
 }
 
-#[derive(Debug, Default)]
+impl Failure {
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::Busy => "busy",
+            Self::Observer => "observer",
+            Self::Missing => "missing",
+            Self::Capacity => "capacity",
+            Self::Geometry => "geometry",
+            Self::State => "state",
+            Self::Exhausted => "exhausted",
+        }
+    }
+
+    pub fn message(self) -> &'static str {
+        match self {
+            Self::Busy => "client is already joined or control is held by another client",
+            Self::Observer => "operation requires the session controller",
+            Self::Missing => "exact target or connected client does not exist",
+            Self::Capacity => "workspace resource limit exceeded",
+            Self::Geometry => "geometry cannot contain the layout and minimum pane sizes",
+            Self::State => "operation is invalid for the current pane state",
+            Self::Exhausted => "identity or revision space exhausted",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Control {
     owner: Option<Id>,
 }

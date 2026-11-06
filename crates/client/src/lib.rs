@@ -1,17 +1,50 @@
-use protocol::{Cursor, Failure, Update};
+use protocol::{Failure, Frame, Packet, Replica};
 use terminal::{Extent, Revision};
 
 #[derive(Debug)]
 pub struct View {
     extent: Extent,
-    cursor: Cursor,
+    state: Replica<terminal::Snapshot>,
 }
 
 impl View {
+    pub fn subscribe(&self, request: u64) -> Result<protocol::Request, Failure> {
+        protocol::Request::identified(
+            request,
+            protocol::Command::Subscribe {
+                target: self.state.target(),
+                after: self.revision(),
+            },
+        )
+    }
+
+    pub fn unsubscribe(&self, request: u64) -> Result<protocol::Request, Failure> {
+        protocol::Request::identified(request, protocol::Command::Unsubscribe(self.state.target()))
+    }
+    pub fn input(
+        &self,
+        request: u64,
+        input: protocol::Input,
+    ) -> Result<protocol::Request, Failure> {
+        let workspace::Target::Pane(pane) = self.state.target() else {
+            return Err(Failure::Target);
+        };
+        protocol::Request::identified(request, protocol::Command::Send { pane, input })
+    }
+
+    pub fn focus(&self, request: u64) -> Result<protocol::Request, Failure> {
+        let workspace::Target::Pane(pane) = self.state.target() else {
+            return Err(Failure::Target);
+        };
+        protocol::Request::identified(
+            request,
+            protocol::Command::Workspace(workspace::Operation::Focus(pane)),
+        )
+    }
     pub fn new(target: workspace::Target, extent: Extent) -> Self {
         Self {
             extent,
-            cursor: Cursor::new(target),
+            state: Replica::new(target),
         }
     }
 
@@ -23,11 +56,20 @@ impl View {
         Some(content.remaining(x, y)?.fit(self.extent))
     }
 
-    pub fn accept(&mut self, update: Update) -> Result<(), Failure> {
-        self.cursor.accept(update)
+    pub fn accept(&mut self, frame: Frame<terminal::Snapshot>) -> Result<(), Failure> {
+        if !matches!(self.state.target(), workspace::Target::Pane(_)) {
+            return Err(Failure::Target);
+        }
+        self.state.apply(Packet::<_, ()>::Snapshot(frame), |_, ()| {
+            Err(Failure::Payload)
+        })
+    }
+
+    pub fn state(&self) -> Option<&terminal::Snapshot> {
+        self.state.state()
     }
 
     pub fn revision(&self) -> Option<Revision> {
-        self.cursor.revision()
+        self.state.revision()
     }
 }
