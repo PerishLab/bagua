@@ -1,4 +1,8 @@
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+mod channel;
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+pub use channel::Channel;
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 mod connection;
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 mod link;

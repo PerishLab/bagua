@@ -41,6 +41,7 @@ impl Client {
         client.push(Message::Hello {
             version: protocol::VERSION,
             client: id,
+            canvas: workspace::Geometry::new(super::COLUMNS, super::ROWS).unwrap(),
         })?;
         Ok(client)
     }

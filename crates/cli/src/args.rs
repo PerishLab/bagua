@@ -3,7 +3,7 @@ use clap::{Args as Group, Parser, Subcommand, ValueEnum};
 #[derive(Parser)]
 #[command(name = "bagua", version = plumb::version!("BAGUA"))]
 #[command(
-    about = "A persistent terminal workspace with Linux machine control. Interactive rendering is not implemented yet."
+    about = "A persistent terminal workspace with Linux machine control and interactive clients."
 )]
 pub(crate) struct Args {
     #[arg(
@@ -22,6 +22,7 @@ pub(crate) struct Args {
     pub control: Option<u64>,
     #[arg(
         long,
+        id = "observer",
         global = true,
         conflicts_with = "control",
         help = "Join this session as an observer for this command"
@@ -61,6 +62,21 @@ pub(crate) enum Kind {
 
 #[derive(Subcommand)]
 pub(crate) enum Action {
+    #[command(about = "Open a session, explicitly launch a program and enter interactive control")]
+    Open {
+        #[command(flatten)]
+        launch: Launch,
+    },
+    #[command(about = "Connect an interactive observer; --take explicitly acquires control")]
+    Connect {
+        session: u64,
+        #[arg(long)]
+        take: bool,
+        #[arg(long, requires = "take")]
+        fixed: bool,
+        #[command(flatten)]
+        launch: Launch,
+    },
     #[command(about = "Run the persistent host in the foreground")]
     Serve,
     #[command(about = "Exchange JSON requests and messages over one persistent connection")]
@@ -181,4 +197,16 @@ pub(crate) enum Key {
     Right,
     Home,
     End,
+}
+
+#[derive(Group)]
+pub(crate) struct Launch {
+    #[arg(long, requires = "cwd")]
+    pub executable: Option<String>,
+    #[arg(long, requires = "executable")]
+    pub cwd: Option<String>,
+    #[arg(long = "arg", allow_hyphen_values = true, requires = "executable")]
+    pub args: Vec<String>,
+    #[arg(long = "env", requires = "executable")]
+    pub environment: Vec<String>,
 }

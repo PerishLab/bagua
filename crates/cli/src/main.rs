@@ -6,6 +6,8 @@ mod remote;
 mod serve;
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 mod session;
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+mod tui;
 
 use args::Args;
 use clap::Parser;

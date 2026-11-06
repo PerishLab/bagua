@@ -40,6 +40,7 @@ pub enum Message {
     Hello {
         version: u16,
         client: Id,
+        canvas: workspace::Geometry,
     },
     Catalog(workspace::Snapshot),
     Reply(Reply),

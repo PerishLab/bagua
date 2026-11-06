@@ -15,6 +15,8 @@ pub enum Key {
     Enter,
     Tab,
     Backspace,
+    Backtab,
+    Alt(char),
     Escape,
     Function(u8),
     Control(char),
@@ -29,7 +31,7 @@ pub enum Input<'a> {
 }
 
 impl Input<'_> {
-    pub(crate) fn encode(self, modes: Modes, extent: Extent) -> Result<Vec<u8>, Failure> {
+    pub fn encode(self, modes: Modes, extent: Extent) -> Result<Vec<u8>, Failure> {
         match self {
             Self::Text(text) => {
                 check(text, false)?;
@@ -78,6 +80,9 @@ impl Key {
             Self::Next => Ok(b"\x1b[6~".into()),
             Self::Enter => Ok(b"\r".into()),
             Self::Tab => Ok(b"\t".into()),
+            Self::Backtab => Ok(b"\x1b[Z".into()),
+            Self::Alt(c) if !c.is_control() => Ok(format!("\x1b{c}").into_bytes()),
+            Self::Alt(_) => Err(Failure::Input),
             Self::Backspace => Ok(b"\x7f".into()),
             Self::Escape => Ok(b"\x1b".into()),
             Self::Function(number) => function(number),

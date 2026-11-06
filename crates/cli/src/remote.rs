@@ -8,6 +8,9 @@ pub(crate) fn execute(args: &Args) -> Result<(), Error> {
     let path = args.socket.as_deref().ok_or(Failure::Unavailable)?;
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     {
+        if matches!(args.action, Action::Open { .. } | Action::Connect { .. }) {
+            return crate::tui::run(path, args);
+        }
         if matches!(args.action, Action::Serve) {
             return crate::serve::run(path);
         }

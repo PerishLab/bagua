@@ -9,25 +9,36 @@ use workspace::{Operation, Snapshot};
 
 pub(crate) struct Session {
     connection: Connection,
-    next: u64,
+    pub actor: workspace::Id,
+    pub canvas: workspace::Geometry,
+    pub created: Vec<workspace::Target>,
+    pub next: u64,
     json: bool,
 }
 
 impl Session {
+    pub fn channel(self) -> Result<bagua::ipc::Channel, Error> {
+        Ok(self.connection.channel()?)
+    }
+
     pub fn connect(path: &Path, args: &Args) -> Result<Self, Error> {
         if args.request == 0 {
             return Err(Failure::Identity.into());
         }
         let mut connection = Connection::connect(path)?;
-        match connection.receive()? {
+        let (actor, canvas) = match connection.receive()? {
             Message::Hello {
                 version: protocol::VERSION,
-                ..
-            } => {}
+                client,
+                canvas,
+            } => (client, canvas),
             _ => return Err(Failure::Version.into()),
-        }
+        };
         Ok(Self {
             connection,
+            actor,
+            canvas,
+            created: Vec::new(),
             next: args.request,
             json: args.json,
         })
@@ -83,12 +94,11 @@ impl Session {
             }
             match message {
                 Message::Reply(reply) if reply.request == request.id => {
-                    snapshot = catalog(
-                        reply
-                            .result
-                            .map_err(|error| Error::from(error).at(request.id))?,
-                    )
-                    .or(snapshot);
+                    let status = reply
+                        .result
+                        .map_err(|error| Error::from(error).at(request.id))?;
+                    self.remember(&status);
+                    snapshot = catalog(status).or(snapshot);
                 }
                 Message::Finished {
                     request: id,
@@ -118,6 +128,12 @@ impl Session {
             }
             let request = serde_json::from_slice(&bytes).map_err(|_| Failure::Payload)?;
             self.exchange(request, true)?;
+        }
+    }
+
+    fn remember(&mut self, status: &Status) {
+        if let Status::Applied(Outcome::Workspace(workspace::Outcome::Changed(change))) = status {
+            self.created = change.created.clone();
         }
     }
 

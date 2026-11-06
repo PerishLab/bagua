@@ -23,3 +23,6 @@ serde = { version = "1", features = ["derive"] }
 vt100 = { version = "0.18", default-features = false }
 radicula-process = { version = "0", registry = "perish" }
 rustix = { version = "1", features = ["event", "fs", "net", "process", "pty", "termios"] }
+
+crossterm = { version = "0.29", default-features = false, features = ["events", "bracketed-paste", "use-dev-tty"] }
+unicode-width = "0.2"

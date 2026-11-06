@@ -24,7 +24,7 @@ pub fn profile() -> Profile {
         .into_iter()
         .map(|component| Capability {
             component,
-            state: if component != Component::Client && pty::SUPPORTED {
+            state: if pty::SUPPORTED {
                 State::Available
             } else {
                 State::Model
