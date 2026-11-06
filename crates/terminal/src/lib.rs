@@ -1,5 +1,30 @@
 use std::num::NonZeroU16;
 
+mod callback;
+mod engine;
+mod events;
+mod input;
+mod mouse;
+mod profile;
+mod screen;
+
+pub use engine::Engine;
+pub use events::Report;
+pub use input::{Input, Key};
+pub use mouse::{Action, Button, Direction, Modifiers, Mouse, Point};
+pub use profile::{CELLS, CHUNK, COLUMNS, EXCLUDED, HISTORY, PROFILE, ROWS, SOURCE};
+pub use screen::{Cell, Color, Cursor, Encoding, Modes, Snapshot, Style, Tracking};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Failure {
+    Capacity,
+    Input,
+    Unsupported,
+    Inactive,
+    Position,
+    Revision,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Extent {
     width: NonZeroU16,

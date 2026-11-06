@@ -1,6 +1,11 @@
 [comment]
 allow = false
 
+[[boundary]]
+allow = ["word", "param"]
+note = "This isolated vt100::Callbacks adapter must implement upstream method names and the fixed five-argument CSI callback. Bagua event and query policy stays in events.rs."
+paths = ["crates/terminal/src/callback.rs"]
+
 [[grant]]
 paths = ["crates/*/src/**/*.rs", "crates/*/tests/**/*.rs"]
 syntax = "test"

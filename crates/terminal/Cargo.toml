@@ -8,3 +8,6 @@ publish.workspace = true
 
 [lib]
 name = "terminal"
+
+[dependencies]
+vt100.workspace = true
