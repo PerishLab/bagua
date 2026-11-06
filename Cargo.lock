@@ -66,6 +66,10 @@ dependencies = [
  "bagua-pty",
  "bagua-terminal",
  "bagua-workspace",
+ "radicula-process",
+ "rustix",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]
@@ -75,10 +79,13 @@ dependencies = [
  "bagua",
  "bagua-client",
  "bagua-protocol",
+ "bagua-terminal",
  "bagua-workspace",
  "clap",
  "plumb",
  "serde_json",
+ "signal-hook",
+ "tempfile",
 ]
 
 [[package]]
@@ -96,6 +103,8 @@ version = "0.0.0"
 dependencies = [
  "bagua-terminal",
  "bagua-workspace",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -111,12 +120,16 @@ dependencies = [
 name = "bagua-terminal"
 version = "0.0.0"
 dependencies = [
+ "serde",
  "vt100",
 ]
 
 [[package]]
 name = "bagua-workspace"
 version = "0.0.0"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "base64"
@@ -592,6 +605,16 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest",
+]
+
+[[package]]
+name = "signal-hook"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "49f7447afd772ca79ad17ae0a3972a6b0df0cb4b80990fd82707593e9e012a74"
+dependencies = [
+ "libc",
+ "signal-hook-registry",
 ]
 
 [[package]]

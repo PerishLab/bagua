@@ -10,4 +10,5 @@ publish.workspace = true
 name = "terminal"
 
 [dependencies]
+serde.workspace = true
 vt100.workspace = true

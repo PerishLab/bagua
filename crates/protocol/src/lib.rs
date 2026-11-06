@@ -5,6 +5,7 @@ mod reply;
 mod stamp;
 mod sync;
 mod watch;
+pub mod wire;
 
 pub use catalog::{Capability, Component, Profile, State};
 pub use command::{Command, Input};
@@ -16,7 +17,8 @@ pub use watch::{SUBSCRIPTIONS, Subscriptions};
 
 pub const VERSION: u16 = 1;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct Request {
     pub version: u16,
     pub id: u64,
@@ -54,7 +56,7 @@ impl Request {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Failure {
     Version,
     Identity,
@@ -65,6 +67,8 @@ pub enum Failure {
     Workspace(workspace::Failure),
     Payload,
     Capacity,
+    Native,
+    Pending,
 }
 
 impl Failure {
@@ -79,6 +83,8 @@ impl Failure {
             Self::Workspace(error) => error.code(),
             Self::Payload => "payload",
             Self::Capacity => "capacity",
+            Self::Native => "native",
+            Self::Pending => "pending",
         }
     }
 
@@ -86,13 +92,17 @@ impl Failure {
         match self {
             Self::Version => "unsupported protocol version",
             Self::Identity => "identity must be nonzero",
-            Self::Unavailable => "terminal hosting is not implemented in this source baseline",
+            Self::Unavailable => {
+                "operation requires a supported host connection or implemented endpoint"
+            }
             Self::Target => "update belongs to a different target",
             Self::Baseline => "incremental baseline is missing; request a complete snapshot",
             Self::Stale => "update does not advance the installed revision",
             Self::Workspace(error) => error.message(),
             Self::Payload => "payload exceeds its declared bound or cannot be applied",
             Self::Capacity => "protocol resource limit exceeded",
+            Self::Native => "native effect failed; inspect the associated result",
+            Self::Pending => "an earlier operation still owns this resource",
         }
     }
 }

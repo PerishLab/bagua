@@ -1,6 +1,6 @@
 use crate::{CHUNK, Extent, Failure, Modes, Mouse};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Key {
     Up,
     Down,

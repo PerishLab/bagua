@@ -4,6 +4,38 @@ use workspace::{Geometry, Operation, Ratio, Sizing, Split, Target};
 
 pub(crate) fn parse(action: &Action) -> Result<Command, Failure> {
     let operation = match action {
+        Action::Serve | Action::Control => return Err(Failure::Unavailable),
+        Action::Shutdown => return Ok(Command::Shutdown),
+        Action::Inspect { pane } => return Ok(Command::Inspect(Command::identity(*pane)?)),
+        Action::Start {
+            pane,
+            executable,
+            cwd,
+            args,
+            environment,
+        } => {
+            return Ok(Command::Start {
+                pane: Command::identity(*pane)?,
+                program: protocol::wire::Program {
+                    executable: executable.clone(),
+                    cwd: cwd.clone(),
+                    args: args.clone(),
+                    environment: environment
+                        .iter()
+                        .map(|value| {
+                            let (key, value) = value.split_once('=').ok_or(Failure::Payload)?;
+                            Ok((key.into(), value.into()))
+                        })
+                        .collect::<Result<_, Failure>>()?,
+                },
+            });
+        }
+        Action::Key { pane, key } => {
+            return Ok(Command::Send {
+                pane: Command::identity(*pane)?,
+                input: Input::Key(key.convert()),
+            });
+        }
         Action::Capabilities => return Ok(Command::Capabilities),
         Action::Watch { kind, id } => {
             return Ok(Command::Subscribe {
@@ -101,4 +133,22 @@ fn target(kind: Kind, value: u64) -> Result<Target, Failure> {
         Kind::Window => Target::Window(id),
         Kind::Pane => Target::Pane(id),
     })
+}
+
+impl crate::args::Key {
+    fn convert(self) -> terminal::Key {
+        use crate::args::Key;
+        match self {
+            Key::Enter => terminal::Key::Enter,
+            Key::Tab => terminal::Key::Tab,
+            Key::Escape => terminal::Key::Escape,
+            Key::Backspace => terminal::Key::Backspace,
+            Key::Up => terminal::Key::Up,
+            Key::Down => terminal::Key::Down,
+            Key::Left => terminal::Key::Left,
+            Key::Right => terminal::Key::Right,
+            Key::Home => terminal::Key::Home,
+            Key::End => terminal::Key::End,
+        }
+    }
 }

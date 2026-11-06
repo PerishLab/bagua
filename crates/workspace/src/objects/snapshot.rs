@@ -1,6 +1,6 @@
 use crate::Session;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Snapshot {
     revision: u64,
     sessions: Vec<Session>,

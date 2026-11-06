@@ -8,3 +8,6 @@ publish.workspace = true
 
 [lib]
 name = "workspace"
+
+[dependencies]
+serde.workspace = true

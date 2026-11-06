@@ -14,8 +14,9 @@ Preserve declared consumer behavior rather than translating upstream files.
 Keep supported subsets, deliberate exclusions and unverified behavior distinct.
 
 Share mechanisms through their existing domain owners; terminal semantics and
-workspace policy belong to Bagua. This workspace has no live terminal host or
-release yet. Executable capability output distinguishes models from available
+workspace policy belong to Bagua. Linux x86_64 has a source-level persistent
+local host and machine-control CLI; interactive rendering and release remain
+separate work. Executable capability output distinguishes models from available
 behavior; neither a compiling interface nor an unavailable-operation refusal
 proves terminal execution. Issue #6 establishes this source boundary; the
 first Linux product closure is tracked by Issue #5.
@@ -125,7 +126,8 @@ with thin executable smoke checks. Formally distributed-artifact multi-process
 qualification belongs to the independent Seatrial scene, using only public
 interfaces and isolated resources. Runtime source carries no testing mode.
 
-The CLI exposes `capabilities` and structured refusal now. The terminal crate
+The CLI exposes `capabilities`, explicit local machine control and structured
+refusals. The terminal crate
 implements the selected in-memory VT profile, snapshots and input encoding;
 `PROFILE`, `EXCLUDED`, resource constants and executable tests own its exact
 scope. Its dependency disables the growing OSC buffer. Do not enable that
@@ -137,12 +139,21 @@ Full grapheme shaping, history reflow, DECAWM switching and extended keyboard
 protocols are outside the current profile. Actual application needs may
 challenge that selection before the first Linux closure. Preserve explicit
 unsupported reports and refusals rather than reporting full VT coverage.
-The terminal capability remains a model until actual hosting exists. The PTY
-component is available on Linux x86_64, with explicit launch data, bounded
+The terminal and PTY components are hosted on Linux x86_64, with explicit launch data, bounded
 nonblocking IO and direct-child retirement/reaping. EOF, exit and closure are
 independent facts. Retirement closes the master and signals the owned child;
 it does not promise arbitrary descendant reclamation. The host must drive
 observation after retirement and retain unwritten bytes across backpressure.
-An IPC host, interactive renderer and other native platforms require their own
-evidence. Do not turn component tests into claims of process persistence or
-real terminal rendering.
+The host previews model mutations against its live and retiring resource budget.
+Accepted input retains its unwritten suffix after disconnect. Completion follows
+actual byte writes or native reclamation; model application is a separate fact.
+Connections have increasing request IDs and explicit output admission. Only
+presentation coalesces, with bounded rotating serialization. Reconnect starts a
+fresh actor/cursor and does not authorize replay. Inspect returns a complete
+screen and process facts before finishing. Current runtime screens have zero
+scrollback; larger terminal-model history is not a runtime capability claim.
+The socket lives in an explicitly supplied canonical private user directory;
+peer UID comes from the kernel. Never replace an unknown existing endpoint.
+The interactive renderer and other native platforms require their own evidence.
+Keep source composition/smoke evidence distinct from formal distributed-artifact
+host/client scenes and installed product qualification.

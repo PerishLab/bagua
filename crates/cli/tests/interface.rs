@@ -8,7 +8,10 @@ fn capabilities() {
         .unwrap();
     assert!(output.status.success());
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(value["runtime"], false);
+    assert_eq!(
+        value["runtime"],
+        cfg!(all(target_os = "linux", target_arch = "x86_64"))
+    );
     assert_eq!(value["request"], 1);
     assert_eq!(value["components"].as_array().unwrap().len(), 7);
     assert_eq!(value["excluded"].as_array().unwrap().len(), 8);
@@ -85,6 +88,6 @@ fn help() {
         .unwrap();
     assert!(output.status.success());
     let text = String::from_utf8(output.stdout).unwrap();
-    assert!(text.contains("models only"));
+    assert!(text.contains("machine control"));
     assert!(text.contains("not implemented"));
 }

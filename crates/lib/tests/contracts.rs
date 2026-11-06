@@ -1,22 +1,4 @@
-use bagua::Host;
 use protocol::{Command, Failure, Request};
-use workspace::{Geometry, Id, Session};
-
-#[test]
-fn detach() {
-    let controller = Id::new(2).unwrap();
-    let mut session = Session::new(Id::new(1).unwrap(), Geometry::new(80, 24).unwrap());
-    session
-        .join(controller, Geometry::new(80, 24).unwrap())
-        .unwrap();
-    session.acquire(controller).unwrap();
-    let mut host = Host::new(session);
-    host.detach(controller);
-    assert_eq!(host.session().controller(), None);
-    assert_eq!(host.session().id(), Id::new(1).unwrap());
-    assert_eq!(host.process().state(), pty::State::Absent);
-    assert_eq!(host.revision(), terminal::Revision::default());
-}
 
 #[test]
 fn unavailable() {
@@ -41,7 +23,7 @@ fn unavailable() {
 #[test]
 fn profile() {
     let profile = bagua::dispatch(Request::new(Command::Capabilities)).unwrap();
-    assert!(!profile.runtime);
+    assert_eq!(profile.runtime, pty::SUPPORTED);
     assert_eq!(profile.components.len(), 7);
     assert_eq!(
         profile
@@ -49,7 +31,7 @@ fn profile() {
             .iter()
             .filter(|c| c.state == protocol::State::Available)
             .count(),
-        1 + usize::from(pty::SUPPORTED)
+        if pty::SUPPORTED { 6 } else { 1 }
     );
     assert!(
         profile

@@ -1,0 +1,65 @@
+mod codec;
+mod screen;
+
+use crate::{Failure, Reply};
+pub use codec::{Decoder, encode};
+pub use screen::Screen;
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+use workspace::Id;
+
+pub const REQUEST: usize = 131_072;
+pub const FRAME: usize = 8_388_608;
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Program {
+    pub executable: String,
+    pub args: Vec<String>,
+    pub cwd: String,
+    pub environment: BTreeMap<String, String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Fault {
+    pub code: String,
+    pub message: String,
+}
+
+impl From<Failure> for Fault {
+    fn from(error: Failure) -> Self {
+        Self {
+            code: error.code().into(),
+            message: error.message().into(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Message {
+    Hello {
+        version: u16,
+        client: Id,
+    },
+    Catalog(workspace::Snapshot),
+    Reply(Reply),
+    Finished {
+        request: u64,
+        result: Result<(), Fault>,
+    },
+    Process {
+        pane: Id,
+        io: bool,
+        closing: bool,
+        exited: bool,
+        code: Option<i32>,
+        signal: Option<i32>,
+        eof: bool,
+        fault: Option<Fault>,
+    },
+    Screen {
+        pane: Id,
+        state: Screen,
+    },
+    Event(crate::Event),
+}

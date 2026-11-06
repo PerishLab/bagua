@@ -1,7 +1,7 @@
 use crate::{Failure, Input, Profile};
 use workspace::Id;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Intent {
     Subscribe {
         target: workspace::Target,
@@ -15,25 +15,26 @@ pub enum Intent {
     Retire(workspace::Change),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Outcome {
     Profile(Profile),
     Workspace(workspace::Outcome),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Status {
+    Admitted,
     Applied(Outcome),
     Accepted(Intent),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Reply {
     pub request: u64,
     pub result: Result<Status, Failure>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Event {
     Subscribed {
         request: u64,

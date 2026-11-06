@@ -1,7 +1,7 @@
 use crate::{Control, Failure, Geometry, Id, Sizing, Window};
 use std::collections::BTreeMap;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Session {
     id: Id,
     control: Control,

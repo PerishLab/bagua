@@ -13,8 +13,9 @@ The seven-crate workspace implements model contracts for control ownership,
 geometry, process lifecycle and revision synchronization. The terminal model
 also interprets a declared UTF-8/VT subset and encodes mode-dependent input.
 The CLI provides capability inspection and explicit refusal of unavailable
-operations. The PTY component runs native Linux x86_64 processes; a persistent
-host and interactive client are not implemented yet.
+operations without a host connection. Linux x86_64 has a persistent local host
+and machine-control CLI. Interactive rendering and formal artifact qualification
+remain separate delivery work.
 
 ## Workspace and control
 
@@ -27,7 +28,7 @@ fixed sizing preserves an explicit canvas. A narrow observer can acquire with
 an explicit fixed size when automatic sizing cannot fit the current layout.
 
 Column and row splits use a ratio of 1–999 thousandths and one separator cell.
-Panes need at least two columns and one row. A failed split, handoff or resize
+Panes need at least two columns and one row. A refused model split, handoff or resize
 preserves the previous tree, focus, policy, revision and ID allocator. Closing
 a pane collapses its split; an empty window is removed, while an empty session
 remains until explicitly closed. Focus falls back to the lowest surviving ID.
@@ -50,9 +51,9 @@ The pure `bagua::evaluate` composition applies model changes. Input and pane
 retirement return accepted intents; they perform no native IO and do not
 produce completion evidence. Native completion/failure, process outcomes and
 presentation revisions have separate event types. Late outcomes for retired
-IDs cannot recreate objects. The actual CLI still refuses hosting operations
-with structured `unavailable`; its command grammar does not prove a live host.
-JSON capability and semantic error output includes the request number.
+IDs cannot recreate objects. The CLI requires an explicit socket for hosted
+operations. Local capability inspection describes compiled endpoints, not whether
+a host is running. Native effects report their actual completion separately.
 
 Synchronization binds target, baseline and payload revision. A replica installs
 both state and revision only after validation and successful delta merging;
@@ -64,9 +65,12 @@ connection/cursor lifetime. Subscribe/unsubscribe are explicit intents; the
 connection-local metadata set admits at most 64 exact targets and treats a
 duplicate subscription idempotently. Observers must be joined to the target's
 session. Cancelling a retired target remains possible. A resume revision is a
-hint, not permission to invent a delta without its baseline. Serialization,
-request deduplication, byte-budget enforcement and runtime subscription
-admission still need host qualification.
+hint, not permission to invent a delta without its baseline. The host sends
+complete snapshots and retains no incremental history. Wire version 1 uses a
+four-byte big-endian JSON length followed by that many UTF-8 JSON bytes.
+Request numbers strictly increase within a connection; reused or older numbers
+are refused without replay. There is no cross-connection exactly-once claim.
+Unknown versions, commands and invalid identities are refused.
 
 ```sh
 cargo run --locked -p bagua-cli -- capabilities --json
@@ -113,6 +117,108 @@ IO, output and input backpressure, SIGWINCH resize, exit status versus EOF,
 forced cleanup, launch failure, descriptor custody and cancellation. These
 qualify the component on the tested Linux machine; persistent hosting and
 distributed-artifact application scenes require their own evidence.
+
+## Local host and machine control
+
+Use an existing canonical absolute directory owned by the current user, with
+no group/other permission bits. The host creates a mode-0600 Unix socket there
+and validates each peer's kernel UID. Existing sockets or files are never
+replaced automatically. Graceful shutdown removes only the socket inode this
+host created. After an abnormal host exit, inspect any stale endpoint before
+removing it. The host has no implicit startup, TCP endpoint or remote identity
+service. `serve` runs in the foreground; SIGINT, SIGTERM and explicit `shutdown`
+drive owned-process retirement. There is no host-restart recovery contract.
+
+With the binary built, choose a real private directory in place of the example
+path below. Run `serve` in one terminal; the remaining commands use that host.
+On a fresh host the first session/window/pane IDs are 1/2/3; consume returned
+IDs rather than assuming these numbers in an existing host.
+
+```sh
+bagua --socket /absolute/private/bagua/host.sock serve
+bagua --socket /absolute/private/bagua/host.sock new --json
+bagua --socket /absolute/private/bagua/host.sock --control 1 start 3 \
+  --executable /bin/sh --cwd / --arg=-i \
+  --env PATH=/usr/bin:/bin --env TERM=xterm-256color
+bagua --socket /absolute/private/bagua/host.sock --control 1 send 3 'printf bagua-ready'
+bagua --socket /absolute/private/bagua/host.sock --control 1 key 3 enter
+bagua --socket /absolute/private/bagua/host.sock --session 1 inspect 3 --json
+bagua --socket /absolute/private/bagua/host.sock --control 1 close session 1 --json
+bagua --socket /absolute/private/bagua/host.sock shutdown
+```
+
+`new`, `window` and `split` create pending panes; only explicit `start` launches
+a program. `--session ID` joins as an observer for a command. `--control ID`
+explicitly joins and acquires control using the current canvas as its viewport;
+it refuses if another connection controls the session. These setup operations
+consume request numbers beginning at `--request`. Neither option transfers
+custody of hosted processes to the CLI. Command exit releases its connection
+and control. `attach` is currently a machine join operation; the interactive
+renderer is not implemented yet.
+
+`control` accepts one JSON `protocol::Request` per stdin line, on one persistent
+connection. It writes JSON messages to stdout and waits for each request's
+actual result before reading the next line. `watch` streams subscribed updates
+on its own connection. Both consume the same commands as other callers.
+For example, a first request can be:
+
+```json
+{"version":1,"id":1,"command":{"Workspace":{"Create":{"columns":80,"rows":24}}}}
+```
+
+Replies distinguish model application or admission from `Finished`. Input is
+finished only when its complete encoded byte sequence is written to the PTY;
+it does not claim application consumption. Explicit close removes model objects
+first and finishes only after owned PTY/direct-child reclamation. A native
+resize failure is a failed effect after model application and is reported
+without claiming rollback. `inspect` delivers a complete screen and process
+observation before finishing. Process facts include IO custody, retirement,
+EOF, actual exit code/signal and current fault. Screens carry revisions,
+styles/cursor/modes, and saturating byte, unsupported-sequence and bell counts.
+`Screen.bytes` counts bytes accepted by the terminal engine, including controls
+that make no visible cell change.
+
+The runtime admits 32 connections and 32 panes, including retired panes until
+reclamation. Session canvases are 2–256 columns and 1–64 rows, with at most
+262,144 retained pane cells across the host. This cold-start host retains live
+screens with zero scrollback; the terminal model's larger history profile is
+separate. Model changes are previewed against runtime bounds before committing.
+Primary/alternate screens, immutable snapshots and encoded messages have their
+own bounded copies; this is not an exact process-RSS limit.
+
+Each loop accepts at most four connections, handles one request and one 4096-byte
+read per connection, writes at most 65,536 socket bytes per connection, and
+per pane performs one 4096-byte application write, one query-reply write and one
+4096-byte output feed. It serializes at most two presentations per turn, rotating
+clients and panes and alternating catalog with terminal views. A 2 ms idle
+pause is not a scheduling deadline; native spawn and kernel calls have no hard
+wall-clock guarantee. The host never waits for a client to drain before driving
+PTYs and control.
+
+Requests are at most 128 KiB; presentation frames at most 8 MiB. Each connection
+holds at most one active frame plus 64 queued reliable messages totaling 256 KiB.
+Presentation is generated from current state only when that output slot is
+available; intermediate views coalesce. After four reliable frames, a subscribed
+connection yields one scheduling opportunity to presentation, so a continuous
+request stream cannot indefinitely suppress its view. Partial frames are never
+interleaved. There are at most 64 exact subscription
+targets and 32 pending inspections per connection. Pane input holds at most
+16 operations and 64 KiB of encoded bytes, retaining partial-write suffixes.
+Terminal query replies have a separate 128 KiB queue; exhaustion backpressures
+the PTY instead of discarding output. Admission refuses before queue mutation.
+
+Malformed or saturated connections close independently. An unfinished connection
+with no IO progress for ten seconds is closed. Reliable events are retained
+within an admitted connection, not persisted across disconnect: loss of the
+connection can leave a caller uncertain whether an effect completed. Inspect
+current state before choosing further work; reconnect does not authorize replay.
+Accepted input continues under host custody after disconnect. Graceful host
+shutdown drains socket output for up to two seconds after native reclamation.
+
+Source tests qualify the protocol codec, native socket/component ownership and
+host composition. Formal independently distributed host/client application
+scenes, pressure and installed behavior remain with the later Seatrial/release
+leaves. No special Codex or tmux execution path exists.
 
 ## Terminal profile
 

@@ -10,5 +10,8 @@ publish.workspace = true
 name = "protocol"
 
 [dependencies]
+serde.workspace = true
 terminal.workspace = true
 workspace.workspace = true
+
+serde_json.workspace = true

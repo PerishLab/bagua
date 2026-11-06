@@ -1,6 +1,6 @@
 use crate::{Extent, Failure, Revision};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Color {
     Default,
     Indexed(u8),
@@ -17,7 +17,7 @@ impl From<vt100::Color> for Color {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Style {
     pub foreground: Color,
     pub background: Color,
@@ -28,7 +28,7 @@ pub struct Style {
     pub inverse: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Cell {
     pub text: String,
     pub width: u8,
@@ -60,7 +60,7 @@ impl From<&vt100::Cell> for Cell {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tracking {
     Off,
     Press,
@@ -69,14 +69,14 @@ pub enum Tracking {
     Motion,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Encoding {
     Legacy,
     Utf8,
     Sgr,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Modes {
     pub cursor: bool,
     pub keypad: bool,
@@ -111,7 +111,7 @@ impl From<&vt100::Screen> for Modes {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Cursor {
     pub position: crate::Point,
     pub visible: bool,

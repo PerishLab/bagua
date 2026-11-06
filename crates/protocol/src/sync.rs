@@ -2,14 +2,14 @@ use crate::Failure;
 use terminal::Revision;
 use workspace::Target;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Update {
     pub target: Target,
     pub base: Option<Revision>,
     pub revision: Revision,
 }
 
-#[derive(Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Cursor {
     target: Target,
     revision: Option<Revision>,

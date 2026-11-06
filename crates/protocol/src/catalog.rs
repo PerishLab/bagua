@@ -1,4 +1,4 @@
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Component {
     Terminal,
     Pty,
@@ -23,7 +23,7 @@ impl Component {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum State {
     Model,
     Available,
@@ -44,13 +44,13 @@ impl State {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Capability {
     pub component: Component,
     pub state: State,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Profile {
     pub runtime: bool,
     pub components: Vec<Capability>,

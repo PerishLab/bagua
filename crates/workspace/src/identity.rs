@@ -1,6 +1,8 @@
 use std::num::NonZeroU64;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord,
+)]
 pub struct Id(NonZeroU64);
 
 impl Id {
@@ -13,7 +15,9 @@ impl Id {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord,
+)]
 pub enum Target {
     Session(Id),
     Window(Id),

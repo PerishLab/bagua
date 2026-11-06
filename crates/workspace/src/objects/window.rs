@@ -1,7 +1,7 @@
 use crate::{Failure, Geometry, Id, Pane, Placement, Split, layout::Tree};
 use std::collections::BTreeMap;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Window {
     id: Id,
     focus: Id,

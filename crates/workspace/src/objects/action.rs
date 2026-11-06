@@ -1,26 +1,26 @@
 use crate::{Geometry, Id, Sizing, Snapshot, Split, Target};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Creation {
     pub session: Id,
     pub window: Id,
     pub pane: Id,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Change {
     pub revision: u64,
     pub created: Vec<Target>,
     pub retired: Vec<Id>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Outcome {
     Snapshot(Snapshot),
     Changed(Change),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Operation {
     Create(Geometry),
     Read,
