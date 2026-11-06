@@ -97,7 +97,19 @@ with thin executable smoke checks. Formally distributed-artifact multi-process
 qualification belongs to the independent Seatrial scene, using only public
 interfaces and isolated resources. Runtime source carries no testing mode.
 
-The CLI exposes `capabilities` and structured refusal now. A complete VT
-interpreter, PTY adapter, IPC host, interactive renderer and native platform
-qualification require their own evidence. Do not turn the model tests into
-claims of process persistence or real terminal rendering.
+The CLI exposes `capabilities` and structured refusal now. The terminal crate
+implements the selected in-memory VT profile, snapshots and input encoding;
+`PROFILE`, `EXCLUDED`, resource constants and executable tests own its exact
+scope. Its dependency disables the growing OSC buffer. Do not enable that
+feature transitively without requalifying the resource contract. The isolated
+callback adapter preserves only upstream trait signatures; event and query
+policy remains Bagua source outside that Ectropy boundary.
+
+Full grapheme shaping, history reflow, DECAWM switching and extended keyboard
+protocols are outside the current profile. Actual application needs may
+challenge that selection before the first Linux closure. Preserve explicit
+unsupported reports and refusals rather than reporting full VT coverage.
+The terminal capability remains a model until actual hosting exists. A PTY
+adapter, IPC host, interactive renderer and native platform qualification
+require their own evidence. Do not turn the model tests into claims of process
+persistence or real terminal rendering.

@@ -19,3 +19,4 @@ bagua = { path = "crates/lib" }
 clap = { version = "4", features = ["derive"] }
 plumb = { version = "0", registry = "perish", default-features = false }
 serde_json = "1"
+vt100 = { version = "0.18", default-features = false }
