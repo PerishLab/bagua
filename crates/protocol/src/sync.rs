@@ -9,13 +9,16 @@ pub struct Update {
     pub revision: Revision,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Cursor {
     target: Target,
     revision: Option<Revision>,
 }
 
 impl Cursor {
+    pub fn target(&self) -> Target {
+        self.target
+    }
     pub fn new(target: Target) -> Self {
         Self {
             target,

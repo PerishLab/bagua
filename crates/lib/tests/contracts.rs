@@ -6,6 +6,9 @@ use workspace::{Geometry, Id, Session};
 fn detach() {
     let controller = Id::new(2).unwrap();
     let mut session = Session::new(Id::new(1).unwrap(), Geometry::new(80, 24).unwrap());
+    session
+        .join(controller, Geometry::new(80, 24).unwrap())
+        .unwrap();
     session.acquire(controller).unwrap();
     let mut host = Host::new(session);
     host.detach(controller);
@@ -18,11 +21,9 @@ fn detach() {
 #[test]
 fn unavailable() {
     for command in [
-        Command::Create,
-        Command::Sessions,
-        Command::Attach {
-            session: Id::new(1).unwrap(),
-        },
+        Command::create(80, 24).unwrap(),
+        Command::Workspace(workspace::Operation::Read),
+        Command::attach(1, 80, 24).unwrap(),
     ] {
         assert_eq!(
             bagua::dispatch(Request::new(command)),
@@ -31,7 +32,8 @@ fn unavailable() {
     }
     let request = Request {
         version: 0,
-        command: Command::Create,
+        id: 1,
+        command: Command::create(80, 24).unwrap(),
     };
     assert_eq!(bagua::dispatch(request), Err(Failure::Version));
 }

@@ -1,7 +1,14 @@
 use workspace::{Failure, Geometry, Id, Session};
 
 fn session() -> Session {
-    Session::new(Id::new(1).unwrap(), Geometry::new(213, 50).unwrap())
+    let mut session = Session::new(Id::new(1).unwrap(), Geometry::new(213, 50).unwrap());
+    session
+        .join(Id::new(2).unwrap(), Geometry::new(213, 50).unwrap())
+        .unwrap();
+    session
+        .join(Id::new(3).unwrap(), Geometry::new(213, 50).unwrap())
+        .unwrap();
+    session
 }
 
 #[test]

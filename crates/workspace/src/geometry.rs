@@ -14,6 +14,10 @@ impl Geometry {
         })
     }
 
+    pub fn valid(self) -> bool {
+        self.columns() >= 2
+    }
+
     pub fn columns(self) -> u16 {
         self.columns.get()
     }

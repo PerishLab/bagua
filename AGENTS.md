@@ -47,6 +47,34 @@ incremental history requires a complete snapshot. Stale or foreign-target
 updates cannot replace installed state. These contracts do not freeze a wire
 encoding before actual transport qualification.
 
+World owns the authoritative object tree and ID allocation. Snapshots expose
+read-only copies, not another writable authority. Window/pane ownership is
+unique; IDs are not reused within one world. Closing a last pane removes its
+window, while a session can remain empty. Exit retains the pane. Trusted native
+outcomes use World observation, not a client command. A retired ID cannot be
+recreated by a late outcome. Model retirement returns exact cleanup intents;
+the host retains resource custody until actual native completion.
+
+Joining never acquires control. Viewport reports from observers update only
+their connection state. Acquisition and transfer validate the recipient's
+viewport before changing automatic geometry. An explicit fixed acquisition
+can recover control from a viewport too small for the existing layout. Layout
+uses one separator cell, two minimum columns and one minimum row per pane;
+ratios, limits and failure atomicity belong to the workspace model.
+
+Operation and terminal input contracts are consumed through one protocol
+request envelope. The pure evaluator reports applied model state or accepted
+native intents. Neither is evidence for a completed native effect. Completion,
+process and presentation events remain separate. Replica validation binds
+target, baseline and the payload's internal revision before committing either
+state or cursor. Latest is a single pending presentation slot; reliable events
+and PTY bytes must never be given that droppable channel.
+Subscriptions bind to the host's connection, require target-session membership
+and retain at most 64 distinct exact targets. Cancellation remains meaningful
+after target retirement. Resume revisions do not establish retained history;
+the host must provide a full snapshot when a baseline is unavailable and
+qualify actual subscription, transport and byte-budget enforcement.
+
 ## First product
 
 A client disconnect or crash does not close the persistent host or its

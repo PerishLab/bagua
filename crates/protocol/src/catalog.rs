@@ -50,7 +50,7 @@ pub struct Capability {
     pub state: State,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Profile {
     pub runtime: bool,
     pub components: Vec<Capability>,
