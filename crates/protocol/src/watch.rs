@@ -10,6 +10,9 @@ pub struct Subscriptions {
 }
 
 impl Subscriptions {
+    pub fn targets(&self) -> impl Iterator<Item = Target> + '_ {
+        self.targets.iter().copied()
+    }
     pub fn contains(&self, target: Target) -> bool {
         self.targets.contains(&target)
     }

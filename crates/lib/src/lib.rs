@@ -1,4 +1,5 @@
 mod host;
+pub mod ipc;
 mod profile;
 
 pub use host::Host;
@@ -8,7 +9,10 @@ use protocol::{Command, Failure, Profile, Request};
 pub fn dispatch(request: Request) -> Result<Profile, Failure> {
     match request.check()? {
         Command::Capabilities => Ok(profile()),
-        Command::Workspace(_)
+        Command::Start { .. }
+        | Command::Inspect(_)
+        | Command::Shutdown
+        | Command::Workspace(_)
         | Command::Send { .. }
         | Command::Subscribe { .. }
         | Command::Unsubscribe(_) => Err(Failure::Unavailable),
@@ -35,6 +39,9 @@ fn apply(
     use protocol::{Intent, Outcome, Status};
     match request.check()? {
         Command::Capabilities => Ok(Status::Applied(Outcome::Profile(profile()))),
+        Command::Start { .. } | Command::Inspect(_) | Command::Shutdown => {
+            Err(Failure::Unavailable)
+        }
         Command::Subscribe { target, after } => {
             world.watch(actor, target)?;
             Ok(Status::Accepted(Intent::Subscribe { target, after }))

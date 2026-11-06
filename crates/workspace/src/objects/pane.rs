@@ -1,6 +1,6 @@
 use crate::{Failure, Id};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum State {
     Pending,
     Failed,
@@ -8,7 +8,7 @@ pub enum State {
     Exited(Option<i32>),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Pane {
     id: Id,
     state: State,

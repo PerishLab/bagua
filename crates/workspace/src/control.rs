@@ -1,6 +1,6 @@
 use crate::Id;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Failure {
     Busy,
     Observer,
@@ -37,7 +37,7 @@ impl Failure {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Control {
     owner: Option<Id>,
 }

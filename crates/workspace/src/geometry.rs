@@ -1,6 +1,6 @@
 use std::num::NonZeroU16;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Geometry {
     columns: NonZeroU16,
     rows: NonZeroU16,
@@ -27,7 +27,7 @@ impl Geometry {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Sizing {
     Automatic(Geometry),
     Fixed(Geometry),

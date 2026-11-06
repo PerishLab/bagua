@@ -1,7 +1,7 @@
 use crate::{Creation, Failure, Geometry, Id, Pane, Session, Snapshot, State, Target, Window};
 use std::collections::BTreeMap;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct World {
     pub(crate) sessions: BTreeMap<Id, Session>,
     pub(crate) revision: u64,

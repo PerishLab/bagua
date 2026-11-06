@@ -1,6 +1,6 @@
 use crate::{Failure, Geometry, Id, Placement, Rect, Split};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Tree {
     Pane(Id),
     Split {

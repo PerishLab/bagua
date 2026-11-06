@@ -15,7 +15,7 @@ pub use mouse::{Action, Button, Direction, Modifiers, Mouse, Point};
 pub use profile::{CELLS, CHUNK, COLUMNS, EXCLUDED, HISTORY, PROFILE, ROWS, SOURCE};
 pub use screen::{Cell, Color, Cursor, Encoding, Modes, Snapshot, Style, Tracking};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Failure {
     Capacity,
     Input,
@@ -25,7 +25,7 @@ pub enum Failure {
     Revision,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Extent {
     width: NonZeroU16,
     height: NonZeroU16,
@@ -59,7 +59,18 @@ impl Extent {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    serde::Serialize,
+    serde::Deserialize,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+)]
 pub struct Revision(u64);
 
 impl Revision {

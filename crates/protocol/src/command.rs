@@ -1,7 +1,7 @@
 use crate::Failure;
 use workspace::{Geometry, Id, Operation};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Input {
     Text(String),
     Paste(String),
@@ -29,9 +29,16 @@ impl Input {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub enum Command {
     Capabilities,
+    Start {
+        pane: Id,
+        program: crate::wire::Program,
+    },
+    Inspect(Id),
+    Shutdown,
     Subscribe {
         target: workspace::Target,
         after: Option<terminal::Revision>,

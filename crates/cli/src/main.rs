@@ -1,9 +1,16 @@
 mod args;
 mod command;
+mod error;
+mod remote;
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+mod serve;
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+mod session;
 
 use args::Args;
 use clap::Parser;
-use protocol::{Failure, Request};
+use error::Error;
+use protocol::Request;
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
@@ -21,7 +28,10 @@ fn main() -> ExitCode {
     }
 }
 
-fn execute(args: &Args) -> Result<(), Failure> {
+fn execute(args: &Args) -> Result<(), Error> {
+    if args.socket.is_some() || matches!(args.action, args::Action::Serve | args::Action::Control) {
+        return remote::execute(args);
+    }
     let command = command::parse(&args.action)?;
     let profile = bagua::dispatch(Request::identified(args.request, command)?)?;
     if args.json {
@@ -46,7 +56,7 @@ fn execute(args: &Args) -> Result<(), Failure> {
             })
         );
     } else {
-        println!("Terminal hosting: absent");
+        println!("Terminal hosting available: {}", profile.runtime);
         for capability in profile.components {
             println!(
                 "{}: {}",
@@ -58,7 +68,8 @@ fn execute(args: &Args) -> Result<(), Failure> {
     Ok(())
 }
 
-fn report(error: Failure, json: bool, request: u64) {
+fn report(error: Error, json: bool, request: u64) {
+    let request = error.correlation(request);
     if json {
         eprintln!(
             "{}",

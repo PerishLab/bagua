@@ -1,13 +1,13 @@
 use crate::{Failure, Geometry, Id};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Axis {
     Columns,
     Rows,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Ratio(u16);
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Ratio(#[serde(deserialize_with = "ratio")] u16);
 
 impl Ratio {
     pub fn new(value: u16) -> Option<Self> {
@@ -25,20 +25,20 @@ impl Default for Ratio {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Split {
     pub axis: Axis,
     pub ratio: Ratio,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Rect {
     pub x: u16,
     pub y: u16,
     pub geometry: Geometry,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Placement {
     pub pane: Id,
     pub rect: Rect,
@@ -80,4 +80,11 @@ impl Rect {
         }
         (left, right)
     }
+}
+
+fn ratio<'de, D: serde::Deserializer<'de>>(decoder: D) -> Result<u16, D::Error> {
+    let value = <u16 as serde::Deserialize>::deserialize(decoder)?;
+    Ratio::new(value)
+        .map(Ratio::value)
+        .ok_or_else(|| serde::de::Error::custom("ratio must be between 1 and 999"))
 }
