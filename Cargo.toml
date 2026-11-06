@@ -1,0 +1,21 @@
+[workspace]
+members = ["crates/terminal", "crates/pty", "crates/workspace", "crates/protocol", "crates/client", "crates/lib", "crates/cli"]
+resolver = "3"
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/PerishLab/bagua"
+publish = false
+
+[workspace.dependencies]
+terminal = { package = "bagua-terminal", path = "crates/terminal" }
+pty = { package = "bagua-pty", path = "crates/pty" }
+workspace = { package = "bagua-workspace", path = "crates/workspace" }
+protocol = { package = "bagua-protocol", path = "crates/protocol" }
+client = { package = "bagua-client", path = "crates/client" }
+bagua = { path = "crates/lib" }
+clap = { version = "4", features = ["derive"] }
+plumb = { version = "0", registry = "perish", default-features = false }
+serde_json = "1"
