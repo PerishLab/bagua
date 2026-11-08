@@ -17,14 +17,63 @@ operations without a host connection. Linux x86_64 has a persistent local host
 and machine-control CLI, plus interactive clients. Formal artifact qualification
 and installation remain separate delivery work.
 
+## Daily-use entry
+
+Use the checked-in `bagua.toml` as an explicit profile in a modern terminal
+connected to Linux. Review it and validate the selected file before entering:
+
+```sh
+bagua --config /absolute/path/bagua.toml config
+bagua --config /absolute/path/bagua.toml enter workspace
+```
+
+Normal entry creates the exact named workspace if absent and requests control.
+After detaching, the same entry reconnects to its existing host and programs.
+`enter workspace --observe` requires an existing workspace and never acquires
+control. A default endpoint is discovered only for normal entry/serve/config;
+machine commands require an explicit socket or a profile containing `host.socket`.
+Never remove an unknown endpoint to make a connection succeed.
+
+The example selects this profile; compiled defaults still use Ctrl-G:
+
+| Example binding | Action |
+| --- | --- |
+| Ctrl-Q twice | Send literal Ctrl-Q to the application |
+| Alt-Q, or Ctrl-Q then d | Detach and restore the terminal |
+| Ctrl-Q then `\` / `-` | Split columns / rows using foreground cwd |
+| Ctrl-Q then `=` | New window using foreground cwd |
+| Alt-1 through Alt-9 | Select the current 1-based window index |
+| Ctrl-Q then Tab / w | Next pane / next window |
+| Ctrl-Q then PageUp / End | Browse history / return live |
+| Ctrl-Q then r | Reload all validated client preferences atomically |
+| Ctrl-Q then x | Close the focused pane and reclaim its owned process |
+
+Mouse drag on a divider changes the real application geometry. Wheel reads
+history when application tracking is off; Shift-wheel requests local history
+when tracking is active. Drag-release copies the current frozen page under the
+configured policy. The example explicitly opts into OSC52; emitted encoding
+is not proof that ET or the OS clipboard accepted it. Enter and ShiftEnter are
+distinct when the hosted application negotiates supported keyboard flag 1,
+including compound requests 5/7; unsupported flags are not advertised.
+
+Use an independent outer terminal for initial human verification: another
+multiplexer using Ctrl-Q may intercept the example prefix. Detach preserves
+applications; closing panes or explicitly shutting down a known owned host is
+a different operation. This profile does not migrate or stop tmux sessions.
+The earlier v0.1.0 cannot read the current configuration or connect to a wire7
+host. Rollback uses its own matching executable, documented old CLI and separate
+endpoint; it never replaces an unknown live host or promises history recovery
+after host restart.
+
 ## Distribution and runtime
 
 The first distribution target is Linux x86_64 GNU, delivered as a `tar.gz`
 containing one executable named `bagua` at its root. No resource directory,
 runtime Cargo invocation, development checkout or internal Rust SDK is needed.
 macOS, Windows, musl and package-manager media are not declared distribution
-targets. Source Issue #26 adds Linux automatic host startup; installed v0.1.0
-still requires explicit startup until a containing release is qualified. MIT licensing covers Bagua's source; dependencies
+targets. Automatic host startup belongs to the daily-use interface below. The earlier
+v0.1.0 requires explicit startup and cannot consume this configuration or wire
+version. Use a matching release artifact for each host and its clients. MIT licensing covers Bagua's source; dependencies
 retain their own licenses.
 
 The release authority is `https://releases.bagua.perish.uk`. Plumb defines the
@@ -55,53 +104,54 @@ and `--bin-dir` paths outside the stable defaults (`~/.local/share/bagua` and
 `~/.local/bin`). Keep the executable installation apart
 from the private runtime directory. The foreground `serve` command receives an
 absolute socket path under an existing, canonical, user-owned mode-0700
-directory. Ordinary source entry can select and create its private runtime
+directory. Ordinary named entry can select and create its private runtime
 directory as described below; the socket is its only runtime file. No session
 persistence or runtime log is created there. Use a fresh directory for each isolated scene, and explicit
 homes/data for its hosted programs. No production session is a test fixture.
 
 ## Published-artifact qualification
 
-The daily-use source declaration adds `bagua-config`, `bagua-entry`,
-`bagua-history`, `bagua-input`, `bagua-mouse` and `bagua-display` to the original
-three cases below. Seatrial #83 owns publication of their independent materials;
-#31/#84 require the complete matching declaration on the exact candidate.
-Declaring these names does not claim publication or a passing qualification.
-
-`plumb.toml` declares Linux cases `bagua-workspace`, `bagua-lifecycle` and
-`bagua-flow`, with the official Seatrial runner and Depot scene channel following
-stable and the Images runtime following stable. The exact resolved generations,
-runner, image, source, marker, publication attempt and content digests belong in
-each run's evidence. Declarations neither publish scenes nor qualify a product.
+`plumb.toml` requires all nine Linux cases below. The official Seatrial runner
+and complete Depot Scene generation follow stable; the Images runtime follows
+stable. Exact source, marker, publication attempt, archive, effective inputs,
+runner, Scene generation and image identities belong to each qualification.
+A declaration, source check or complete distribution does not imply a pass.
 
 | Required case | Public behavior to qualify |
 | --- | --- |
-| `bagua-workspace` | Create/start, shell input, splits/windows/focus, keyboard/mouse/paste and local copy, different viewports, readonly refusal, explicit control transfer, fixed/automatic geometry, detach/reconnect and terminal restoration |
-| `bagua-lifecycle` | Client loss preserves host/programs; process exit, EOF, pane/session close and host shutdown remain distinct; owned resources are reclaimed and lane cleanup succeeds |
-| `bagua-flow` | Fragmented UTF-8, output floods and slow/disappearing clients preserve admitted bytes; narrow/tiny viewport clipping is bounded; reconnect/obsolete revisions require correct full state and bounded resources |
+| `bagua-workspace` | Sessions, explicit launch, layout/focus, control transfer, observer refusal, sizing, real PTY input/copy, detach and terminal restoration |
+| `bagua-lifecycle` | Client loss preserves applications; exit/EOF/closure differ; launch failure and owned native reclamation remain observable |
+| `bagua-flow` | Exact flood bytes/bells, fragmented UTF-8, slow/lost readers, full resynchronization, admitted input custody, tiny viewports and capacity recovery |
+| `bagua-config` | Strict discovery/validation, redacted diagnostics, failed whole reload and successful client preference reload |
+| `bagua-entry` | Named/default entry and host races, identity/unknown-endpoint refusal, foreground cwd inheritance, immediate input routing and deleted-cwd refusal |
+| `bagua-history` | Full 50000-row reads at 80/160 columns, retention/byte budgets/fair share, scope/epoch/eviction refusal, frozen pages, keyboard/wheel navigation and reconnect |
+| `bagua-input` | Actual application bytes for keyboard flags 1/5/7, stack/reset boundaries, prefix/release/paste, ordered layout input, 32-window/index coverage and failure acknowledgement without replay |
+| `bagua-mouse` | Actual divider widths/focus, observer refusal, local/manual/release copy, Unicode/base64/ST, limit refusal and blocked application OSC |
+| `bagua-display` | Authoritative header/content height, observed cwd, decor reload, small-view feedback, complete paint output and bounded refresh traffic |
 
-Seatrial owns the independently distributed scene and assertions. It drives the
-public CLI or the candidate’s declared wire version using case-owned PTYs, programs, sockets and storage, with
-no source checkout, private crate links, runtime Cargo builds or production test
-switch. `control` provides persistent JSON requests/results; `watch` provides
-subscriptions and `inspect` provides full screens/process facts. The host and
-client commands below are the same consumer entry points the scene uses.
+Seatrial owns the independently published black-box programs. They drive the
+public CLI and declared wire version through case-owned PTYs, programs, sockets
+and files. There is no product source checkout, private crate link, runtime
+Cargo build or product testing switch. Required cases cannot be dropped to
+manufacture qualification. Preparation dependencies are not automatically
+verified subjects. Seatrial #83/#88 record the daily-use material lineage;
+Bagua #31 and Seatrial #84 retain candidate publication and actual execution.
 
-Bagua issue #12 establishes distribution and this entry contract; Seatrial #66
-delivers and executes the required scenes. Until that evidence exists, declared
-cases remain unqualified. A complete distribution, source tests or green ship
-workflow does not imply a Windtun pass. Inspect the latest attempt under
-`v1/releases/<channel>/<marker>/windtun/` and use `plumb windtun check` for current
-public qualification. Missing, pending, failed or unsupported evidence remains
-nonpositive. Qualification, content association, stable promotion enforcement
-and installed consumption are separate facts; no active Bagua promotion gate or
-stable/install qualification is claimed by this declaration.
+Inspect the immutable attempt under
+`v1/releases/<channel>/<marker>/windtun/` and use `plumb windtun check` to verify
+current public qualification. All declared cases and successful lane cleanup
+are required. Missing, pending, failed, changed or unsupported evidence remains
+nonpositive. Qualification, content association, stable promotion and installed
+consumption are separate facts. This declaration alone establishes none of them.
+Linux automated fixtures do not establish macOS/Windows support, ET behavior,
+the actual OS clipboard or subjective daily comfort; independent Bagua #33
+retains those human checks.
 
 ## User configuration
 
-The configuration source change tracked by Issue #25 adds `bagua config`,
-`--config PATH` and `--no-config`. Installed use needs a containing release;
-the earlier v0.1.0 stable does not contain these commands. The checked-in
+The daily-use interface includes `bagua config`, `--config PATH` and
+`--no-config`. The earlier v0.1.0 stable does not contain these commands;
+use a containing, qualified artifact for installed consumption. The checked-in
 [bagua.toml](bagua.toml) is a runnable example, not an automatically loaded
 working-directory configuration.
 
@@ -120,8 +170,8 @@ bagua --config /absolute/path/bagua.toml --socket /absolute/private/host.sock se
 bagua --config /absolute/path/bagua.toml
 ```
 
-Schema version 1 is the default when omitted. Supported sections are `client`,
-`host`, `history`, `workspace`, `bindings` and `program`. Unknown fields, duplicate keys and unsupported versions
+Schema version 1 is the default when omitted. Supported sections are `client`, `host`, `history`, `workspace`, `bindings`,
+`mouse`, `clipboard`, `header`, `status` and `program`. Unknown fields, duplicate keys and unsupported versions
 refuse before interactive mode or native startup. `client.prefix` is a control
 letter such as C-g or C-q; C-h/C-i/C-j/C-m are reserved because the decoder maps
 them to navigation keys. `client.escape_ms` is 0–1000 milliseconds, default 50;
@@ -469,8 +519,9 @@ qualification or the user's final visual verification.
 
 ## History
 
-Issue #27 adds source history; a containing candidate, independent qualification
-and stable installation are still required by #31/#32 before user handoff.
+History belongs to the daily-use interface. A containing distribution, current
+independent qualification and actual installation remain distinct evidence;
+v0.1.0 has no scrollback. Issue #27 records the source contract.
 `[history]` configures `lines` (0–50000, default 50000), `bytes` (0–67108864,
 default 67108864) and `total` (bytes–268435456, default 268435456). Only the
 host's startup configuration chooses retention. A connecting client's file
