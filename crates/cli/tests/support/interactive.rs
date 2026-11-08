@@ -1,6 +1,8 @@
 use bagua::ipc::{Connection, Service};
 #[path = "interactive/startup.rs"]
 mod startup;
+#[path = "interactive/view.rs"]
+mod view;
 use protocol::{Command, Request, wire::Message};
 use pty::{Launch, Process, Size, Transfer};
 use radicula_process::Environment;

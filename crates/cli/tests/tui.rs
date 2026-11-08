@@ -9,6 +9,8 @@ mod history;
 mod interactive;
 #[path = "support/keyboard.rs"]
 mod keyboard;
+#[path = "support/routing.rs"]
+mod routing;
 use interactive::{Fixture, Peer, SHELL};
 use pty::Size;
 use std::time::{Duration, Instant};

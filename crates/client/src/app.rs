@@ -83,6 +83,10 @@ impl App {
         self.session()
             .is_some_and(|s| s.controller() == Some(self.actor))
     }
+    pub fn revision(&self) -> Option<u64> {
+        self.catalog.as_ref().map(Snapshot::revision)
+    }
+
     pub fn focus(&self) -> Option<Id> {
         let session = self.session()?;
         session

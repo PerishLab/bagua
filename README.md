@@ -314,6 +314,52 @@ Enter/Shift+Enter bytes, withdrawal to legacy mode, configuration reload and
 terminal restoration. Actual terminal emulator/Codex behavior and pressure
 remain Seatrial qualification, rather than a full Kitty support claim.
 
+## Input after layout and focus changes
+
+Issue #40 fixes source input that could otherwise reach the old pane when text
+immediately followed a split or focus shortcut. Keyboard and paste gestures
+are kept without a pane target until preceding workspace mutations settle.
+The client waits for their applied model revision in a validated catalog and
+reliable completion; a new pane also waits for its native start result. Native
+retirement is an accepted cleanup intent with an already applied model change,
+and remains distinct from finished resource reclamation. No optimistic mutable
+World is installed in the client. Ordinary viewport reports do not switch the
+input target and need no focus barrier.
+
+Deferred gestures are FIFO, at most 64 entries and 64 KiB, in addition to the
+existing command and keyboard budgets. Adjacent unsent text may batch up to
+4096 UTF-8 bytes. Once the gesture buffer lacks room for a complete decoded
+event, input staging backpressures instead of consuming that event. Input that
+has already acquired a target and reached command admission is never retargeted
+or replayed. Multiple split/window/switch gestures therefore resolve against
+the results of preceding gestures. Clipboard or history gestures also keep their
+position; reload waits behind prior gestures, while help and detach remain
+local controls. Detach drives previously captured gestures and admitted commands
+to completion within its existing ten-second bound. A suspended tiny viewport
+holds deferred gestures until it becomes drawable again.
+
+Mouse handling first drains earlier keyboard intents. A click's focus command
+precedes later keyboard target selection. A mouse gesture while a prior layout
+is unresolved or earlier gestures still need draining refuses explicitly; its
+coordinates are never silently interpreted against a different layout. Local
+pointer policies are further specified by Issue #29.
+
+A rejected layout/focus intent or native start pauses application input and
+explicitly refuses the following unsent gestures. They are never sent to the
+old pane as a fallback. Press an unmodified Escape to acknowledge and resume;
+Escape is reserved for this acknowledgement while paused. Buffered gestures are
+not replayed. Acknowledgement does not bypass an unresolved model outcome: a
+missing applied revision remains unknown and requires host inspection or detach.
+Help, reload and detach remain available while paused. Loss of the connection
+keeps the existing uncertain-outcome rule and never authorizes replay.
+
+The own-CLI regression checks batch shortcuts and literal shell commands in one
+PTY write, then independently inspect each pane. They cover split, new window,
+Alt return, mouse focus, close/fallback and explicit failure acknowledgement;
+pure protocol checks retain text until fresh model/start evidence and refuse
+writes after transfer. These source checks do not replace Seatrial #83's
+independent distributed-artifact workflow qualification.
+
 ## History
 
 Issue #27 adds source history; a containing candidate, independent qualification
