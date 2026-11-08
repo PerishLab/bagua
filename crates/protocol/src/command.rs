@@ -38,6 +38,7 @@ pub enum Command {
         program: crate::wire::Program,
     },
     Inspect(Id),
+    Describe(Id),
     History {
         pane: Id,
         read: crate::wire::Read,

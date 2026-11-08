@@ -41,9 +41,14 @@ pub(super) fn catalog(snapshot: &Snapshot) -> Result<(), Failure> {
         return Err(Failure::Capacity);
     }
     let mut ids = BTreeSet::new();
+    let mut names = BTreeSet::new();
     let mut count = 0;
     let mut cells = 0;
     for session in snapshot.sessions() {
+        if !workspace::valid(session.name()) || !names.insert(session.name()) {
+            return Err(Failure::Payload);
+        }
+        let mut windows = BTreeSet::new();
         let size = session.geometry();
         if !size.valid() || size.columns() > 256 || size.rows() > 64 {
             return Err(Failure::Capacity);
@@ -52,6 +57,9 @@ pub(super) fn catalog(snapshot: &Snapshot) -> Result<(), Failure> {
             return Err(Failure::Identity);
         }
         for window in session.windows() {
+            if !workspace::valid(window.name()) || !windows.insert(window.name()) {
+                return Err(Failure::Payload);
+            }
             if !ids.insert(window.id()) {
                 return Err(Failure::Identity);
             }

@@ -29,9 +29,17 @@ pub(crate) fn listen() -> Result<(Signals, Arc<AtomicBool>), Error> {
     Ok((signals, stop))
 }
 
-pub(crate) fn run(path: &Path, history: bagua::config::History) -> Result<(), Error> {
+pub(crate) fn run(
+    path: &Path,
+    history: bagua::config::History,
+    identity: protocol::wire::Image,
+    orphan: bool,
+) -> Result<(), Error> {
+    if orphan {
+        rustix::process::setsid().map_err(std::io::Error::from)?;
+    }
     let (_signals, stop) = listen()?;
-    let mut service = bagua::ipc::Service::configured(path, history)?;
+    let mut service = bagua::ipc::Service::identified(path, history, Some(identity))?;
     service.run(&stop)?;
     Ok(())
 }

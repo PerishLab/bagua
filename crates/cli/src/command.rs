@@ -4,10 +4,15 @@ use workspace::{Geometry, Operation, Ratio, Sizing, Split, Target};
 
 pub(crate) fn parse(action: &Action) -> Result<Command, Failure> {
     let operation = match action {
+        Action::Rename { kind, id, name } => Operation::Rename {
+            target: target(*kind, *id)?,
+            name: name.clone(),
+        },
         Action::Config
+        | Action::Enter { .. }
         | Action::Open { .. }
         | Action::Connect { .. }
-        | Action::Serve
+        | Action::Serve { .. }
         | Action::Control => {
             return Err(Failure::Unavailable);
         }
@@ -50,7 +55,13 @@ pub(crate) fn parse(action: &Action) -> Result<Command, Failure> {
             });
         }
         Action::Unwatch { kind, id } => return Ok(Command::Unsubscribe(target(*kind, *id)?)),
-        Action::New { size } => Operation::Create(geometry(size)?),
+        Action::New { size, name } => match name {
+            Some(name) => Operation::Named {
+                geometry: geometry(size)?,
+                name: name.clone(),
+            },
+            None => Operation::Create(geometry(size)?),
+        },
         Action::List => Operation::Read,
         Action::Attach { session, size } => Operation::Join {
             session: Command::identity(*session)?,

@@ -45,7 +45,7 @@ pub(crate) struct Args {
     )]
     pub request: u64,
     #[command(subcommand)]
-    pub action: Action,
+    pub action: Option<Action>,
 }
 
 #[derive(Group)]
@@ -71,6 +71,24 @@ pub(crate) enum Kind {
 
 #[derive(Subcommand)]
 pub(crate) enum Action {
+    #[command(
+        about = "Enter an exact named workspace, creating it if absent and requesting control"
+    )]
+    Enter {
+        name: Option<String>,
+        #[arg(long, help = "Require an existing named workspace")]
+        existing: bool,
+        #[arg(long, help = "Observe an existing workspace without acquiring control")]
+        observe: bool,
+        #[arg(
+            long,
+            conflicts_with = "observe",
+            help = "Acquire while preserving the current canvas"
+        )]
+        fixed: bool,
+        #[command(flatten)]
+        launch: Launch,
+    },
     #[command(about = "Validate and show active configuration, sources and reload policy")]
     Config,
     #[command(about = "Open a session, explicitly launch a program and enter interactive control")]
@@ -89,7 +107,10 @@ pub(crate) enum Action {
         launch: Launch,
     },
     #[command(about = "Run the persistent host in the foreground")]
-    Serve,
+    Serve {
+        #[arg(long, hide = true)]
+        orphan: bool,
+    },
     #[command(about = "Exchange JSON requests and messages over one persistent connection")]
     Control,
     #[command(about = "Gracefully stop this host and reclaim its owned processes")]
@@ -132,6 +153,8 @@ pub(crate) enum Action {
     New {
         #[command(flatten)]
         size: Dimensions,
+        #[arg(long)]
+        name: Option<String>,
     },
     #[command(about = "List sessions")]
     List,
@@ -167,6 +190,13 @@ pub(crate) enum Action {
     },
     #[command(about = "Select a pane and its window")]
     Focus { pane: u64 },
+    #[command(about = "Rename an exact session or window without changing its identity")]
+    Rename {
+        #[arg(value_enum)]
+        kind: Kind,
+        id: u64,
+        name: String,
+    },
     #[command(about = "Close one exact object")]
     Close {
         #[arg(value_enum)]
@@ -194,6 +224,31 @@ pub(crate) enum Action {
         #[arg(long)]
         paste: bool,
     },
+}
+
+static DEFAULT: Action = Action::ordinary();
+
+impl Action {
+    pub(crate) const fn ordinary() -> Self {
+        Self::Enter {
+            name: None,
+            existing: false,
+            observe: false,
+            fixed: false,
+            launch: Launch {
+                executable: None,
+                cwd: None,
+                args: Vec::new(),
+                environment: Vec::new(),
+            },
+        }
+    }
+}
+
+impl Args {
+    pub fn selected(&self) -> &Action {
+        self.action.as_ref().unwrap_or(&DEFAULT)
+    }
 }
 
 #[derive(Clone, Copy, ValueEnum)]

@@ -9,6 +9,8 @@ pub enum Failure {
     Geometry,
     State,
     Exhausted,
+    Name,
+    Conflict,
 }
 
 impl Failure {
@@ -21,6 +23,8 @@ impl Failure {
             Self::Geometry => "geometry",
             Self::State => "state",
             Self::Exhausted => "exhausted",
+            Self::Name => "name",
+            Self::Conflict => "conflict",
         }
     }
 
@@ -33,6 +37,10 @@ impl Failure {
             Self::Geometry => "geometry cannot contain the layout and minimum pane sizes",
             Self::State => "operation is invalid for the current pane state",
             Self::Exhausted => "identity or revision space exhausted",
+            Self::Name => {
+                "name must contain 1..=64 UTF-8 bytes without controls or surrounding whitespace"
+            }
+            Self::Conflict => "the exact name already exists in this scope",
         }
     }
 }

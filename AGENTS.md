@@ -193,3 +193,16 @@ qualify every emulator, extended key protocol or unsupported shaping behavior.
 Other native platforms require their own evidence.
 Keep source composition/smoke evidence distinct from formal distributed-artifact
 host/client scenes and installed product qualification.
+
+Named entry is a source contract distinct from installed v0.1.0. Names are
+validated metadata; World retains sole identity allocation and atomic entry.
+Display indices are derived from current window order and never replace IDs.
+Normal entry alone may capture invocation shell/cwd/environment as an explicit
+complete Program; the background service receives a minimal startup environment.
+Default endpoint discovery belongs to CLI, with no unknown endpoint replacement.
+Self-start uses the running Linux executable and checks native file identity
+before workspace commands. A native PTY foreground context is an observation,
+not workspace authority or permission to inspect arbitrary processes. Cwd lookup
+retains queue order and refuses before layout mutation on missing native facts.
+A subsequent launch race remains an observable failed pane. Wire identity and
+context are protocol data; native PathBuf/process access stays in the PTY adapter.

@@ -18,11 +18,30 @@ pub struct Change {
 pub enum Outcome {
     Snapshot(Snapshot),
     Changed(Change),
+    Entered { session: Id, change: Change },
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Entry {
+    pub name: String,
+    pub viewport: Geometry,
+    pub create: bool,
+    pub observe: bool,
+    pub fixed: bool,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Operation {
     Create(Geometry),
+    Named {
+        geometry: Geometry,
+        name: String,
+    },
+    Enter(Entry),
+    Rename {
+        target: Target,
+        name: String,
+    },
     Read,
     Join {
         session: Id,

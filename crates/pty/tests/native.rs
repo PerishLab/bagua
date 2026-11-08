@@ -1,5 +1,7 @@
 #![cfg(all(target_os = "linux", target_arch = "x86_64"))]
 
+#[path = "support/context.rs"]
+mod context;
 #[path = "support/runner.rs"]
 mod runner;
 mod support;

@@ -58,4 +58,9 @@ impl Connection {
     pub fn streaming(&self) -> io::Result<()> {
         self.stream.set_read_timeout(None)
     }
+
+    pub fn bounded(&self, timeout: Duration) -> io::Result<()> {
+        self.stream.set_read_timeout(Some(timeout))?;
+        self.stream.set_write_timeout(Some(timeout))
+    }
 }

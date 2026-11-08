@@ -25,7 +25,7 @@ pub(super) struct Client {
 }
 
 impl Client {
-    pub fn new(id: Id) -> Result<Self, Failure> {
+    pub fn new(id: Id, identity: Option<wire::Image>) -> Result<Self, Failure> {
         let mut client = Self {
             last: 0,
             watches: Subscriptions::default(),
@@ -42,6 +42,7 @@ impl Client {
         };
         client.push(Message::Hello {
             version: protocol::VERSION,
+            identity,
             client: id,
             canvas: workspace::Geometry::new(super::COLUMNS, super::ROWS).unwrap(),
         })?;
@@ -50,6 +51,14 @@ impl Client {
 
     pub fn room(&self) -> Result<(), Failure> {
         if self.bytes > BYTES - 16_384 || self.queue.len() > MESSAGES - 8 {
+            return Err(Failure::Capacity);
+        }
+        Ok(())
+    }
+
+    pub fn reserve(&self, message: &Message) -> Result<(), Failure> {
+        let bytes = wire::encode(message, BYTES)?;
+        if self.bytes + bytes.len() + 16_384 > BYTES || self.queue.len() + 3 > MESSAGES {
             return Err(Failure::Capacity);
         }
         Ok(())

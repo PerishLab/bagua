@@ -1,5 +1,6 @@
 mod action;
 mod client;
+mod context;
 mod effects;
 mod history;
 mod input;
@@ -30,6 +31,7 @@ pub struct Host {
     turn: usize,
     scope: [u8; 16],
     history: crate::config::History,
+    identity: Option<protocol::wire::Image>,
 }
 
 impl Host {
@@ -46,6 +48,19 @@ impl Host {
         })
     }
 
+    pub fn identified(
+        scope: [u8; 16],
+        history: crate::config::History,
+        identity: Option<protocol::wire::Image>,
+    ) -> Result<Self, Failure> {
+        if identity.is_some_and(|image| image.inode == 0) {
+            return Err(Failure::Payload);
+        }
+        let mut host = Self::configured(scope, history)?;
+        host.identity = identity;
+        Ok(host)
+    }
+
     pub fn world(&self) -> &World {
         &self.world
     }
@@ -60,7 +75,7 @@ impl Host {
             .filter(|next| *next < u64::MAX)
             .ok_or(Failure::Capacity)?;
         let id = Id::new(self.next).ok_or(Failure::Identity)?;
-        self.clients.insert(id, Client::new(id)?);
+        self.clients.insert(id, Client::new(id, self.identity)?);
         Ok(id)
     }
 

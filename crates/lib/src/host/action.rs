@@ -25,6 +25,7 @@ impl Host {
             Command::Start { pane, program } => self.start(actor, id, (pane, program)),
             Command::Send { pane, input } => self.send(actor, id, (pane, input)),
             Command::Inspect(pane) => self.inspect(actor, id, pane),
+            Command::Describe(pane) => self.describe(actor, id, pane),
             Command::History { pane, read } => self.history(actor, id, (pane, read)),
             Command::Subscribe { target, after: _ } => self.subscribe(actor, id, target),
             Command::Unsubscribe(target) => {

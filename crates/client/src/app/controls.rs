@@ -71,6 +71,19 @@ impl App {
                 },
             },
             Gesture::Window => Operation::Window(self.session),
+            Gesture::Index(index) => {
+                if index == 0 {
+                    return Err(Failure::Target);
+                }
+                let pane = self
+                    .session()
+                    .ok_or(Failure::Target)?
+                    .windows()
+                    .nth(usize::from(index - 1))
+                    .ok_or(Failure::Target)?
+                    .focus();
+                Operation::Focus(pane)
+            }
             Gesture::Pane => Operation::Focus(self.cycle(false)?),
             Gesture::Next => Operation::Focus(self.cycle(true)?),
             Gesture::Transfer => {

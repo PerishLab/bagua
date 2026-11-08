@@ -9,6 +9,7 @@ pub enum Gesture {
     Detach,
     Split(workspace::Axis),
     Window,
+    Index(u8),
     Pane,
     Next,
     Acquire,
@@ -70,6 +71,11 @@ impl Keys {
             }
             return command(event.code);
         }
+        if event.modifiers == KeyModifiers::ALT
+            && let KeyCode::Char(key @ '1'..='9') = event.code
+        {
+            return Ok(Gesture::Index(key as u8 - b'0'));
+        }
         input(event)
     }
 }
@@ -121,9 +127,9 @@ fn character(c: char, modifiers: KeyModifiers) -> Result<Gesture, Failure> {
 fn command(code: KeyCode) -> Result<Gesture, Failure> {
     Ok(match code {
         KeyCode::Char('d' | 'q') => Gesture::Detach,
-        KeyCode::Char('v') => Gesture::Split(workspace::Axis::Columns),
-        KeyCode::Char('h') => Gesture::Split(workspace::Axis::Rows),
-        KeyCode::Char('n') => Gesture::Window,
+        KeyCode::Char('v' | '\\') => Gesture::Split(workspace::Axis::Columns),
+        KeyCode::Char('h' | '-') => Gesture::Split(workspace::Axis::Rows),
+        KeyCode::Char('n' | '=') => Gesture::Window,
         KeyCode::Tab => Gesture::Pane,
         KeyCode::Char('w') => Gesture::Next,
         KeyCode::Char('a') => Gesture::Acquire,

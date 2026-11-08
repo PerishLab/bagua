@@ -1,10 +1,14 @@
 mod codec;
+mod context;
 mod history;
+mod image;
 mod screen;
 
 use crate::{Failure, Reply};
 pub use codec::{Decoder, encode};
+pub use context::Context;
 pub use history::{History, Read, Scope};
+pub use image::Image;
 pub use screen::Screen;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -39,12 +43,19 @@ impl From<Failure> for Fault {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Message {
+    Context {
+        request: u64,
+        pane: Id,
+        state: Context,
+    },
     History {
         request: u64,
         state: History,
     },
     Hello {
         version: u16,
+        #[serde(default)]
+        identity: Option<Image>,
         client: Id,
         canvas: workspace::Geometry,
     },

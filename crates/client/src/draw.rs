@@ -26,10 +26,10 @@ impl App {
             "observe"
         };
         let text = format!(
-            "bagua s{} c{} {role} | {}",
-            self.session.value(),
-            self.actor.value(),
-            self.notice
+            "bagua {} {role} | {} | {}",
+            self.caption(),
+            self.notice,
+            self.names()
         );
         write!(
             output,
@@ -43,6 +43,33 @@ impl App {
             return Err(Failure::Capacity);
         }
         Ok(output.into_bytes())
+    }
+
+    fn caption(&self) -> String {
+        let Some(session) = self.session() else {
+            return "closed".into();
+        };
+        let selected = session
+            .windows()
+            .enumerate()
+            .find(|(_, window)| Some(window.id()) == session.selected());
+        match selected {
+            Some((index, _)) => format!("w{}", index + 1),
+            None => "empty".into(),
+        }
+    }
+
+    fn names(&self) -> String {
+        let Some(session) = self.session() else {
+            return String::new();
+        };
+        match session
+            .windows()
+            .find(|window| Some(window.id()) == session.selected())
+        {
+            Some(window) => format!("{}/{}", session.name(), window.name()),
+            None => session.name().into(),
+        }
     }
 
     fn border(&self, output: &mut String, place: workspace::Placement) {

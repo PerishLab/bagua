@@ -40,7 +40,7 @@ impl Fixture {
 
     pub fn apply(&mut self, operation: Operation) -> Result<Change, Failure> {
         match self.world.apply(self.actor, operation)? {
-            Outcome::Changed(change) => Ok(change),
+            Outcome::Changed(change) | Outcome::Entered { change, .. } => Ok(change),
             Outcome::Snapshot(_) => Err(Failure::State),
         }
     }

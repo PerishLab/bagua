@@ -1,4 +1,5 @@
 mod close;
+mod context;
 mod io;
 mod spawn;
 
@@ -19,6 +20,10 @@ pub struct Process {
 }
 
 impl Process {
+    pub fn context(&self) -> Result<crate::Context, Failure> {
+        context::read(self).map_err(|error| Failure::io(Stage::Inspect, error))
+    }
+
     pub fn spawn(launch: Launch) -> Result<Self, Failure> {
         spawn::start(launch)
     }

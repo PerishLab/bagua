@@ -30,6 +30,26 @@ impl World {
     }
 
     pub fn create(&mut self, geometry: Geometry) -> Result<Creation, Failure> {
+        let name = crate::names::available(
+            "session",
+            self.sessions.values().map(|session| session.name().into()),
+        )?;
+        self.named(geometry, name)
+    }
+
+    pub fn find(&self, name: &str) -> Option<&Session> {
+        self.sessions
+            .values()
+            .find(|session| session.name() == name)
+    }
+
+    pub fn named(&mut self, geometry: Geometry, name: String) -> Result<Creation, Failure> {
+        if !crate::valid(&name) {
+            return Err(Failure::Name);
+        }
+        if self.find(&name).is_some() {
+            return Err(Failure::Conflict);
+        }
         if !geometry.valid() {
             return Err(Failure::Geometry);
         }
@@ -45,9 +65,11 @@ impl World {
             pane: ids[2],
         };
         let mut session = Session::new(creation.session, geometry);
-        session
-            .windows
-            .insert(creation.window, Window::new(creation.window, creation.pane));
+        session.name = name;
+        session.windows.insert(
+            creation.window,
+            Window::new(creation.window, creation.pane, "window-1".into()),
+        );
         session.selected = Some(creation.window);
         self.sessions.insert(creation.session, session);
         self.commit(revision, 3);

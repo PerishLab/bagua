@@ -12,6 +12,7 @@ pub fn dispatch(request: Request) -> Result<Profile, Failure> {
         Command::Capabilities => Ok(profile()),
         Command::Start { .. }
         | Command::Inspect(_)
+        | Command::Describe(_)
         | Command::History { .. }
         | Command::Shutdown
         | Command::Workspace(_)
@@ -43,6 +44,7 @@ fn apply(
         Command::Capabilities => Ok(Status::Applied(Outcome::Profile(profile()))),
         Command::Start { .. }
         | Command::Inspect(_)
+        | Command::Describe(_)
         | Command::History { .. }
         | Command::Shutdown => Err(Failure::Unavailable),
         Command::Subscribe { target, after } => {
