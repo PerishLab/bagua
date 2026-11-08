@@ -132,3 +132,35 @@ fn styles() {
     assert!(!plain.inverse);
     assert!(!snapshot.cursor().visible);
 }
+
+#[test]
+fn combining() {
+    let bytes = "a\u{301}a\u{301}".as_bytes();
+    for boundary in 0..=bytes.len() {
+        let mut actual = engine();
+        actual.feed(&bytes[..boundary]).unwrap();
+        actual.feed(&bytes[boundary..]).unwrap();
+        let snapshot = actual.snapshot();
+        assert_eq!(snapshot.contents(), "a\u{301}a\u{301}", "{boundary}");
+        assert_eq!(snapshot.cursor().position, Point { x: 2, y: 0 });
+        for x in 0..2 {
+            assert_eq!(snapshot.cell(Point { x, y: 0 }).unwrap().text, "a\u{301}");
+        }
+    }
+}
+
+#[test]
+fn sustained() {
+    let bytes = "a\u{301}".repeat(12800).into_bytes();
+    let mut actual = Engine::new(Extent::new(256, 64).unwrap(), 0).unwrap();
+    for piece in bytes.chunks(4096) {
+        actual.feed(piece).unwrap();
+    }
+    let snapshot = actual.snapshot();
+    assert_eq!(snapshot.contents().as_bytes(), bytes);
+    for y in 0..50 {
+        for x in 0..256 {
+            assert_eq!(snapshot.cell(Point { x, y }).unwrap().text, "a\u{301}");
+        }
+    }
+}
