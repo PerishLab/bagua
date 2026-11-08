@@ -31,7 +31,7 @@ fn setup() -> (App, World, Engine) {
         .unwrap();
     let mut app = App::new(actor, created.session, Extent::new(8, 3).unwrap());
     app.catalog(world.snapshot()).unwrap();
-    let engine = Engine::new(Extent::new(8, 3).unwrap(), 0).unwrap();
+    let engine = Engine::new(Extent::new(8, 3).unwrap(), 20).unwrap();
     (app, world, engine)
 }
 
@@ -136,4 +136,111 @@ fn observer() {
         [Command::Workspace(Operation::Acquire { .. })]
     ));
     assert!(!app.controller());
+}
+
+fn historical(engine: &Engine, read: &protocol::wire::Read) -> protocol::wire::History {
+    let range = engine.history().range();
+    let back = if read.back == 0 {
+        engine.extent().height()
+    } else {
+        read.back
+    };
+    let top = read
+        .top
+        .unwrap_or_else(|| range.next.saturating_sub(u64::from(back)).max(range.first));
+    protocol::wire::History {
+        ticket: read.ticket,
+        scope: protocol::wire::Scope {
+            host: [1; 16],
+            pane: Id::new(3).unwrap(),
+            epoch: engine.epoch(),
+        },
+        first: range.first,
+        next: range.next,
+        top,
+        column: read.column,
+        bytes: range.bytes,
+        evicted: range.evicted,
+        screen: Screen::from(
+            &engine
+                .snapshot()
+                .window((range.next - top) as usize, read.column)
+                .unwrap(),
+        ),
+    }
+}
+
+fn request(app: &mut App) -> protocol::wire::Read {
+    let commands = app.handle(Gesture::History(-1)).unwrap();
+    let Command::History { pane, read } = commands[0].clone() else {
+        panic!("history request")
+    };
+    app.bind(9, pane, &read);
+    read
+}
+
+#[test]
+fn browsing() {
+    let (mut app, _, mut engine) = setup();
+    engine
+        .feed(b"zero\r\none\r\ntwo\r\nthree\r\nfour\r\nfive")
+        .unwrap();
+    install(&mut app, &engine);
+    let read = request(&mut app);
+    app.accept(Message::History {
+        request: 9,
+        state: historical(&engine, &read),
+    })
+    .unwrap();
+    let pane = Id::new(3).unwrap();
+    assert_eq!(app.screen(pane).unwrap().cells[0].text, "z");
+    let paused = app.screen(pane).unwrap().clone();
+    for _ in 0..30 {
+        engine.feed(b"\r\nNEW").unwrap();
+    }
+    install(&mut app, &engine);
+    assert_eq!(app.screen(pane).unwrap(), &paused);
+    app.select(pane, Point { x: 0, y: 0 }, false).unwrap();
+    app.select(pane, Point { x: 3, y: 0 }, true).unwrap();
+    app.handle(Gesture::Copy).unwrap();
+    assert_eq!(app.screen(pane).unwrap(), &paused);
+    app.handle(Gesture::Live).unwrap();
+    assert!(app.history(pane).is_none());
+    assert_eq!(
+        app.handle(Gesture::Paste).unwrap(),
+        vec![Command::Send {
+            pane,
+            input: Input::Paste("zero".into())
+        }]
+    );
+}
+
+#[test]
+fn cancellation() {
+    let (mut app, _, mut engine) = setup();
+    engine.feed(b"zero\r\none\r\ntwo\r\nthree").unwrap();
+    install(&mut app, &engine);
+    let read = request(&mut app);
+    let state = historical(&engine, &read);
+    app.accept(Message::History {
+        request: 10,
+        state: state.clone(),
+    })
+    .unwrap();
+    assert!(app.history(Id::new(3).unwrap()).is_none());
+    app.handle(Gesture::Live).unwrap();
+    app.accept(Message::History { request: 9, state }).unwrap();
+    assert!(app.history(Id::new(3).unwrap()).is_none());
+    let read = request(&mut app);
+    app.accept(Message::Finished {
+        request: 9,
+        result: Err(Failure::Baseline.into()),
+    })
+    .unwrap();
+    app.accept(Message::History {
+        request: 9,
+        state: historical(&engine, &read),
+    })
+    .unwrap();
+    assert!(app.history(Id::new(3).unwrap()).is_none());
 }

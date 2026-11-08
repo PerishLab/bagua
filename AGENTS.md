@@ -122,7 +122,7 @@ The anchor library owns the configuration schema through the published Radicula
 configuration capability. The CLI owns `bagua.toml` discovery and startup composition. Only `main` captures process environment.
 Configuration chooses client preferences and explicit launch data; it grants no
 host authority. Client prefix and Escape delay can reload after complete
-validation. Startup socket and program sections require a new invocation;
+validation. Startup socket, program and history sections require a new invocation;
 reload never restarts a host or changes existing programs. Unknown fields and
 future capability sections refuse instead of implying implemented behavior.
 Public configuration diagnostics name fields and sources without printing
@@ -170,8 +170,13 @@ actual byte writes or native reclamation; model application is a separate fact.
 Connections have increasing request IDs and explicit output admission. Only
 presentation coalesces, with bounded rotating serialization. Reconnect starts a
 fresh actor/cursor and does not authorize replay. Inspect returns a complete
-screen and process facts before finishing. Current runtime screens have zero
-scrollback; larger terminal-model history is not a runtime capability claim.
+screen and process facts before finishing. Source runtime history has independent line/per-pane/aggregate byte budgets,
+primary-only physical rows and context-bound paged reads; installed v0.1.0
+remains zero scrollback until a containing release is qualified. History does
+not reflow or restore rows into the application grid. Clients retain one frozen
+page; live frames never include the entire history. Host context is freshly
+created at the native service boundary; pure model callers provide their own
+explicit contexts. Geometry/reset epochs invalidate old read cursors.
 The socket lives in an explicitly supplied canonical private user directory;
 peer UID comes from the kernel. Never replace an unknown existing endpoint.
 The interactive client consumes typed full snapshots over the same local protocol.

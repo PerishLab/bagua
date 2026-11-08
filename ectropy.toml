@@ -8,7 +8,7 @@ paths = ["crates/pty/src/linux/spawn.rs"]
 
 [[boundary]]
 allow = ["word", "param"]
-note = "This isolated vt100::Callbacks adapter must implement upstream method names and the fixed five-argument CSI callback. Bagua event and query policy stays in events.rs."
+note = "This isolated vt100::Callbacks and vte::Perform adapter must implement upstream method names and fixed five-argument CSI callbacks. Bagua event, capture and query policy stays outside this adapter."
 paths = ["crates/terminal/src/callback.rs"]
 
 [[grant]]

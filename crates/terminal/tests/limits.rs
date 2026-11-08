@@ -7,7 +7,7 @@ fn capacity() {
         (513, 1, 0),
         (2, 257, 0),
         (2, 1, usize::MAX),
-        (512, 256, 4096),
+        (512, 256, 50_001),
     ] {
         assert!(matches!(
             Engine::new(Extent::new(width, height).unwrap(), history),
@@ -22,11 +22,8 @@ fn capacity() {
     );
     assert_eq!(terminal.revision(), Revision::default());
     assert_eq!(terminal.snapshot().contents(), "");
-    assert_eq!(
-        terminal.resize(Extent::new(512, 256).unwrap()),
-        Err(Failure::Capacity)
-    );
-    assert_eq!(terminal.extent(), Extent::new(80, 24).unwrap());
+    assert!(terminal.resize(Extent::new(512, 256).unwrap()).is_ok());
+    assert_eq!(terminal.extent(), Extent::new(512, 256).unwrap());
 }
 
 #[test]

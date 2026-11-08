@@ -3,7 +3,7 @@ use crate::{Extent, Failure};
 pub const SOURCE: &str = "vt100:fb0f54ec7222f4805f33cd3ca530229e0a0fe6ad";
 pub const COLUMNS: u16 = 512;
 pub const ROWS: u16 = 256;
-pub const HISTORY: usize = 4096;
+pub const HISTORY: usize = 50_000;
 pub const CELLS: usize = 1_048_576;
 pub const CHUNK: usize = 4096;
 
@@ -35,7 +35,7 @@ pub(crate) fn check(extent: Extent, history: usize) -> Result<(), Failure> {
     if history > HISTORY {
         return Err(Failure::Capacity);
     }
-    let rows = usize::from(extent.height()) * 2 + history;
+    let rows = usize::from(extent.height()) * 2;
     if rows * usize::from(extent.width()) > CELLS {
         return Err(Failure::Capacity);
     }

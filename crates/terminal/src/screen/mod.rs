@@ -1,4 +1,6 @@
-use crate::{Extent, Failure, Revision};
+mod snapshot;
+
+pub use snapshot::Snapshot;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Color {
@@ -116,71 +118,4 @@ pub struct Cursor {
     pub position: crate::Point,
     pub visible: bool,
     pub pending: bool,
-}
-
-#[derive(Clone)]
-pub struct Snapshot {
-    screen: vt100::Screen,
-    revision: Revision,
-}
-
-impl Snapshot {
-    pub(crate) fn new(screen: vt100::Screen, revision: Revision) -> Self {
-        Self { screen, revision }
-    }
-
-    pub fn revision(&self) -> Revision {
-        self.revision
-    }
-
-    pub fn extent(&self) -> Extent {
-        let (height, width) = self.screen.size();
-        Extent { width, height }
-    }
-
-    pub fn contents(&self) -> String {
-        self.screen.contents()
-    }
-
-    pub fn cell(&self, position: crate::Point) -> Option<Cell> {
-        self.screen.cell(position.y, position.x).map(Cell::from)
-    }
-
-    pub fn wrapped(&self, row: u16) -> bool {
-        row < self.extent().height() && self.screen.row_wrapped(row)
-    }
-
-    pub fn cursor(&self) -> Cursor {
-        let (y, x) = self.screen.cursor_position();
-        let width = self.extent().width();
-        Cursor {
-            position: crate::Point {
-                x: x.min(width - 1),
-                y,
-            },
-            visible: !self.screen.hide_cursor() && self.screen.scrollback() == 0,
-            pending: x >= width,
-        }
-    }
-
-    pub fn modes(&self) -> Modes {
-        Modes::from(&self.screen)
-    }
-
-    pub fn history(&self) -> usize {
-        self.screen.scrollback_len()
-    }
-
-    pub fn offset(&self) -> usize {
-        self.screen.scrollback()
-    }
-
-    pub fn view(&self, offset: usize) -> Result<Self, Failure> {
-        if offset > self.history() {
-            return Err(Failure::Position);
-        }
-        let mut view = self.clone();
-        view.screen.set_scrollback(offset);
-        Ok(view)
-    }
 }

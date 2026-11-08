@@ -5,6 +5,11 @@ pub(super) fn check(config: &bagua::config::Config) -> Result<(client::Keys, Dur
     if config.version != 1 {
         return Err(Error::config("version: expected configuration version 1"));
     }
+    config.history.check().map_err(|_| {
+        Error::config(
+            "history: lines must be 0..=50000, bytes <=67108864 and bytes <= total <=268435456",
+        )
+    })?;
     if config.client.escape > 1000 {
         return Err(Error::config("client.escape_ms: expected 0..=1000"));
     }

@@ -122,6 +122,12 @@ impl Runner {
             return Ok(());
         }
         if let Some(command) = self.queue.front().cloned() {
+            if let Command::History { pane, read } = &command
+                && !self.app.current(*pane, read)
+            {
+                self.bytes -= weight(&self.queue.pop_front().unwrap());
+                return Ok(());
+            }
             let job = match command {
                 Command::Workspace(Operation::Split { .. } | Operation::Window(_)) => Job::Spawn,
                 _ => Job::Ordinary,
@@ -173,6 +179,9 @@ impl Runner {
                 return Ok(false);
             }
             Err(error) => return Err(error.into()),
+        }
+        if let Command::History { pane, read } = &request.command {
+            self.app.bind(self.next, *pane, read);
         }
         self.jobs.insert(self.next, job);
         self.next = self.next.checked_add(1).ok_or(Failure::Identity)?;

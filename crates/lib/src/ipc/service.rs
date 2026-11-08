@@ -18,9 +18,26 @@ pub struct Service {
 
 impl Service {
     pub fn bind(path: &Path) -> io::Result<Self> {
+        Self::configured(path, crate::config::History::default())
+    }
+
+    pub fn configured(path: &Path, history: crate::config::History) -> io::Result<Self> {
+        history.check().map_err(super::error)?;
+        let mut scope = [0; 16];
+        let mut filled = 0;
+        while filled < scope.len() {
+            let count = rustix::rand::getrandom(
+                &mut scope[filled..],
+                rustix::rand::GetRandomFlags::empty(),
+            )?;
+            if count == 0 {
+                return Err(io::Error::other("host context entropy unavailable"));
+            }
+            filled += count;
+        }
         Ok(Self {
             socket: Socket::bind(path)?,
-            host: Host::new(),
+            host: Host::configured(scope, history).map_err(super::error)?,
             links: BTreeMap::new(),
             drain: None,
         })

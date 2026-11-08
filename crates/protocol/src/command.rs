@@ -38,6 +38,10 @@ pub enum Command {
         program: crate::wire::Program,
     },
     Inspect(Id),
+    History {
+        pane: Id,
+        read: crate::wire::Read,
+    },
     Shutdown,
     Subscribe {
         target: workspace::Target,

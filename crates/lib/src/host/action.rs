@@ -25,6 +25,7 @@ impl Host {
             Command::Start { pane, program } => self.start(actor, id, (pane, program)),
             Command::Send { pane, input } => self.send(actor, id, (pane, input)),
             Command::Inspect(pane) => self.inspect(actor, id, pane),
+            Command::History { pane, read } => self.history(actor, id, (pane, read)),
             Command::Subscribe { target, after: _ } => self.subscribe(actor, id, target),
             Command::Unsubscribe(target) => {
                 self.clients
@@ -48,7 +49,7 @@ impl Host {
         }
         let extent = self.extent(id)?;
         if let std::collections::btree_map::Entry::Vacant(entry) = self.panes.entry(id) {
-            entry.insert(Pane::new(extent)?);
+            entry.insert(Pane::new(extent, self.history)?);
         }
         self.reply(actor, request, Ok(Status::Admitted))?;
         let size = pty::Size::new(extent.width(), extent.height()).unwrap();

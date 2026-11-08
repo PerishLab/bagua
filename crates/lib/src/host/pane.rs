@@ -27,9 +27,10 @@ pub(super) struct Pane {
 }
 
 impl Pane {
-    pub fn new(extent: Extent) -> Result<Self, protocol::Failure> {
+    pub fn new(extent: Extent, history: crate::config::History) -> Result<Self, protocol::Failure> {
         Ok(Self {
-            engine: Engine::new(extent, 0).map_err(|_| protocol::Failure::Payload)?,
+            engine: Engine::bounded(extent, history.lines, history.bytes)
+                .map_err(|_| protocol::Failure::Payload)?,
             process: None,
             input: VecDeque::new(),
             replies: VecDeque::new(),

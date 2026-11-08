@@ -114,7 +114,7 @@ bagua --config /absolute/path/bagua.toml --socket /absolute/private/host.sock op
 ```
 
 Schema version 1 is the default when omitted. Supported sections are `client`,
-`host` and `program`. Unknown fields, duplicate keys and unsupported versions
+`host`, `history` and `program`. Unknown fields, duplicate keys and unsupported versions
 refuse before interactive mode or native startup. `client.prefix` is a control
 letter such as C-g or C-q; C-h/C-i/C-j/C-m are reserved because the decoder maps
 them to navigation keys. `client.escape_ms` is 0–1000 milliseconds, default 50;
@@ -123,8 +123,8 @@ The built-in prefix remains Ctrl-G. Pressing the chosen prefix twice sends its
 literal control key to the application. Prefix-r reloads and reports its result.
 
 Reload validates the whole file before atomically replacing client prefix and
-Escape delay. Errors, missing reload input or changed host/program sections
-preserve the old client configuration. Host socket and program settings apply
+Escape delay. Errors, missing reload input or changed host/program/history sections
+preserve the old client configuration. Host socket, history budgets and program settings apply
 only to a new invocation; they never restart a host or alter running programs.
 Each client owns its preferences, including an observer, without gaining write
 or geometry authority. A disabled or undiscoverable source cannot reload.
@@ -143,8 +143,74 @@ socket, client settings and reload policy. It shows program paths and only
 argument counts/environment key names. It neither starts programs nor proves
 their executability, directory access or runtime permissions. Parse diagnostics
 report field/byte information without echoing the original TOML source line.
-History, arbitrary bindings, clipboard and status sections remain unsupported
+Arbitrary bindings, clipboard and status sections remain unsupported
 until their owning Issues land; this example does not enable future features.
+
+## History
+
+Issue #27 adds source history; a containing candidate, independent qualification
+and stable installation are still required by #31/#32 before user handoff.
+`[history]` configures `lines` (0–50000, default 50000), `bytes` (0–67108864,
+default 67108864) and `total` (bytes–268435456, default 268435456). Only the
+host's startup configuration chooses retention. A connecting client's file
+cannot resize or reconfigure an existing host. Changes require a new host;
+reload refuses them. `bagua config` reports the selected budgets.
+
+Only primary screen rows that scroll off are retained. Alternate screen output
+has no scrollback. History consists of physical rows with original styles,
+column counts and soft-wrap flags, without reflow on resize. Growing the live
+screen may introduce upstream blank rows; it does not restore history into the
+application screen. Narrowing a live row keeps vt100's truncation behavior.
+Already retained rows preserve all captured text; prefix Left/Right pans a
+history page horizontally, up to the terminal's 512-column profile. Partial
+wide cells at a page edge become blanks. CSI 3 J on the primary screen and RIS
+clear stored history; old local selections remain independent frozen copies.
+
+Prefix PageUp enters history; prefix PageUp/PageDown or ordinary PageUp/PageDown
+while paused navigate by one pane height. Prefix End, ordinary End or Escape
+returns live. Wheel moves three rows when application tracking is off; Shift-wheel
+explicitly reads history even when tracking is active. An observer may read
+history without acquiring control. Wheels target the focused pane. Ordinary
+application input while paused refuses until returning live; selection retains
+its existing arrow/copy semantics. Ongoing output neither changes the frozen
+page nor scrolls it. Focus/geometry changes discard the paused view and selection.
+
+Rows have monotonically increasing identities. Requests carry host context,
+pane and geometry/reset epoch plus absolute row position. Foreign contexts,
+old epochs and evicted ranges refuse; a new bootstrap read explicitly refreshes
+the range. Reconnection discards the client's old view and starts fresh. Frozen
+pages may remain visible after server eviction, but cannot silently acquire new
+text under old row identities. Rows still on the live screen are mutable; only
+rows below the returned `next` history boundary are stable retained identities.
+
+History uses a shared segmented index and bounded row capture, independently
+of vt100's zero-capacity scrollback. Model reads return at most 128 rows; wire
+history reads return one pane-sized typed screen through the existing 8 MiB
+presentation slot, followed by reliable completion. Full history is never part
+of a live frame or connection bootstrap. History reads do not replay raw SGR,
+OSC or PTY bytes to the outer terminal. Each client keeps one paused page and
+one bounded selection copy, rather than accumulating downloaded history.
+
+The host divides `total` equally among retained panes, including retiring panes,
+and caps each share at `bytes`. Oldest rows are evicted first when either line
+count or the effective share is exceeded. Defaults support 50000 ordinary
+80/160-column text rows in a pane; richly styled/combining-heavy rows or many
+full panes may hit the byte budget sooner. Returned pages expose actual retained
+range, bytes and eviction count. Accounting includes string capacity and a
+conservative row allocation allowance. Live grids, allocator overhead, shared
+frozen snapshots and bounded transport buffers are additional memory: these
+budgets are not an exact process-RSS limit. History eviction never discards
+uninterpreted PTY output or reliable input/control events.
+
+`cargo test --release -p bagua-terminal --test history -- --nocapture` writes
+50000 full-width rows at both 80 and 160 columns, reads every retained row,
+checks eviction and snapshot isolation, and reports capture/read and snapshot
+cost. The client history test measures live/page serialization and 100 draws
+at the same real capacity. Run each exact terminal test (`narrow` or `wide`)
+as its own process when measuring RSS; compiler memory is separate. Local
+timing varies with host contention and supplies no latency guarantee. These
+source probes and the thin own-CLI PTY smoke do not replace formal distributed
+artifact, shell/Codex, pressure or OS clipboard qualification.
 
 ## Workspace and control
 
@@ -195,7 +261,8 @@ connection-local metadata set admits at most 64 exact targets and treats a
 duplicate subscription idempotently. Observers must be joined to the target's
 session. Cancelling a retired target remains possible. A resume revision is a
 hint, not permission to invent a delta without its baseline. The host sends
-complete snapshots and retains no incremental history. Wire version 2 uses a
+complete live snapshots and retains no incremental screen deltas. Scrollback is
+read separately in bounded pages. Wire version 3 uses a
 four-byte big-endian JSON length followed by that many UTF-8 JSON bytes.
 Request numbers strictly increase within a connection; reused or older numbers
 are refused without replay. There is no cross-connection exactly-once claim.
@@ -292,7 +359,7 @@ on its own connection. Both consume the same commands as other callers.
 For example, a first request can be:
 
 ```json
-{"version":2,"id":1,"command":{"Workspace":{"Create":{"columns":80,"rows":24}}}}
+{"version":3,"id":1,"command":{"Workspace":{"Create":{"columns":80,"rows":24}}}}
 ```
 
 Replies distinguish model application or admission from `Finished`. Input is
@@ -309,9 +376,8 @@ that make no visible cell change.
 
 The runtime admits 32 connections and 32 panes, including retired panes until
 reclamation. Session canvases are 2–256 columns and 1–64 rows, with at most
-262,144 retained pane cells across the host. This cold-start host retains live
-screens with zero scrollback; the terminal model's larger history profile is
-separate. Model changes are previewed against runtime bounds before committing.
+262,144 retained pane cells across the host. Source history defaults to 50000 primary physical rows per pane, bounded by
+64 MiB per-pane and 256 MiB aggregate accounting; installed v0.1.0 has no history. Model changes are previewed against runtime bounds before committing.
 Primary/alternate screens, immutable snapshots and encoded messages have their
 own bounded copies; this is not an exact process-RSS limit.
 
@@ -331,7 +397,7 @@ available; intermediate views coalesce. After four reliable frames, a subscribed
 connection yields one scheduling opportunity to presentation, so a continuous
 request stream cannot indefinitely suppress its view. Partial frames are never
 interleaved. There are at most 64 exact subscription
-targets and 32 pending inspections per connection. Pane input holds at most
+targets, 32 pending inspections and one pending history read per connection. Pane input holds at most
 16 operations and 64 KiB of encoded bytes, retaining partial-write suffixes.
 Terminal query replies have a separate 128 KiB queue; exhaustion backpressures
 the PTY instead of discarding output. Admission refuses before queue mutation.
@@ -398,6 +464,7 @@ This is a Bagua choice, not a tmux compatibility contract.
 | `[` / `c` / `p` | Begin selection / copy / paste the local buffer |
 | `?` | Show the command hints |
 | `r` | Validate and atomically reload client configuration |
+| PageUp / PageDown / End | Page backward / forward through history / return live |
 
 Ordinary keys go to the focused pane only for the controller. The profile
 includes UTF-8 text, ASCII control keys, printable Alt characters, arrows,
@@ -416,7 +483,8 @@ and Ctrl-G c copies. Copy omits continuation cells and physical row padding,
 joins soft wraps and preserves hard row breaks. The buffer is local to the
 client, at most 4096 UTF-8 bytes, and is lost on exit. Ctrl-G p submits it through
 the normal paste contract. No OS clipboard or OSC 52 effect is claimed.
-Runtime scrollback remains zero; selection covers the current screen.
+Selection covers the current live or frozen history page. It does not span
+unloaded pages; the 4096-byte copy limit refuses overflow without truncation.
 
 One terminal row is reserved for status. The local drawable viewport is bounded
 to 512×255, with the host's narrower 256×64 canvas limits applied separately.
@@ -464,9 +532,9 @@ legacy/SGR mouse reports. Status, cursor and character-size query replies are
 returned as bytes; the model itself performs no IO. Observed unhandled
 callbacks and bells are counted separately from API input refusals.
 
-Screen dimensions are 2–512 columns and 1–256 rows, with at most 4096 history
-rows. Columns multiplied by twice the screen height plus history must not
-exceed 1,048,576 cells. Each feed or text/paste request accepts at most 4096
+Screen dimensions are 2–512 columns and 1–256 rows. Twice the live screen area
+must not exceed 1,048,576 cells. History independently admits at most 50000 rows
+and 64 MiB of accounted storage. Each feed or text/paste request accepts at most 4096
 input bytes; callers retain and chunk larger streams. Query replies are
 bounded by 16 times that feed budget. Rejected size/budget operations preserve
 the model. Every accepted nonempty feed or changed size advances its revision;
@@ -479,7 +547,8 @@ marks. Full grapheme shaping, emoji ZWJ and history reflow are excluded.
 Wide characters that leave one vacant column cross a physical row boundary;
 that boundary remains a newline in plain-text extraction. Normal autowrap
 joins logical lines. DECAWM switching is unsupported; wrapping stays enabled.
-Column changes truncate or extend physical rows. These choices require further
+Column changes truncate or extend live physical rows; already retained history
+keeps its original text and column count. These choices require further
 qualification with actual applications before the Linux product closes.
 
 Input supports application-cursor arrows, navigation, F1–F12, explicit control

@@ -17,6 +17,7 @@ pub(super) struct Client {
     pub cursor: Option<Id>,
     pub catalog: u64,
     pub catalogue: bool,
+    pub history: Option<(u64, Id, wire::Read)>,
     queue: VecDeque<Vec<u8>>,
     bytes: usize,
     writing: Option<(Vec<u8>, usize)>,
@@ -33,6 +34,7 @@ impl Client {
             cursor: None,
             catalog: 0,
             catalogue: false,
+            history: None,
             queue: VecDeque::new(),
             bytes: 0,
             writing: None,
@@ -87,7 +89,9 @@ impl Client {
 
     pub fn output(&mut self) -> Option<&[u8]> {
         if self.writing.is_none() {
-            if self.quota >= 4 && (!self.watches.empty() || !self.wanted.is_empty()) {
+            let pending =
+                !self.watches.empty() || !self.wanted.is_empty() || self.history.is_some();
+            if self.quota >= 4 && pending {
                 return None;
             }
             let bytes = self.queue.pop_front()?;

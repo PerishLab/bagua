@@ -11,6 +11,8 @@ pub struct Config {
     pub client: Client,
     #[cascade(section)]
     pub host: Host,
+    #[cascade(section)]
+    pub history: History,
     pub program: Option<Program>,
 }
 
@@ -20,6 +22,7 @@ impl Default for Config {
             version: 1,
             client: Client::default(),
             host: Host::default(),
+            history: History::default(),
             program: None,
         }
     }
@@ -49,4 +52,33 @@ impl Default for Client {
 #[serde(default, deny_unknown_fields)]
 pub struct Host {
     pub socket: Option<PathBuf>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Deserialize, Cascade)]
+#[cascade(section, strict)]
+#[serde(default, deny_unknown_fields)]
+pub struct History {
+    pub lines: usize,
+    pub bytes: usize,
+    pub total: usize,
+}
+
+impl Default for History {
+    fn default() -> Self {
+        Self {
+            lines: terminal::HISTORY,
+            bytes: terminal::STORAGE,
+            total: 256 * 1024 * 1024,
+        }
+    }
+}
+
+impl History {
+    pub fn check(self) -> Result<(), protocol::Failure> {
+        terminal::History::new(self.lines, self.bytes).map_err(|_| protocol::Failure::Capacity)?;
+        if self.total > 256 * 1024 * 1024 || self.total < self.bytes {
+            return Err(protocol::Failure::Capacity);
+        }
+        Ok(())
+    }
 }

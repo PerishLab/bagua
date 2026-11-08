@@ -131,6 +131,7 @@ version = "0.0.0"
 dependencies = [
  "serde",
  "vt100",
+ "vte",
 ]
 
 [[package]]

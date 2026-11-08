@@ -4,6 +4,11 @@ version = 1
 prefix = "C-q"
 escape_ms = 50
 
+[history]
+lines = 50000
+bytes = 67108864
+total = 268435456
+
 [program]
 executable = "/bin/sh"
 args = ["-i"]

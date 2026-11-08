@@ -23,6 +23,8 @@ pub enum Gesture {
     Pan(Key),
     Help,
     Reload,
+    History(i32),
+    Live,
     Ignore,
 }
 
@@ -139,6 +141,9 @@ fn command(code: KeyCode) -> Result<Gesture, Failure> {
         KeyCode::Down => Gesture::Pan(Key::Down),
         KeyCode::Char('?') => Gesture::Help,
         KeyCode::Char('r') => Gesture::Reload,
+        KeyCode::PageUp => Gesture::History(-1),
+        KeyCode::PageDown => Gesture::History(1),
+        KeyCode::End => Gesture::Live,
         KeyCode::Esc => Gesture::Ignore,
         _ => return Err(Failure::Unavailable),
     })

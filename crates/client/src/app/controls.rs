@@ -12,10 +12,19 @@ impl App {
                 return Ok(Vec::new());
             }
             Gesture::Help => {
-                self.status("Prefix: d detach v/h split n window Tab pane w window a acquire t transfer f fixed u auto x close ! session [ select c copy p paste r reload; Shift-drag select");
+                self.status("Prefix: d detach v/h split n window Tab pane w window a acquire t transfer f fixed u auto x close ! session [ select c copy p paste r reload PgUp/PgDn history End live; Shift-drag select");
                 return Ok(Vec::new());
             }
             Gesture::Reload => return Err(Failure::Unavailable),
+            Gesture::History(direction) => {
+                let pane = self.focus().ok_or(Failure::Target)?;
+                let rows = i32::from(self.screen(pane).ok_or(Failure::Baseline)?.extent.height());
+                return self.scroll(pane, direction.saturating_mul(rows));
+            }
+            Gesture::Live => {
+                self.live();
+                return Ok(Vec::new());
+            }
             Gesture::Select => {
                 self.begin()?;
                 return Ok(Vec::new());
@@ -25,6 +34,12 @@ impl App {
                 return Ok(Vec::new());
             }
             Gesture::Pan(key) => {
+                if self
+                    .focus()
+                    .is_some_and(|pane| self.history(pane).is_some())
+                {
+                    return self.horizontal(key);
+                }
                 self.pan(key);
                 return Ok(Vec::new());
             }
@@ -33,6 +48,12 @@ impl App {
                 if self.selection.is_some() {
                     self.selecting(input)?;
                     return Ok(Vec::new());
+                }
+                if self
+                    .focus()
+                    .is_some_and(|pane| self.history(pane).is_some())
+                {
+                    return self.browsing(input);
                 }
                 return self.input(input);
             }

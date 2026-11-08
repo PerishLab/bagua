@@ -91,6 +91,10 @@ impl Loaded {
         self.delay
     }
 
+    pub fn history(&self) -> bagua::config::History {
+        self.config.history
+    }
+
     pub fn prefix(&self) -> &str {
         &self.config.client.prefix
     }
@@ -101,9 +105,12 @@ impl Loaded {
         }
         let mut next = Self::read(self.path.clone(), true)?;
         next.explicit = self.explicit;
-        if next.config.host != self.config.host || next.config.program != self.config.program {
+        if next.config.host != self.config.host
+            || next.config.program != self.config.program
+            || next.config.history != self.config.history
+        {
             return Err(Error::config(
-                "host/program changes require a new invocation; running host and programs were not changed",
+                "host/program/history changes require a new invocation; running host and programs were not changed",
             ));
         }
         *self = next;
@@ -118,13 +125,14 @@ impl Loaded {
             "loaded": self.present,
             "client": {"prefix": self.prefix(), "escape_ms": self.config.client.escape},
             "host": {"socket": args.socket},
+            "history": {"lines": self.config.history.lines, "bytes": self.config.history.bytes, "total": self.config.history.total},
             "program": self.config.program.as_ref().map(|program| serde_json::json!({
                 "executable": program.executable, "cwd": program.cwd,
                 "args": program.args.len(), "environment": program.environment.keys().collect::<Vec<_>>()
             })),
             "reload": ["client.prefix", "client.escape_ms"],
-            "restart": ["host.socket", "program"],
-            "unsupported": ["history", "bindings", "clipboard", "status"],
+            "restart": ["host.socket", "program", "history"],
+            "unsupported": ["bindings", "clipboard", "status"],
         })
     }
 }

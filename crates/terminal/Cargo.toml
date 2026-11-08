@@ -12,3 +12,4 @@ name = "terminal"
 [dependencies]
 serde.workspace = true
 vt100.workspace = true
+vte.workspace = true
