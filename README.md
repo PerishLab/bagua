@@ -287,10 +287,14 @@ bounds apply. No input sequence is forwarded as unchecked raw bytes.
 For the inner application, the terminal engine implements the flag-1
 (disambiguation) subset of the [Kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/).
 `CSI ? u` returns its current flags; `CSI > flags u`, `CSI < count u` and
-`CSI = flags ; mode u` push, pop and set them. Flag values 0/1 and set modes
-1/2/3 are supported; omitted/zero set mode uses replacement, and omitted/zero
-pop count means one in this subset. Unknown flags or forms increment unsupported
-without changing mode. Primary and alternate screens retain separate stacks,
+`CSI = flags ; mode u` push, pop and set them. Push/set adopt only the supported
+bit 1, including from combinations such as 5 or 7; query reports only actual
+flags 0/1. A request containing unsupported bits increments unsupported once,
+even when its supported bit is adopted. Set modes 1/2/3 replace/set/clear;
+omitted/zero set mode uses replacement, and omitted/zero pop count means one.
+Replacing or pushing with unsupported bits alone selects zero; set/clear apply
+only bit 1. Pop uses a count, never a flag mask. Malformed forms and invalid
+set modes increment unsupported without changing mode. Primary and alternate screens retain separate stacks,
 each bounded to 16 entries including its current state; overflow evicts the
 oldest entry. Exhausting a stack resets to zero; RIS clears both. Primary device
 attributes (`CSI c`/`CSI 0 c`) reply `CSI ? 1 ; 2 c` to complete protocol detection.
@@ -773,8 +777,8 @@ keys, the keyboard enhancement subset below, UTF-8 text, bracketed paste and
 requested mouse tracking. Paste refuses
 embedded controls except CR/LF/TAB, including any embedded ESC delimiter.
 Legacy mouse coordinates stop at column/row 223; SGR uses the declared screen
-bounds. UTF-8 mouse encoding is explicitly refused. Keyboard enhancement flags beyond the declared subset refuse without changing
-mode and remain counted as unsupported. OSC
+bounds. UTF-8 mouse encoding is explicitly refused. Keyboard enhancement requests adopt only the declared supported mask;
+unimplemented bits remain counted as unsupported and are never reported as enabled. OSC
 metadata, clipboard, images, hyperlinks,
 window resize requests and other DCS extensions have no external effect.
 

@@ -14,7 +14,7 @@ pub const PROFILE: &[&str] = &[
     "indexed/RGB colors, bold, dim, italic, underline and inverse",
     "bounded primary history and immutable revision-bound snapshots",
     "legacy arrows, navigation, F1-F12, control keys and bracketed paste",
-    "CSI-u flag 1 negotiation with separate bounded primary/alternate stacks",
+    "CSI-u supported-mask flag 1 negotiation with separate bounded primary/alternate stacks",
     "typed Shift/Alt/Ctrl keys and unambiguous modified navigation/F1-F12",
     "X10/normal/drag/motion tracking with legacy or SGR mouse encoding",
     "primary device/status/cursor/character-size queries, explicit replies and bell counts",

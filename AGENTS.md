@@ -211,7 +211,11 @@ Keyboard bindings are bounded client preferences, never program execution or
 control authority. Prefix literal transmission, releases, paste and malformed
 input have distinct state transitions. Terminal owns per-pane keyboard mode,
 independent bounded primary/alternate stacks and fresh encoding of typed keys.
-Flag-1 support never claims other enhancement flags or unchecked raw transport.
+Push/set requests adopt only the supported flag-1 mask, including combinations;
+query reports actual flags, and requests containing unknown bits still count
+as unsupported. Valid replace/set/clear semantics apply to that mask; malformed
+forms leave state unchanged. Flag-1 support never claims other enhancement flags
+or unchecked raw transport.
 Inner application negotiation produces replies only for its owned PTY. The
 interactive client independently pushes/pops its outer terminal mode; hosted
 escape strings never cross that boundary. Automatic focus updates preserve
