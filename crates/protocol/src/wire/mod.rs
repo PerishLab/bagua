@@ -1,8 +1,10 @@
 mod codec;
+mod history;
 mod screen;
 
 use crate::{Failure, Reply};
 pub use codec::{Decoder, encode};
+pub use history::{History, Read, Scope};
 pub use screen::Screen;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -37,6 +39,10 @@ impl From<Failure> for Fault {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Message {
+    History {
+        request: u64,
+        state: History,
+    },
     Hello {
         version: u16,
         client: Id,

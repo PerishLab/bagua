@@ -27,6 +27,25 @@ impl App {
             x: point.x - place.rect.x,
             y: point.y - place.rect.y,
         };
+        let wheel = match event.kind {
+            MouseEventKind::ScrollUp => Some(-3),
+            MouseEventKind::ScrollDown => Some(3),
+            _ => None,
+        };
+        if let Some(rows) = wheel {
+            let tracked = self
+                .screen(place.pane)
+                .is_some_and(|screen| screen.modes.tracking != terminal::Tracking::Off);
+            if event.modifiers.contains(KeyModifiers::SHIFT)
+                || !tracked
+                || self.history(place.pane).is_some()
+            {
+                if self.focus() != Some(place.pane) {
+                    return Err(Failure::Target);
+                }
+                return self.scroll(place.pane, rows);
+            }
+        }
         if event.modifiers.contains(KeyModifiers::SHIFT) {
             let extend = match event.kind {
                 MouseEventKind::Down(MouseButton::Left) => false,
@@ -37,6 +56,9 @@ impl App {
             };
             self.select(place.pane, local, extend)?;
             return Ok(Vec::new());
+        }
+        if self.history(place.pane).is_some() {
+            return Err(Failure::Unavailable);
         }
         if !self.controller() {
             return Err(Failure::Workspace(workspace::Failure::Observer));

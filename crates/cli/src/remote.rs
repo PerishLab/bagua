@@ -12,7 +12,7 @@ pub(crate) fn execute(args: &Args, config: crate::config::Loaded) -> Result<(), 
             return crate::tui::run(path, args, config);
         }
         if matches!(args.action, Action::Serve) {
-            return crate::serve::run(path);
+            return crate::serve::run(path, config.history());
         }
         let mut remote = crate::session::Session::connect(path, args)?;
         if matches!(args.action, Action::Control) {

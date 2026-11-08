@@ -3,6 +3,7 @@ use std::num::NonZeroU16;
 mod callback;
 mod engine;
 mod events;
+mod history;
 mod input;
 mod mouse;
 mod profile;
@@ -10,10 +11,12 @@ mod screen;
 
 pub use engine::Engine;
 pub use events::Report;
+pub use history::{History, Line, PAGE, Range, STORAGE};
 pub use input::{Input, Key};
 pub use mouse::{Action, Button, Direction, Modifiers, Mouse, Point};
 pub use profile::{CELLS, CHUNK, COLUMNS, EXCLUDED, HISTORY, PROFILE, ROWS, SOURCE};
-pub use screen::{Cell, Color, Cursor, Encoding, Modes, Snapshot, Style, Tracking};
+pub use screen::Snapshot;
+pub use screen::{Cell, Color, Cursor, Encoding, Modes, Style, Tracking};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Failure {

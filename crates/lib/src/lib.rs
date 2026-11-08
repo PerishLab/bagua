@@ -12,6 +12,7 @@ pub fn dispatch(request: Request) -> Result<Profile, Failure> {
         Command::Capabilities => Ok(profile()),
         Command::Start { .. }
         | Command::Inspect(_)
+        | Command::History { .. }
         | Command::Shutdown
         | Command::Workspace(_)
         | Command::Send { .. }
@@ -40,9 +41,10 @@ fn apply(
     use protocol::{Intent, Outcome, Status};
     match request.check()? {
         Command::Capabilities => Ok(Status::Applied(Outcome::Profile(profile()))),
-        Command::Start { .. } | Command::Inspect(_) | Command::Shutdown => {
-            Err(Failure::Unavailable)
-        }
+        Command::Start { .. }
+        | Command::Inspect(_)
+        | Command::History { .. }
+        | Command::Shutdown => Err(Failure::Unavailable),
         Command::Subscribe { target, after } => {
             world.watch(actor, target)?;
             Ok(Status::Accepted(Intent::Subscribe { target, after }))

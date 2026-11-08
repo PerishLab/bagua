@@ -1,6 +1,7 @@
 mod action;
 mod client;
 mod effects;
+mod history;
 mod input;
 mod pane;
 mod publish;
@@ -27,11 +28,22 @@ pub struct Host {
     stopping: Option<(Id, u64)>,
     finished: bool,
     turn: usize,
+    scope: [u8; 16],
+    history: crate::config::History,
 }
 
 impl Host {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn configured(scope: [u8; 16], history: crate::config::History) -> Result<Self, Failure> {
+        history.check()?;
+        Ok(Self {
+            scope,
+            history,
+            ..Self::default()
+        })
     }
 
     pub fn world(&self) -> &World {
@@ -75,6 +87,7 @@ impl Host {
     }
 
     pub fn tick(&mut self) -> Result<(), Failure> {
+        self.budget();
         self.pump()?;
         self.settle()?;
         self.publish()?;
@@ -100,7 +113,7 @@ impl Host {
             || self
                 .clients
                 .get(&actor)
-                .is_some_and(|client| !client.wanted.is_empty())
+                .is_some_and(|client| !client.wanted.is_empty() || client.history.is_some())
             || self.panes.values().any(|pane| pane.pending(actor))
     }
 

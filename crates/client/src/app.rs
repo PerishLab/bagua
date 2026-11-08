@@ -1,4 +1,5 @@
 mod controls;
+mod history;
 mod validate;
 
 use protocol::{
@@ -21,6 +22,7 @@ pub struct App {
     pub(super) notice: String,
     pub(super) done: bool,
     pub(super) dirty: bool,
+    past: history::Past,
 }
 
 impl App {
@@ -37,6 +39,7 @@ impl App {
             notice: "Ctrl-G ? help".into(),
             done: false,
             dirty: true,
+            past: history::Past::default(),
         }
     }
 
@@ -64,6 +67,9 @@ impl App {
             && selection.pane == pane
         {
             return Some(&selection.screen);
+        }
+        if let Some(view) = self.history(pane) {
+            return Some(&view.screen);
         }
         self.screens.get(&pane)?.state()
     }
@@ -115,16 +121,21 @@ impl App {
 
     pub fn accept(&mut self, message: Message) -> Result<(), Failure> {
         match message {
+            Message::History { request, state } => self.past(request, state)?,
             Message::Catalog(snapshot) => self.catalog(snapshot)?,
             Message::Screen { pane, state } => self.install(pane, state)?,
             Message::Reply(reply) => {
                 if let Err(error) = reply.result {
+                    self.finished(reply.request);
                     self.status(error.message());
                 }
             }
-            Message::Finished {
-                result: Err(fault), ..
-            } => self.status(fault.message),
+            Message::Finished { request, result } => {
+                self.finished(request);
+                if let Err(fault) = result {
+                    self.status(fault.message);
+                }
+            }
             Message::Process {
                 pane,
                 exited: true,
@@ -162,6 +173,7 @@ impl App {
         else {
             self.done = true;
             self.screens.clear();
+            self.live();
             self.catalog = Some(snapshot);
             return Ok(());
         };
@@ -184,7 +196,12 @@ impl App {
         self.catalog = Some(snapshot);
         self.clamp();
         if focus != self.focus() {
-            self.selection = None;
+            self.live();
+        }
+        if let Some(view) = &self.past.view
+            && extents.get(&view.scope.pane) != Some(&view.screen.extent)
+        {
+            self.live();
         }
         if let Some(selection) = &self.selection
             && extents.get(&selection.pane) != Some(&selection.screen.extent)

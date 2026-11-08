@@ -10,12 +10,22 @@ pub struct Report {
 
 #[derive(Default)]
 pub(crate) struct Events {
+    pub history: crate::History,
+    pub columns: u16,
     unsupported: u64,
     bells: u64,
     replies: Vec<u8>,
 }
 
 impl Events {
+    pub fn new(history: crate::History, columns: u16) -> Self {
+        Self {
+            history,
+            columns,
+            ..Self::default()
+        }
+    }
+
     pub fn bell(&mut self) {
         self.bells += 1;
     }
@@ -38,12 +48,11 @@ impl Events {
     }
 
     pub fn take(&mut self, revision: Revision) -> Report {
-        let events = std::mem::take(self);
         Report {
             revision,
-            unsupported: events.unsupported,
-            bells: events.bells,
-            replies: events.replies,
+            unsupported: std::mem::take(&mut self.unsupported),
+            bells: std::mem::take(&mut self.bells),
+            replies: std::mem::take(&mut self.replies),
         }
     }
 }

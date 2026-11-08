@@ -67,6 +67,9 @@ impl Host {
     }
 
     fn presentation(&mut self, actor: Id) -> Result<bool, Failure> {
+        if self.past(actor)? {
+            return Ok(true);
+        }
         let preferred = self.clients[&actor].catalogue;
         for catalog in [preferred, !preferred] {
             let shown = if catalog {

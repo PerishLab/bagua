@@ -72,7 +72,7 @@ impl Host {
         for id in ids {
             let extent = self.extent(id).map_err(Fault::from)?;
             if let std::collections::btree_map::Entry::Vacant(entry) = self.panes.entry(id) {
-                entry.insert(Pane::new(extent).map_err(Fault::from)?);
+                entry.insert(Pane::new(extent, self.history).map_err(Fault::from)?);
             }
             let pane = self.panes.get_mut(&id).unwrap();
             if pane.engine.extent() == extent {

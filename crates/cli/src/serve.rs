@@ -29,9 +29,9 @@ pub(crate) fn listen() -> Result<(Signals, Arc<AtomicBool>), Error> {
     Ok((signals, stop))
 }
 
-pub(crate) fn run(path: &Path) -> Result<(), Error> {
+pub(crate) fn run(path: &Path, history: bagua::config::History) -> Result<(), Error> {
     let (_signals, stop) = listen()?;
-    let mut service = bagua::ipc::Service::bind(path)?;
+    let mut service = bagua::ipc::Service::configured(path, history)?;
     service.run(&stop)?;
     Ok(())
 }

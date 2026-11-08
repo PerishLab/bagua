@@ -18,6 +18,10 @@ fn transaction() {
     .unwrap();
     assert!(config.reload().is_err());
     assert_eq!(config.prefix(), "C-q");
+    fs::write(&path, "[history]\nlines=20000\n[client]\nprefix='C-a'\n").unwrap();
+    assert!(config.reload().is_err());
+    assert_eq!(config.history().lines, 50_000);
+    assert_eq!(config.prefix(), "C-q");
     fs::write(&path, "[client]\nprefix='C-a'\nescape_ms=0\n").unwrap();
     config.reload().unwrap();
     assert_eq!(config.prefix(), "C-a");
