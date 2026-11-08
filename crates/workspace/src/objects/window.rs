@@ -1,4 +1,4 @@
-use crate::{Failure, Geometry, Id, Pane, Placement, Split, layout::Tree};
+use crate::{Canvas, Failure, Id, Pane, Placement, Split, layout::Tree};
 use std::collections::BTreeMap;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -36,19 +36,19 @@ impl Window {
         self.panes.values()
     }
 
-    pub fn placements(&self, geometry: Geometry) -> Result<Vec<Placement>, Failure> {
-        self.tree.placements(geometry)
+    pub fn placements(&self, canvas: impl Into<Canvas>) -> Result<Vec<Placement>, Failure> {
+        self.tree.placements(canvas.into())
     }
 
-    pub fn dividers(&self, geometry: Geometry) -> Result<Vec<crate::Divider>, Failure> {
-        self.tree.dividers(geometry)
+    pub fn dividers(&self, canvas: impl Into<Canvas>) -> Result<Vec<crate::Divider>, Failure> {
+        self.tree.dividers(canvas.into())
     }
 
     pub fn preview(
         &self,
         divider: crate::Divider,
         ratio: crate::Ratio,
-        geometry: Geometry,
+        geometry: Canvas,
     ) -> Result<Vec<Placement>, Failure> {
         self.adjusted(divider, ratio, geometry)?
             .placements(geometry)
@@ -58,7 +58,7 @@ impl Window {
         &mut self,
         divider: crate::Divider,
         ratio: crate::Ratio,
-        geometry: Geometry,
+        geometry: Canvas,
     ) -> Result<(), Failure> {
         self.tree = self.adjusted(divider, ratio, geometry)?;
         Ok(())
@@ -68,7 +68,7 @@ impl Window {
         &self,
         divider: crate::Divider,
         ratio: crate::Ratio,
-        geometry: Geometry,
+        geometry: Canvas,
     ) -> Result<Tree, Failure> {
         if !self.tree.dividers(geometry)?.contains(&divider) {
             return Err(Failure::State);
@@ -94,7 +94,7 @@ impl Window {
         pane: Id,
         next: Id,
         split: Split,
-        geometry: Geometry,
+        geometry: Canvas,
     ) -> Result<(), Failure> {
         if self.panes.len() >= 64 {
             return Err(Failure::Capacity);

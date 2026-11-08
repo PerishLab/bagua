@@ -67,7 +67,7 @@ pub(super) fn catalog(snapshot: &Snapshot) -> Result<(), Failure> {
                 return Err(Failure::Identity);
             }
             let panes: BTreeSet<_> = window.panes().map(|p| p.id()).collect();
-            let placements = window.placements(size)?;
+            let placements = window.placements(session.canvas())?;
             cells += placements
                 .iter()
                 .map(|p| {

@@ -34,9 +34,10 @@ pub(crate) fn run(path: &Path, args: &Args, config: crate::config::Loaded) -> Re
     }
 }
 
-pub(super) fn extent(columns: u16, rows: u16) -> Option<terminal::Extent> {
-    if columns < 2 || rows < 2 {
+pub(super) fn extent(columns: u16, rows: u16, separator: bool) -> Option<terminal::Extent> {
+    let reserved = 1 + u16::from(separator);
+    if columns < 2 || rows <= reserved {
         return None;
     }
-    terminal::Extent::new(columns.min(512), (rows - 1).min(255))
+    terminal::Extent::new(columns.min(512), (rows - reserved).min(256 - reserved))
 }

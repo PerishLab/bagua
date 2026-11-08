@@ -1,5 +1,20 @@
 use std::num::NonZeroU16;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Canvas {
+    pub geometry: Geometry,
+    pub header: bool,
+}
+
+impl From<Geometry> for Canvas {
+    fn from(geometry: Geometry) -> Self {
+        Self {
+            geometry,
+            header: false,
+        }
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Geometry {
     columns: NonZeroU16,

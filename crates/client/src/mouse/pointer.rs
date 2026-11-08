@@ -70,7 +70,7 @@ impl App {
         let Some(view) = session.windows().find(|view| view.id() == window) else {
             return false;
         };
-        view.dividers(session.geometry())
+        view.dividers(session.canvas())
             .is_ok_and(|dividers| dividers.contains(&divider))
     }
 
@@ -114,7 +114,7 @@ impl App {
             .find(|w| Some(w.id()) == session.selected())
             .ok_or(Failure::Target)?;
         let Some(divider) = window
-            .dividers(session.geometry())?
+            .dividers(session.canvas())?
             .into_iter()
             .find(|d| d.contains(point.x, point.y))
         else {
@@ -166,7 +166,7 @@ impl App {
                     workspace::Axis::Rows => point.y,
                 };
                 if let Some(next) = divider.ratio(position)
-                    && view.preview(divider, next, session.geometry()).is_ok()
+                    && view.preview(divider, next, session.canvas()).is_ok()
                 {
                     ratio = next;
                 }
@@ -189,7 +189,15 @@ impl App {
                 Ok(Some(Vec::new()))
             }
             Pointer::Application { pane, rect, button } => {
-                let commands = self.application(Placement { pane, rect }, point, event)?;
+                let commands = self.application(
+                    Placement {
+                        pane,
+                        rect,
+                        frame: rect,
+                    },
+                    point,
+                    event,
+                )?;
                 if event.kind != MouseEventKind::Up(button) {
                     self.pointer = Some(Pointer::Application { pane, rect, button });
                 }

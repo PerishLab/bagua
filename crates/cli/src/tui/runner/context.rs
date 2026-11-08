@@ -138,7 +138,9 @@ impl Runner {
         }
         if reply.result.is_err() {
             self.refused(reply.request);
-            self.jobs.remove(&reply.request);
+            if !matches!(self.jobs.get(&reply.request), Some(Job::Header { .. })) {
+                self.jobs.remove(&reply.request);
+            }
         }
         Ok(())
     }

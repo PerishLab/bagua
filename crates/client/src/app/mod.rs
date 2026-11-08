@@ -1,7 +1,9 @@
+mod context;
 mod controls;
 mod history;
 mod install;
 pub(super) mod preferences;
+mod timing;
 mod validate;
 
 use protocol::{
@@ -22,6 +24,7 @@ pub struct App {
     pub(super) selection: Option<crate::select::Selection>,
     pub(super) clipboard: String,
     pub(super) notice: String,
+    pub(super) urgent: bool,
     pub(super) done: bool,
     pub(super) dirty: bool,
     past: history::Past,
@@ -29,6 +32,12 @@ pub struct App {
     pub(super) copying: crate::Clipboard,
     pub(super) pointer: Option<crate::mouse::Pointer>,
     pub(super) copies: crate::select::Copies,
+    pub(super) decor: crate::Decor,
+    pub(super) clock: String,
+    pub(super) now: std::time::Instant,
+    pub(super) next: Option<std::time::Instant>,
+    pub(super) leader: Option<String>,
+    pub(super) records: BTreeMap<Id, context::Record>,
 }
 
 impl App {
@@ -43,6 +52,7 @@ impl App {
             selection: None,
             clipboard: String::new(),
             notice: "Ready".into(),
+            urgent: false,
             done: false,
             dirty: true,
             past: history::Past::default(),
@@ -50,6 +60,12 @@ impl App {
             copying: crate::Clipboard::default(),
             pointer: None,
             copies: crate::select::Copies::default(),
+            decor: crate::Decor::default(),
+            clock: "--:--".into(),
+            now: std::time::Instant::now(),
+            next: None,
+            leader: None,
+            records: BTreeMap::new(),
         }
     }
 
@@ -69,8 +85,18 @@ impl App {
         self.dirty = false;
     }
     pub fn status(&mut self, value: impl Into<String>) {
-        self.notice = value.into().chars().take(512).collect();
+        self.notice = value
+            .into()
+            .chars()
+            .map(|c| if c.is_control() { '?' } else { c })
+            .take(512)
+            .collect();
         self.dirty = true;
+        self.urgent = false;
+    }
+    pub fn error(&mut self, value: impl Into<String>) {
+        self.status(value);
+        self.urgent = true;
     }
     pub fn screen(&self, pane: Id) -> Option<&Screen> {
         if let Some(selection) = &self.selection
@@ -114,7 +140,7 @@ impl App {
         else {
             return Ok(Vec::new());
         };
-        Ok(window.placements(session.geometry())?)
+        Ok(window.placements(session.canvas())?)
     }
 
     pub fn missing(&self) -> Vec<Id> {
@@ -141,13 +167,13 @@ impl App {
             Message::Reply(reply) => {
                 if let Err(error) = reply.result {
                     self.finished(reply.request);
-                    self.status(error.message());
+                    self.error(error.message());
                 }
             }
             Message::Finished { request, result } => {
                 self.finished(request);
                 if let Err(fault) = result {
-                    self.status(fault.message);
+                    self.error(fault.message);
                 }
             }
             Message::Process {
@@ -157,14 +183,20 @@ impl App {
                 signal,
                 ..
             } => {
+                self.records.remove(&pane);
                 self.status(format!(
                     "pane {} exited: code={code:?} signal={signal:?}",
                     pane.value()
                 ));
             }
             Message::Process {
-                fault: Some(fault), ..
-            } => self.status(fault.message),
+                pane,
+                fault: Some(fault),
+                ..
+            } => {
+                self.records.remove(&pane);
+                self.error(fault.message);
+            }
             Message::Hello { .. } => return Err(Failure::Version),
             _ => {}
         }
@@ -187,6 +219,7 @@ impl App {
         else {
             self.done = true;
             self.screens.clear();
+            self.records.clear();
             self.cancel();
             self.live();
             self.catalog = Some(snapshot);
@@ -194,7 +227,7 @@ impl App {
         };
         let mut extents = BTreeMap::new();
         for window in session.windows() {
-            for placement in window.placements(session.geometry())? {
+            for placement in window.placements(session.canvas())? {
                 let size = placement.rect.geometry;
                 extents.insert(
                     placement.pane,
@@ -209,6 +242,7 @@ impl App {
                 _ => false,
             });
         self.catalog = Some(snapshot);
+        self.retain();
         self.pointer();
         self.clamp();
         if focus != self.focus() && (self.past.active() || self.selection.is_some()) {

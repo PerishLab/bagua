@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod checks;
-use crate::Copy;
+use crate::{Copy, Paint};
 use std::{
     collections::VecDeque,
     io::{self, Write},
@@ -10,7 +10,8 @@ use std::{
 #[derive(Default)]
 pub(super) struct Output {
     active: Option<Writing>,
-    latest: Option<Vec<u8>>,
+    latest: Option<View>,
+    baseline: Option<Paint>,
     copies: VecDeque<Copy>,
     bytes: usize,
     count: usize,
@@ -20,6 +21,12 @@ struct Writing {
     bytes: Vec<u8>,
     offset: usize,
     reliable: bool,
+    paint: Option<Paint>,
+}
+
+enum View {
+    Raw(Vec<u8>),
+    Paint(Paint),
 }
 
 impl Output {
@@ -27,7 +34,15 @@ impl Output {
         if frame.len() > 4_194_304 {
             return Err(io::Error::other("presentation exceeds its byte budget"));
         }
-        self.latest = Some(frame);
+        self.latest = Some(View::Raw(frame));
+        Ok(())
+    }
+
+    pub fn present(&mut self, paint: Paint) -> io::Result<()> {
+        paint
+            .check()
+            .map_err(|_| io::Error::other("presentation exceeds its byte budget"))?;
+        self.latest = Some(View::Paint(paint));
         Ok(())
     }
 
@@ -50,42 +65,34 @@ impl Output {
                     bytes: copy.0,
                     offset: 0,
                     reliable: true,
+                    paint: None,
                 })
                 .or_else(|| {
-                    self.latest.take().map(|bytes| Writing {
-                        bytes,
-                        offset: 0,
-                        reliable: false,
+                    self.latest.take().map(|view| match view {
+                        View::Raw(bytes) => Writing {
+                            bytes,
+                            offset: 0,
+                            reliable: false,
+                            paint: None,
+                        },
+                        View::Paint(paint) => Writing {
+                            bytes: paint.render(self.baseline.as_ref()),
+                            offset: 0,
+                            reliable: false,
+                            paint: Some(paint),
+                        },
                     })
                 });
         }
         let Some(active) = &mut self.active else {
             return Ok(());
         };
-        let length = (active.bytes.len() - active.offset).min(65_536);
-        match writer.write(&active.bytes[active.offset..active.offset + length]) {
-            Ok(0) if length == 0 => {}
-            Ok(0) => {
-                return Err(io::Error::new(
-                    io::ErrorKind::WriteZero,
-                    "terminal output closed",
-                ));
-            }
-            Ok(count) => active.offset += count,
-            Err(error)
-                if matches!(
-                    error.kind(),
-                    io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
-                ) =>
-            {
-                return Ok(());
-            }
-            Err(error) => return Err(error),
-        }
-        if active.offset == active.bytes.len() {
+        if active.write(writer)? {
             if active.reliable {
                 self.bytes -= active.bytes.len();
                 self.count -= 1;
+            } else {
+                self.baseline = active.paint.take();
             }
             self.active = None;
         }
@@ -106,5 +113,33 @@ impl Output {
             std::thread::sleep(Duration::from_millis(2));
         }
         Ok(())
+    }
+}
+
+impl Writing {
+    fn write(&mut self, writer: &mut impl Write) -> io::Result<bool> {
+        let length = (self.bytes.len() - self.offset).min(65_536);
+        if length == 0 {
+            return Ok(true);
+        }
+        match writer.write(&self.bytes[self.offset..self.offset + length]) {
+            Ok(0) => {
+                return Err(io::Error::new(
+                    io::ErrorKind::WriteZero,
+                    "terminal output closed",
+                ));
+            }
+            Ok(count) => self.offset += count,
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
+                ) =>
+            {
+                return Ok(false);
+            }
+            Err(error) => return Err(error),
+        }
+        Ok(self.offset == self.bytes.len())
     }
 }

@@ -79,7 +79,8 @@ impl Runner {
         self.intents.clear();
         self.staged = 0;
         self.leader = false;
-        self.app.status(format!(
+        self.app.prefix(None);
+        self.app.error(format!(
             "Input paused: {reason}; Escape resumes without replaying buffered gestures"
         ));
     }

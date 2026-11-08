@@ -127,3 +127,30 @@ fn pointer() {
         }
     );
 }
+#[test]
+fn decor() {
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("bagua.toml");
+    fs::write(&path, "[client]\nprefix='C-q'\n").unwrap();
+    let mut config = Loaded::read(Some(path.clone()), true).unwrap();
+    let before = config.decor().clone();
+    for source in [
+        "[client]\nprefix='C-a'\n[header]\ncomponents=['shell']\n",
+        "[header]\nactive=256\n",
+        "[status]\ntimezone='local'\n",
+        "[status]\nrefresh_seconds=0\n",
+        "[status]\ncomponents=['clock','clock']\n",
+    ] {
+        fs::write(&path, source).unwrap();
+        assert!(config.reload().is_err());
+        assert_eq!(config.prefix(), "C-q");
+        assert_eq!(config.decor(), &before);
+    }
+    fs::write(&path,"[header]\nenabled=true\ncomponents=['command','cwd']\nactive=12\ninactive=0\ncolor=false\n[status]\nseparator=true\ntimezone='Asia/Shanghai'\nrefresh_seconds=1\n").unwrap();
+    config.reload().unwrap();
+    assert!(config.decor().header.enabled);
+    assert!(!config.decor().header.color);
+    assert_eq!(config.decor().header.active, 12);
+    assert!(config.decor().status.separator);
+    assert_eq!(config.decor().status.refresh(), Duration::from_secs(1));
+}

@@ -124,6 +124,7 @@ impl App {
         self.copies.push(&copied, self.copying.outer)?;
         self.clipboard = copied;
         self.selection = None;
+        self.pointer = None;
         self.status(format!(
             "Copied {} bytes locally{}",
             self.clipboard.len(),

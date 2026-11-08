@@ -1,4 +1,4 @@
-use crate::{Failure, Geometry, Id, Placement, Rect, Split};
+use crate::{Canvas, Failure, Geometry, Id, Placement, Rect, Split};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Tree {
@@ -60,7 +60,8 @@ impl Tree {
         }
     }
 
-    pub fn placements(&self, geometry: Geometry) -> Result<Vec<Placement>, Failure> {
+    pub fn placements(&self, canvas: Canvas) -> Result<Vec<Placement>, Failure> {
+        let geometry = canvas.geometry;
         if !geometry.valid() {
             return Err(Failure::Geometry);
         }
@@ -72,21 +73,45 @@ impl Tree {
                 geometry,
             },
             &mut placements,
+            canvas.header,
         )?;
         Ok(placements)
     }
 
-    fn collect(&self, rect: Rect, output: &mut Vec<Placement>) -> Result<(), Failure> {
+    fn collect(
+        &self,
+        rect: Rect,
+        output: &mut Vec<Placement>,
+        header: bool,
+    ) -> Result<(), Failure> {
         match self {
-            Self::Pane(pane) => output.push(Placement { pane: *pane, rect }),
+            Self::Pane(pane) => {
+                let top = u16::from(header);
+                let height = rect
+                    .geometry
+                    .rows()
+                    .checked_sub(top)
+                    .ok_or(Failure::Geometry)?;
+                let geometry =
+                    Geometry::new(rect.geometry.columns(), height).ok_or(Failure::Geometry)?;
+                output.push(Placement {
+                    pane: *pane,
+                    frame: rect,
+                    rect: Rect {
+                        y: rect.y + top,
+                        geometry,
+                        ..rect
+                    },
+                });
+            }
             Self::Split {
                 split,
                 first,
                 second,
             } => {
                 let (left, right) = rect.split(*split)?;
-                first.collect(left, output)?;
-                second.collect(right, output)?;
+                first.collect(left, output, header)?;
+                second.collect(right, output, header)?;
             }
         }
         Ok(())

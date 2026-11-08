@@ -15,7 +15,7 @@ impl App {
             return Ok(());
         };
         let expected = window
-            .placements(session.geometry())?
+            .placements(session.canvas())?
             .into_iter()
             .find(|p| p.pane == pane)
             .map(|p| p.rect.geometry);

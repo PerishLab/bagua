@@ -48,7 +48,7 @@ impl Host {
         let session = self.world.session(session).unwrap();
         let window = session.windows().find(|w| Some(w.id()) == window).unwrap();
         let placement = window
-            .placements(session.geometry())?
+            .placements(session.canvas())?
             .into_iter()
             .find(|p| p.pane == id)
             .unwrap();
@@ -159,7 +159,7 @@ fn validate(
         }
         for window in session.windows() {
             count += window.panes().count();
-            for placement in window.placements(size)? {
+            for placement in window.placements(session.canvas())? {
                 let size = placement.rect.geometry;
                 cells += usize::from(size.columns()) * usize::from(size.rows());
             }

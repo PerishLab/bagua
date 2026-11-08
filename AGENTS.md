@@ -136,7 +136,7 @@ Wharf owns its archive, manager, identity binding and complete distribution unde
 `releases.bagua.perish.uk`; internal crates remain unpublished. Source builds keep
 version 0.0.0. Product source carries no generated installer or release workflow.
 The required Windtun case names in `plumb.toml` are the consumer contract for
-Seatrial #66. Declaration validity does not prove those scenes are published,
+Seatrial #66 and #83. Declaration validity does not prove those scenes are published,
 executed or qualified, or that stable promotion enforcement is active. Issue #12
 retains the actual non-stable distribution obligation after its source merge.
 
@@ -171,8 +171,8 @@ Connections have increasing request IDs and explicit output admission. Only
 presentation coalesces, with bounded rotating serialization. Reconnect starts a
 fresh actor/cursor and does not authorize replay. Inspect returns a complete
 screen and process facts before finishing. Source runtime history has independent line/per-pane/aggregate byte budgets,
-primary-only physical rows and context-bound paged reads; installed v0.1.0
-remains zero scrollback until a containing release is qualified. History does
+primary-only physical rows and context-bound paged reads; v0.1.0 has zero
+scrollback, and newer runtime history needs a qualified containing release. History does
 not reflow or restore rows into the application grid. Clients retain one frozen
 page; live frames never include the entire history. Host context is freshly
 created at the native service boundary; pure model callers provide their own
@@ -194,7 +194,7 @@ Other native platforms require their own evidence.
 Keep source composition/smoke evidence distinct from formal distributed-artifact
 host/client scenes and installed product qualification.
 
-Named entry is a source contract distinct from installed v0.1.0. Names are
+Named entry is a source contract distinct from the v0.1.0 contract. Names are
 validated metadata; World retains sole identity allocation and atomic entry.
 Display indices are derived from current window order and never replace IDs.
 Normal entry alone may capture invocation shell/cwd/environment as an explicit
@@ -245,3 +245,22 @@ TTY writer finishes the active frame before starting an effect. Reload governs
 future effects and does not cancel admitted ones. Cleanup drains active output
 and reliable effects within its bound, reports incomplete output as unknown,
 and attempts terminal restoration. Sending OSC52 never proves the OS clipboard.
+
+World owns the header inset as session layout state. Placements distinguish the
+outer frame from the application content rectangle; host PTYs, terminal grids,
+layout admission and client replicas consume the same authoritative canvas.
+Header preferences alone grant no authority. A controller adopts them through
+an explicit operation; observers follow the actual session inset. A refused
+reservation never draws a header over application cells.
+
+Display metadata uses bounded visible-pane reads through the existing native
+context contract, with observation age and unavailable/expired states. It never
+feeds launch cwd or grants process authority. Metadata jobs have their own small
+share of client jobs, follow input priority and do not erase user feedback on
+background refusal. Prefix waiting is a separate presentation fact.
+
+Paints contain complete typed rows and cursor state. Diff output compares only
+with the last completely written paint; an offered or coalesced paint is never
+the baseline. Copy effects stay between complete frames and preserve that
+baseline. Geometry changes refresh the full display; unchanged pictures emit no
+bytes, and time/metadata refresh follows the declared bounded interval.

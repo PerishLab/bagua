@@ -1,4 +1,4 @@
-use crate::{Axis, Geometry, Id, Ratio, Rect, Split};
+use crate::{Axis, Canvas, Id, Ratio, Rect, Split};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Divider {
@@ -45,8 +45,9 @@ impl Divider {
 }
 
 impl super::Tree {
-    pub fn dividers(&self, geometry: Geometry) -> Result<Vec<Divider>, crate::Failure> {
-        self.placements(geometry)?;
+    pub fn dividers(&self, canvas: Canvas) -> Result<Vec<Divider>, crate::Failure> {
+        self.placements(canvas)?;
+        let geometry = canvas.geometry;
         let mut output = Vec::new();
         self.divisions(
             Rect {
