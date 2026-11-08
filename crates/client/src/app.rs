@@ -36,7 +36,7 @@ impl App {
             offset: Point::default(),
             selection: None,
             clipboard: String::new(),
-            notice: "Ctrl-G ? help".into(),
+            notice: "Ready".into(),
             done: false,
             dirty: true,
             past: history::Past::default(),

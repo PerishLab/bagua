@@ -650,9 +650,9 @@ Mouse presses focus panes for the controller. Mouse reports otherwise follow
 the application's declared tracking mode and encoding. Shift-left-drag selects
 locally in either role. Selection freezes one pane snapshot while the host and
 live replica continue. In selection mode arrows extend the range, Escape cancels
-and Ctrl-G c copies. Copy omits continuation cells and physical row padding,
+and the configured copy binding copies (prefix c by default). Copy omits continuation cells and physical row padding,
 joins soft wraps and preserves hard row breaks. The buffer is local to the
-client, at most 4096 UTF-8 bytes, and is lost on exit. Ctrl-G p submits it through
+client, at most 4096 UTF-8 bytes, and is lost on exit. The configured paste binding (prefix p by default) submits it through
 the normal paste contract. No OS clipboard or OSC 52 effect is claimed.
 Selection covers the current live or frozen history page. It does not span
 unloaded pages; the 4096-byte copy limit refuses overflow without truncation.
