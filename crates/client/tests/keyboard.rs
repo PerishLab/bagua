@@ -4,6 +4,21 @@ use protocol::Failure;
 use std::time::{Duration, Instant};
 
 #[test]
+fn delay() {
+    let now = Instant::now();
+    let mut keyboard = Keyboard::new(Duration::from_millis(10));
+    keyboard.push(b"\x1b").unwrap();
+    assert!(keyboard.next(now).is_none());
+    assert!(keyboard.next(now + Duration::from_millis(9)).is_none());
+    assert!(
+        matches!(keyboard.next(now + Duration::from_millis(10)), Some(Ok(Event::Key(key))) if key.code == KeyCode::Esc)
+    );
+    keyboard.delay(Duration::ZERO);
+    keyboard.push(b"\x1b").unwrap();
+    assert!(matches!(keyboard.next(now), Some(Ok(Event::Key(key))) if key.code == KeyCode::Esc));
+}
+
+#[test]
 fn streaming() {
     let mut keyboard = Keyboard::default();
     let mut events = Vec::new();

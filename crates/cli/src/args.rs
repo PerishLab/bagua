@@ -6,6 +6,15 @@ use clap::{Args as Group, Parser, Subcommand, ValueEnum};
     about = "A persistent terminal workspace with Linux machine control and interactive clients."
 )]
 pub(crate) struct Args {
+    #[arg(long, global = true, help = "Read this explicit bagua.toml file")]
+    pub config: Option<std::path::PathBuf>,
+    #[arg(
+        long = "no-config",
+        global = true,
+        conflicts_with = "config",
+        help = "Use defaults without reading a configuration file"
+    )]
+    pub bare: bool,
     #[arg(
         long,
         global = true,
@@ -62,6 +71,8 @@ pub(crate) enum Kind {
 
 #[derive(Subcommand)]
 pub(crate) enum Action {
+    #[command(about = "Validate and show active configuration, sources and reload policy")]
+    Config,
     #[command(about = "Open a session, explicitly launch a program and enter interactive control")]
     Open {
         #[command(flatten)]

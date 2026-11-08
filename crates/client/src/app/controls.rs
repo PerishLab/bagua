@@ -12,9 +12,10 @@ impl App {
                 return Ok(Vec::new());
             }
             Gesture::Help => {
-                self.status("Ctrl-G: d detach v/h split n window Tab pane w window a acquire t transfer f fixed u auto x close ! session [ select c copy p paste; Shift-drag select");
+                self.status("Prefix: d detach v/h split n window Tab pane w window a acquire t transfer f fixed u auto x close ! session [ select c copy p paste r reload; Shift-drag select");
                 return Ok(Vec::new());
             }
+            Gesture::Reload => return Err(Failure::Unavailable),
             Gesture::Select => {
                 self.begin()?;
                 return Ok(Vec::new());

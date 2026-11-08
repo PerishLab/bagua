@@ -1,4 +1,6 @@
 #![cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[path = "support/configure.rs"]
+mod configure;
 #[path = "support/interactive.rs"]
 mod interactive;
 use interactive::{Fixture, Peer, SHELL};

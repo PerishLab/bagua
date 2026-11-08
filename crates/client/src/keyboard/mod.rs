@@ -7,15 +7,35 @@ use std::{
     time::{Duration, Instant},
 };
 
-#[derive(Default)]
 pub struct Keyboard {
     bytes: VecDeque<u8>,
     escape: Option<Instant>,
     paste: Option<paste::Paste>,
     discard: bool,
+    delay: Duration,
+}
+
+impl Default for Keyboard {
+    fn default() -> Self {
+        Self::new(Duration::from_millis(50))
+    }
 }
 
 impl Keyboard {
+    pub fn new(delay: Duration) -> Self {
+        Self {
+            bytes: VecDeque::new(),
+            escape: None,
+            paste: None,
+            discard: false,
+            delay,
+        }
+    }
+
+    pub fn delay(&mut self, delay: Duration) {
+        self.delay = delay;
+    }
+
     pub fn room(&self) -> usize {
         8192 - self.bytes.len()
     }
@@ -69,7 +89,7 @@ impl Keyboard {
     }
     fn escaped(&mut self, now: Instant) -> Option<Result<Event, Failure>> {
         let started = *self.escape.get_or_insert(now);
-        let timed = now.saturating_duration_since(started) >= Duration::from_millis(50);
+        let timed = now.saturating_duration_since(started) >= self.delay;
         if self.bytes.len() == 1 {
             if !timed {
                 return None;

@@ -118,6 +118,17 @@ Configuration describes data. Program, argv, working directory and environment
 are explicit; invoking a shell is explicit when shell interpretation is needed.
 These exclusions do not change how applications use their own shells.
 
+The anchor library owns the configuration schema through the published Radicula
+configuration capability. The CLI owns `bagua.toml` discovery and startup composition. Only `main` captures process environment.
+Configuration chooses client preferences and explicit launch data; it grants no
+host authority. Client prefix and Escape delay can reload after complete
+validation. Startup socket and program sections require a new invocation;
+reload never restarts a host or changes existing programs. Unknown fields and
+future capability sections refuse instead of implying implemented behavior.
+Public configuration diagnostics name fields and sources without printing
+program argument or environment values. User directories and explicit config
+paths are inputs; a working-directory file is never implicitly discovered.
+
 ## Verification
 
 The first declared release contains only the Linux x86_64 GNU `bagua` executable.

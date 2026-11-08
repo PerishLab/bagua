@@ -1,3 +1,4 @@
+pub mod config;
 mod host;
 pub mod ipc;
 mod profile;

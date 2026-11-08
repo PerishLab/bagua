@@ -32,3 +32,7 @@ note = "The actual Rust workspace and locked dependency graph."
 [[layout.file]]
 name = ["README.md"]
 note = "Public product introduction and contribution entry."
+
+[[layout.file]]
+name = ["bagua.toml"]
+note = "An explicit runnable user configuration example, never an implicit working-directory input."

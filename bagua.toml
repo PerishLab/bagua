@@ -1,0 +1,15 @@
+version = 1
+
+[client]
+prefix = "C-q"
+escape_ms = 50
+
+[program]
+executable = "/bin/sh"
+args = ["-i"]
+cwd = "/"
+
+[program.environment]
+PATH = "/usr/bin:/bin"
+TERM = "xterm-256color"
+LANG = "C.UTF-8"

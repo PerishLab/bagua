@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub(crate) struct Error {
     code: String,
     message: String,
@@ -5,6 +6,14 @@ pub(crate) struct Error {
 }
 
 impl Error {
+    pub fn config(message: impl Into<String>) -> Self {
+        Self {
+            code: "configuration".into(),
+            message: message.into(),
+            request: None,
+        }
+    }
+
     pub fn at(mut self, request: u64) -> Self {
         self.request = Some(request);
         self

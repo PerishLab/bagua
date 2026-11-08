@@ -66,8 +66,10 @@ dependencies = [
  "bagua-pty",
  "bagua-terminal",
  "bagua-workspace",
+ "radicula-config",
  "radicula-process",
  "rustix",
+ "serde",
  "serde_json",
  "tempfile",
 ]
@@ -85,6 +87,7 @@ dependencies = [
  "clap",
  "crossterm",
  "plumb",
+ "radicula-config",
  "radicula-process",
  "serde_json",
  "signal-hook 0.4.6",
