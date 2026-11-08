@@ -124,7 +124,7 @@ The built-in prefix remains Ctrl-G. Pressing the chosen prefix twice sends its
 literal control key to the application. Prefix-r reloads and reports its result.
 
 Reload validates the whole file before atomically replacing client prefix,
-Escape delay and bindings. Errors, missing reload input or changed host/program/history/workspace sections
+Escape delay, bindings, mouse and clipboard preferences. Errors, missing reload input or changed host/program/history/workspace sections
 preserve the old client configuration. Host socket, history budgets and program settings apply
 only to a new invocation; they never restart a host or alter running programs.
 Each client owns its preferences, including an observer, without gaining write
@@ -144,7 +144,7 @@ socket, client settings and reload policy. It shows program paths and only
 argument counts/environment key names. It neither starts programs nor proves
 their executability, directory access or runtime permissions. Parse diagnostics
 report field/byte information without echoing the original TOML source line.
-Typed bindings are described below; clipboard and status sections remain
+Typed bindings, mouse and clipboard are described below; status sections remain
 unsupported until their owning Issues land.
 
 ## Ordinary named entry
@@ -481,7 +481,7 @@ duplicate subscription idempotently. Observers must be joined to the target's
 session. Cancelling a retired target remains possible. A resume revision is a
 hint, not permission to invent a delta without its baseline. The host sends
 complete live snapshots and retains no incremental screen deltas. Scrollback is
-read separately in bounded pages. Wire version 5 includes named entry, native foreground-context reads, executable
+read separately in bounded pages. Wire version 6 includes validated divider adjustments, named entry, native foreground-context reads, executable
 file identity in Hello, keyboard mode flags and typed modified input. It uses a
 four-byte big-endian JSON length followed by that many UTF-8 JSON bytes.
 Request numbers strictly increase within a connection; reused or older numbers
@@ -642,7 +642,7 @@ color, alternate screen, cursor positioning, line-wrap control, bracketed paste
 and SGR mouse reports. This is an explicit terminal profile, not automatic
 capability negotiation or qualification of every terminal emulator.
 Hello binds the host canvas and executable file identity; subscriptions bind
-target-scoped revisions. Use a matching host/client build and wire version 5.
+target-scoped revisions. Use a matching host/client build and wire version 6.
 Installed v0.1.0 speaks wire 2 and cannot consume these source changes.
 
 For explicit machine workflows, run the host described above. Open a new session with a complete
@@ -696,16 +696,71 @@ terminator and refused, with bounded storage. Unsupported or oversized CSI
 input is refused. The client uses a bounded decoder instead of an unbounded
 event-reader paste accumulator.
 
-Mouse presses focus panes for the controller. Mouse reports otherwise follow
-the application's declared tracking mode and encoding. Shift-left-drag selects
-locally in either role. Selection freezes one pane snapshot while the host and
-live replica continue. In selection mode arrows extend the range, Escape cancels
-and the configured copy binding copies (prefix c by default). Copy omits continuation cells and physical row padding,
-joins soft wraps and preserves hard row breaks. The buffer is local to the
-client, at most 4096 UTF-8 bytes, and is lost on exit. The configured paste binding (prefix p by default) submits it through
-the normal paste contract. No OS clipboard or OSC 52 effect is claimed.
-Selection covers the current live or frozen history page. It does not span
-unloaded pages; the 4096-byte copy limit refuses overflow without truncation.
+Mouse presses focus panes for the controller. Without application tracking,
+left-drag selects locally; Shift-left-drag selects locally even when the
+application tracks mouse input. Observers can select without acquiring control.
+Wheel events follow application tracking, or request host history when tracking
+is off, Shift is held, or the focused pane is already browsing history. History
+wheel routing requires the focused pane. Application presses retain their pane
+rectangle until release; coordinates clamp to that rectangle. Local capture
+cancels on changed geometry, retirement, out-of-viewport events, configuration
+reload or refusal behind an earlier layout intention. Escape cancels a local
+pointer gesture. A click without a drag leaves normal keyboard input available.
+
+Dragging a divider shows its proposed ratio; release submits one `Adjust`
+operation. World validates the exact previous divider (stable subtree anchors,
+split and rectangle), current geometry and control authority before committing.
+Invalid intermediate positions keep the last valid ratio. A stale or undersized
+layout refuses atomically. The host then resizes its PTYs and terminal grids;
+this never substitutes client-only geometry for application size. Observers
+cannot resize. Shift bypasses divider capture.
+
+Selection freezes one pane snapshot while the host and live replica continue.
+Release copies and exits selection by default; `[mouse] copy_on_release=false`
+retains manual selection. Arrows extend a manual selection, Escape cancels,
+and the configured copy binding copies (prefix c by default). Copy includes a
+whole wide cell when either column is selected, omits continuation cells and
+physical row padding, joins soft wraps and preserves hard row breaks. It covers
+the current live or frozen history page, without spanning unloaded pages.
+
+```toml
+[mouse]
+enabled = true
+resize = true
+copy_on_release = true
+
+[clipboard]
+target = "local" # or "osc52", explicitly enabling outer-terminal writes
+limit = 262144   # UTF-8 bytes, allowed range 1..=1048576
+```
+
+The local buffer is lost on exit. Oversized copies and a full pending-effect
+queue refuse with a capacity error, preserve the previous buffer and never
+truncate it. The configured paste binding (prefix p by default) still uses the
+separate 4096-byte host paste contract; a larger copied buffer refuses paste.
+Mouse and clipboard preferences reload atomically with keys and Escape delay.
+`mouse.enabled=false` disables Bagua mouse handling, rather than forwarding
+unchecked terminal reports. The example `bagua.toml` explicitly opts into OSC52.
+
+`local` never emits OSC52. `osc52` also retains the local buffer, and enqueues
+one standard-base64 `OSC 52 ; c ; data ST` effect only for a user copy. Application
+OSC strings never pass through. The client retains at most four pending effects
+and 2 MiB of encoded bytes; the terminal writer has an independent equal budget,
+including its active effect. Full writer admission leaves the effect with the
+client, without coalescing or duplication. Reload affects future copies;
+already admitted effects finish in order. Detach drains pending client effects
+under its existing ten-second bound. Terminal cleanup drains the active frame
+and admitted effects within 250 ms before leaving display modes; failure reports
+incomplete/unknown output and attempts parser cancellation and mode restoration.
+
+One TTY writer completes a started frame before writing an effect. Latest-view
+replacement cannot drop a copy or splice its bytes inside a VT sequence or UTF-8
+cell. A queued or written OSC52 is not evidence that the OS clipboard changed.
+An outer terminal, ET hop or nested multiplexer may refuse or filter it. Bagua
+does not synthesize tmux passthrough wrappers or read the OS clipboard back.
+Use an independent terminal for the trial, explicitly enable the appropriate
+outer-terminal policy, and verify actual copy/paste manually in #33. Formal
+candidate/ET qualification remains separate from the source-native PTY checks.
 
 One terminal row is reserved for status. The local drawable viewport is bounded
 to 512×255, with the host's narrower 256×64 canvas limits applied separately.
@@ -728,7 +783,8 @@ Detach drains queued operations and waits for results, with a ten-second bound;
 an unfinished operation remains uncertain on timeout or connection loss.
 
 Repaints are limited to one per 16 ms. Output holds one active frame and one
-latest replacement, each at most 4 MiB; each turn writes at most 65,536 TTY bytes.
+latest replacement, each at most 4 MiB, plus the independent reliable-copy budget
+described above; each turn writes at most 65,536 TTY bytes.
 The client opens its own nonblocking `/dev/tty` descriptor, preserving inherited
 file-description flags. Normal detach, startup errors and handled SIGINT/SIGTERM
 restore raw mode and the selected display modes. Native tests compare the exact

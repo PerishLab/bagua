@@ -94,3 +94,81 @@ fn focus() {
     assert_eq!(session.selected(), Some(fixture.creation.window));
     assert_eq!(session.windows().next().unwrap().focus(), first);
 }
+
+#[test]
+fn dividers() {
+    let geometry = Geometry::new(81, 25).unwrap();
+    let mut fixture = Fixture::new(geometry);
+    let second = fixture.split(fixture.creation.pane, Axis::Columns);
+    fixture.split(second, Axis::Rows);
+    let window = fixture
+        .world
+        .session(fixture.creation.session)
+        .unwrap()
+        .windows()
+        .next()
+        .unwrap();
+    let dividers = window.dividers(geometry).unwrap();
+    assert_eq!(dividers.len(), 2);
+    let divider = dividers[0];
+    assert!(divider.contains(40, 0));
+    assert!(divider.contains(40, 24));
+    assert!(!divider.contains(39, 0));
+    let ratio = divider.ratio(50).unwrap();
+    let operation = Operation::Adjust {
+        window: fixture.creation.window,
+        divider,
+        ratio,
+    };
+    let before = fixture.world.snapshot();
+    assert_eq!(
+        fixture
+            .world
+            .apply(workspace::Id::new(1001).unwrap(), operation.clone()),
+        Err(Failure::Observer)
+    );
+    assert_eq!(fixture.world.snapshot(), before);
+    fixture.apply(operation.clone()).unwrap();
+    let window = fixture
+        .world
+        .session(fixture.creation.session)
+        .unwrap()
+        .windows()
+        .next()
+        .unwrap();
+    let places = window.placements(geometry).unwrap();
+    assert_eq!(places[0].rect.geometry.columns(), 50);
+    assert_eq!(places[1].rect.x, 51);
+    let before = fixture.world.snapshot();
+    assert_eq!(fixture.apply(operation), Err(Failure::State));
+    assert_eq!(fixture.world.snapshot(), before);
+    let divider = fixture
+        .world
+        .session(fixture.creation.session)
+        .unwrap()
+        .windows()
+        .next()
+        .unwrap()
+        .dividers(geometry)
+        .unwrap()[0];
+    assert_eq!(
+        fixture.apply(Operation::Adjust {
+            window: fixture.creation.window,
+            divider,
+            ratio: workspace::Ratio::new(1).unwrap()
+        }),
+        Err(Failure::Geometry)
+    );
+    assert_eq!(fixture.world.snapshot(), before);
+    fixture
+        .apply(Operation::Close(Target::Pane(second)))
+        .unwrap();
+    assert_eq!(
+        fixture.apply(Operation::Adjust {
+            window: fixture.creation.window,
+            divider: dividers[1],
+            ratio
+        }),
+        Err(Failure::State)
+    );
+}

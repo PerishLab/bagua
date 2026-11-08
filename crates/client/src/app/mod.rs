@@ -1,14 +1,16 @@
 mod controls;
 mod history;
+mod install;
+pub(super) mod preferences;
 mod validate;
 
 use protocol::{
-    Failure, Frame, Packet, Replica,
+    Failure, Replica,
     wire::{Message, Screen},
 };
 use std::collections::BTreeMap;
 use terminal::{Extent, Point};
-use workspace::{Id, Placement, Session, Snapshot, Target};
+use workspace::{Id, Placement, Session, Snapshot};
 
 pub struct App {
     pub(super) actor: Id,
@@ -23,6 +25,10 @@ pub struct App {
     pub(super) done: bool,
     pub(super) dirty: bool,
     past: history::Past,
+    pub(super) mouse: crate::Mouse,
+    pub(super) copying: crate::Clipboard,
+    pub(super) pointer: Option<crate::mouse::Pointer>,
+    pub(super) copies: crate::select::Copies,
 }
 
 impl App {
@@ -40,6 +46,10 @@ impl App {
             done: false,
             dirty: true,
             past: history::Past::default(),
+            mouse: crate::Mouse::default(),
+            copying: crate::Clipboard::default(),
+            pointer: None,
+            copies: crate::select::Copies::default(),
         }
     }
 
@@ -177,6 +187,7 @@ impl App {
         else {
             self.done = true;
             self.screens.clear();
+            self.cancel();
             self.live();
             self.catalog = Some(snapshot);
             return Ok(());
@@ -198,6 +209,7 @@ impl App {
                 _ => false,
             });
         self.catalog = Some(snapshot);
+        self.pointer();
         self.clamp();
         if focus != self.focus() && (self.past.active() || self.selection.is_some()) {
             self.live();
@@ -212,44 +224,6 @@ impl App {
         {
             self.selection = None;
         }
-        self.dirty = true;
-        Ok(())
-    }
-
-    fn install(&mut self, pane: Id, screen: Screen) -> Result<(), Failure> {
-        validate::screen(&screen)?;
-        let Some(session) = self.session() else {
-            return Ok(());
-        };
-        let Some(window) = session
-            .windows()
-            .find(|w| w.panes().any(|p| p.id() == pane))
-        else {
-            return Ok(());
-        };
-        let expected = window
-            .placements(session.geometry())?
-            .into_iter()
-            .find(|p| p.pane == pane)
-            .map(|p| p.rect.geometry);
-        let Some(size) = expected else { return Ok(()) };
-        if (size.columns(), size.rows()) != (screen.extent.width(), screen.extent.height()) {
-            return Ok(());
-        }
-        let replica = self
-            .screens
-            .entry(pane)
-            .or_insert_with(|| Replica::new(Target::Pane(pane)));
-        if replica
-            .revision()
-            .is_some_and(|revision| revision >= screen.revision)
-        {
-            return Ok(());
-        }
-        replica.apply(
-            Packet::<_, ()>::Snapshot(Frame::snapshot(Target::Pane(pane), screen)),
-            |_, ()| Err(Failure::Baseline),
-        )?;
         self.dirty = true;
         Ok(())
     }

@@ -5,6 +5,9 @@ pub(super) fn check(config: &bagua::config::Config) -> Result<(client::Keys, Dur
     if config.version != 1 {
         return Err(Error::config("version: expected configuration version 1"));
     }
+    client::Clipboard::new(&config.clipboard.target, config.clipboard.limit).map_err(|_| {
+        Error::config("clipboard: target must be local or osc52; limit must be 1..=1048576 bytes")
+    })?;
     config.history.check().map_err(|_| {
         Error::config(
             "history: lines must be 0..=50000, bytes <=67108864 and bytes <= total <=268435456",

@@ -1,3 +1,5 @@
+mod output;
+use output::Output;
 use rustix::fs::{Mode, OFlags};
 use std::{
     fs::File,
@@ -12,8 +14,7 @@ const LEAVE: &[u8] =
 
 pub struct Terminal {
     file: File,
-    writing: Option<(Vec<u8>, usize)>,
-    latest: Option<Vec<u8>>,
+    output: Output,
     active: bool,
 }
 
@@ -52,8 +53,7 @@ impl Terminal {
         crossterm::terminal::enable_raw_mode()?;
         let mut terminal = Self {
             file: file.into(),
-            writing: None,
-            latest: None,
+            output: Output::default(),
             active: true,
         };
         terminal.control(ENTER)?;
@@ -65,43 +65,15 @@ impl Terminal {
     }
 
     pub fn offer(&mut self, frame: Vec<u8>) -> io::Result<()> {
-        if frame.len() > 4_194_304 {
-            return Err(io::Error::other("presentation exceeds its byte budget"));
-        }
-        self.latest = Some(frame);
-        Ok(())
+        self.output.offer(frame)
+    }
+
+    pub fn copy(&mut self, copy: &crate::Copy) -> bool {
+        self.output.copy(copy)
     }
 
     pub fn flush(&mut self) -> io::Result<()> {
-        if self.writing.is_none() {
-            self.writing = self.latest.take().map(|bytes| (bytes, 0));
-        }
-        let Some((bytes, offset)) = &mut self.writing else {
-            return Ok(());
-        };
-        let length = (bytes.len() - *offset).min(65_536);
-        match self.file.write(&bytes[*offset..*offset + length]) {
-            Ok(0) => {
-                return Err(io::Error::new(
-                    io::ErrorKind::WriteZero,
-                    "terminal output closed",
-                ));
-            }
-            Ok(count) => *offset += count,
-            Err(error)
-                if matches!(
-                    error.kind(),
-                    io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
-                ) =>
-            {
-                return Ok(());
-            }
-            Err(error) => return Err(error),
-        }
-        if *offset == bytes.len() {
-            self.writing = None;
-        }
-        Ok(())
+        self.output.flush(&mut self.file)
     }
 
     pub fn finish(&mut self) -> io::Result<()> {
@@ -109,14 +81,25 @@ impl Terminal {
             return Ok(());
         }
         self.active = false;
-        let mode = crossterm::terminal::disable_raw_mode();
-        let display = self.control(LEAVE);
-        match (mode, display) {
-            (Err(mode), Err(display)) => Err(io::Error::other(format!(
-                "terminal mode: {mode}; display: {display}"
-            ))),
-            (Err(error), _) | (_, Err(error)) => Err(error),
-            _ => Ok(()),
+        let mut failures = Vec::new();
+        if let Err(error) = self.output.drain(&mut self.file) {
+            failures.push(format!(
+                "output incomplete; copied effects unknown: {error}"
+            ));
+            if let Err(error) = self.control(b"\x18\x1b\\") {
+                failures.push(format!("output cancellation: {error}"));
+            }
+        }
+        if let Err(error) = crossterm::terminal::disable_raw_mode() {
+            failures.push(format!("terminal mode: {error}"));
+        }
+        if let Err(error) = self.control(LEAVE) {
+            failures.push(format!("display: {error}"));
+        }
+        if failures.is_empty() {
+            Ok(())
+        } else {
+            Err(io::Error::other(failures.join("; ")))
         }
     }
 

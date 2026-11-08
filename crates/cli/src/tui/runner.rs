@@ -81,6 +81,7 @@ impl Runner {
     pub fn run(&mut self, terminal: &mut Terminal, stop: &AtomicBool) -> Result<(), Error> {
         let mut painted = Instant::now() - Duration::from_secs(1);
         while !stop.load(Ordering::Relaxed) {
+            self.copies(terminal);
             if self.app.done() && self.leaving.is_none() {
                 self.leaving = Some(Instant::now());
             }
@@ -124,7 +125,23 @@ impl Runner {
             terminal.flush()?;
             std::thread::sleep(Duration::from_millis(2));
         }
+        self.copies(terminal);
+        if self.app.copying().is_some() {
+            return Err(std::io::Error::other(
+                "clipboard effects remain unadmitted; OS clipboard unknown",
+            )
+            .into());
+        }
         Ok(())
+    }
+
+    fn copies(&mut self, terminal: &mut Terminal) {
+        while let Some(copy) = self.app.copying() {
+            if !terminal.copy(copy) {
+                break;
+            }
+            self.app.copied();
+        }
     }
 
     fn receive(&mut self, message: Message) -> Result<(), Error> {
@@ -224,6 +241,9 @@ impl Runner {
     }
 
     fn settled(&self) -> bool {
+        if self.app.copying().is_some() {
+            return false;
+        }
         match (
             self.queue.front(),
             self.jobs.first_key_value(),

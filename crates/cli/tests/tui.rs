@@ -9,6 +9,8 @@ mod history;
 mod interactive;
 #[path = "support/keyboard.rs"]
 mod keyboard;
+#[path = "support/mouse.rs"]
+mod mouse;
 #[path = "support/routing.rs"]
 mod routing;
 use interactive::{Fixture, Peer, SHELL};

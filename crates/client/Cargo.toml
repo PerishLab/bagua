@@ -16,6 +16,7 @@ workspace.workspace = true
 
 crossterm.workspace = true
 unicode-width.workspace = true
+base64.workspace = true
 
 [target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dependencies]
 rustix.workspace = true

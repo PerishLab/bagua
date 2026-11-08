@@ -12,7 +12,7 @@ pub use identity::{Id, Target};
 pub use names::valid;
 pub use session::Session;
 
-pub use layout::{Axis, Placement, Ratio, Rect, Split};
+pub use layout::{Axis, Divider, Placement, Ratio, Rect, Split};
 pub use objects::{
     Change, Creation, Entry, Operation, Outcome, Pane, Snapshot, State, Window, World,
 };

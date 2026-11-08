@@ -17,6 +17,10 @@ pub struct Config {
     pub workspace: Workspace,
     #[cascade(section)]
     pub bindings: Bindings,
+    #[cascade(section)]
+    pub mouse: Mouse,
+    #[cascade(section)]
+    pub clipboard: Clipboard,
     pub program: Option<Program>,
 }
 
@@ -29,7 +33,47 @@ impl Default for Config {
             history: History::default(),
             workspace: Workspace::default(),
             bindings: Bindings::default(),
+            mouse: Mouse::default(),
+            clipboard: Clipboard::default(),
             program: None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Deserialize, Cascade)]
+#[cascade(section, strict)]
+#[serde(default, deny_unknown_fields)]
+pub struct Mouse {
+    pub enabled: bool,
+    pub resize: bool,
+    #[serde(rename = "copy_on_release")]
+    #[cascade(name = "copy_on_release")]
+    pub release: bool,
+}
+
+impl Default for Mouse {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            resize: true,
+            release: true,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Cascade)]
+#[cascade(section, strict)]
+#[serde(default, deny_unknown_fields)]
+pub struct Clipboard {
+    pub target: String,
+    pub limit: usize,
+}
+
+impl Default for Clipboard {
+    fn default() -> Self {
+        Self {
+            target: "local".into(),
+            limit: 262_144,
         }
     }
 }

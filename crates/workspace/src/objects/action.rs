@@ -62,6 +62,11 @@ pub enum Operation {
         split: Split,
     },
     Focus(Id),
+    Adjust {
+        window: Id,
+        divider: crate::Divider,
+        ratio: crate::Ratio,
+    },
     Close(Target),
     Resize {
         session: Id,
