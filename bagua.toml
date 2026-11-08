@@ -9,12 +9,6 @@ lines = 50000
 bytes = 67108864
 total = 268435456
 
-[program]
-executable = "/bin/sh"
-args = ["-i"]
-cwd = "/"
-
-[program.environment]
-PATH = "/usr/bin:/bin"
-TERM = "xterm-256color"
-LANG = "C.UTF-8"
+[workspace]
+name = "workspace"
+cwd = "foreground"

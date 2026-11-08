@@ -1,5 +1,14 @@
 use std::{num::NonZeroU16, time::Duration};
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Context {
+    pub pid: u32,
+    pub session: u32,
+    pub started: u64,
+    pub command: String,
+    pub cwd: std::path::PathBuf,
+}
+
 pub const CHUNK: usize = 4096;
 pub const GRACE: Duration = Duration::from_millis(250);
 

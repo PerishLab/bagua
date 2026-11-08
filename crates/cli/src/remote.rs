@@ -8,14 +8,23 @@ pub(crate) fn execute(args: &Args, config: crate::config::Loaded) -> Result<(), 
     let path = args.socket.as_deref().ok_or(Failure::Unavailable)?;
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     {
-        if matches!(args.action, Action::Open { .. } | Action::Connect { .. }) {
+        if matches!(
+            args.selected(),
+            Action::Open { .. } | Action::Connect { .. } | Action::Enter { .. }
+        ) {
             return crate::tui::run(path, args, config);
         }
-        if matches!(args.action, Action::Serve) {
-            return crate::serve::run(path, config.history());
+        if let Action::Serve { orphan } = args.selected() {
+            let path = crate::startup::directory(path, config.runtime().is_some())?;
+            let identity = config
+                .invocation
+                .as_ref()
+                .ok_or(Failure::Unavailable)?
+                .image;
+            return crate::serve::run(&path, config.history(), identity, *orphan);
         }
         let mut remote = crate::session::Session::connect(path, args)?;
-        if matches!(args.action, Action::Control) {
+        if matches!(args.selected(), Action::Control) {
             if args.control.is_some() || args.session.is_some() {
                 return Err(Failure::Payload.into());
             }
@@ -24,7 +33,7 @@ pub(crate) fn execute(args: &Args, config: crate::config::Loaded) -> Result<(), 
         if let Some(session) = args.control.or(args.session) {
             remote.join(session, args.control.is_some())?;
         }
-        let command = crate::command::parse(&args.action)?;
+        let command = crate::command::parse(args.selected())?;
         let watch = matches!(command, protocol::Command::Subscribe { .. });
         remote.call(command, true)?;
         if watch {

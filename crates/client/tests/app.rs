@@ -244,3 +244,32 @@ fn cancellation() {
     .unwrap();
     assert!(app.history(Id::new(3).unwrap()).is_none());
 }
+
+#[test]
+fn numbering() {
+    let (mut app, mut world, _) = setup();
+    let actor = Id::new(100).unwrap();
+    world
+        .apply(actor, Operation::Window(Id::new(1).unwrap()))
+        .unwrap();
+    app.catalog(world.snapshot()).unwrap();
+    assert_eq!(
+        app.handle(Gesture::Index(1)).unwrap(),
+        vec![Command::Workspace(Operation::Focus(Id::new(3).unwrap()))]
+    );
+    world
+        .apply(actor, Operation::Close(Target::Window(Id::new(2).unwrap())))
+        .unwrap();
+    app.catalog(world.snapshot()).unwrap();
+    assert_eq!(
+        app.handle(Gesture::Index(1)).unwrap(),
+        vec![Command::Workspace(Operation::Focus(Id::new(5).unwrap()))]
+    );
+    assert!(app.handle(Gesture::Index(0)).is_err());
+    assert!(app.handle(Gesture::Index(2)).is_err());
+    let mut screen = Engine::new(Extent::new(8, 4).unwrap(), 0).unwrap();
+    for bytes in app.draw().unwrap().chunks(terminal::CHUNK) {
+        screen.feed(bytes).unwrap();
+    }
+    assert!(screen.snapshot().contents().contains("bagua w1"));
+}

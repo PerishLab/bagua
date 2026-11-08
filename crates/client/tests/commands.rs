@@ -26,6 +26,32 @@ fn prefix() {
 }
 
 #[test]
+fn windows() {
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    for index in 1..=9 {
+        let key = char::from(b'0' + index);
+        assert_eq!(
+            client::translate(KeyEvent::new(KeyCode::Char(key), KeyModifiers::ALT), false),
+            Ok(client::Gesture::Index(index))
+        );
+    }
+    assert_eq!(
+        client::translate(KeyEvent::new(KeyCode::Char('0'), KeyModifiers::ALT), false),
+        Ok(client::Gesture::Input(Input::Key(Key::Alt('0'))))
+    );
+    for (key, gesture) in [
+        ('\\', client::Gesture::Split(workspace::Axis::Columns)),
+        ('-', client::Gesture::Split(workspace::Axis::Rows)),
+        ('=', client::Gesture::Window),
+    ] {
+        assert_eq!(
+            client::translate(KeyEvent::new(KeyCode::Char(key), KeyModifiers::NONE), true),
+            Ok(gesture)
+        );
+    }
+}
+
+#[test]
 fn contract() {
     let pane = Id::new(7).unwrap();
     let view = client::View::new(Target::Pane(pane), Extent::new(80, 24).unwrap());

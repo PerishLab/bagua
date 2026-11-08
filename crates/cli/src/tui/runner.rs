@@ -1,6 +1,9 @@
+#[cfg(test)]
+mod checks;
+mod context;
 mod input;
 mod reload;
-use super::queue::weight;
+use super::queue::{Queued, weight};
 use crate::error::Error;
 use bagua::ipc::Channel;
 use client::{App, Gesture, Terminal};
@@ -14,11 +17,16 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
     time::{Duration, Instant},
 };
-use workspace::{Id, Operation, Target};
+use workspace::{Id, Operation};
 
 enum Job {
     Ordinary,
-    Spawn,
+    Spawn(Program),
+    Resolve {
+        pane: Id,
+        command: Command,
+        program: Program,
+    },
     Inspect(Id),
 }
 
@@ -28,12 +36,12 @@ pub(super) struct Runner {
     next: u64,
     program: Option<Program>,
     jobs: BTreeMap<u64, Job>,
-    launches: VecDeque<Id>,
+    launches: VecDeque<(Id, Program)>,
     leader: bool,
     suspended: bool,
     keyboard: client::Keyboard,
     size: (u16, u16),
-    pub(super) queue: VecDeque<Command>,
+    pub(super) queue: VecDeque<Queued>,
     pub(super) bytes: usize,
     leaving: Option<Instant>,
     pub(super) config: crate::config::Loaded,
@@ -107,10 +115,24 @@ impl Runner {
     }
 
     fn receive(&mut self, message: Message) -> Result<(), Error> {
-        if let Message::Reply(reply) = &message {
-            self.replied(reply);
+        if let Message::Context {
+            request,
+            pane,
+            state,
+        } = &message
+        {
+            self.described(*request, *pane, state)?;
         }
-        if let Message::Finished { request, .. } = &message {
+        if let Message::Reply(reply) = &message {
+            self.replied(reply)?;
+        }
+        if let Message::Finished { request, result } = &message {
+            if matches!(self.jobs.get(request), Some(Job::Resolve { .. })) {
+                if result.is_ok() {
+                    return Err(Failure::Payload.into());
+                }
+                self.refused(*request);
+            }
             self.jobs.remove(request);
         }
         self.app.accept(message)?;
@@ -121,32 +143,22 @@ impl Runner {
         if self.jobs.len() >= 16 {
             return Ok(());
         }
-        if let Some(command) = self.queue.front().cloned() {
-            if let Command::History { pane, read } = &command
-                && !self.app.current(*pane, read)
-            {
-                self.bytes -= weight(&self.queue.pop_front().unwrap());
-                return Ok(());
-            }
-            let job = match command {
-                Command::Workspace(Operation::Split { .. } | Operation::Window(_)) => Job::Spawn,
-                _ => Job::Ordinary,
-            };
-            if self.submit(command, job)? {
-                let command = self.queue.pop_front().unwrap();
-                self.bytes -= weight(&command);
+        if let Some((pane, program)) = self.launches.front().cloned() {
+            if self.submit(Command::Start { pane, program }, Job::Ordinary)? {
+                self.launches.pop_front();
             }
             return Ok(());
         }
-        if let Some(pane) = self.launches.front().copied() {
-            if let Some(program) = self.program.clone() {
-                if self.submit(Command::Start { pane, program }, Job::Ordinary)? {
-                    self.launches.pop_front();
-                }
-            } else {
-                self.launches.pop_front();
-                self.app
-                    .status("Pane is pending; no explicit program configured");
+        if let Some(queued) = self.queue.front().cloned() {
+            if let Command::History { pane, read } = &queued.command
+                && !self.app.current(*pane, read)
+            {
+                self.bytes -= weight(&self.queue.pop_front().unwrap().command);
+                return Ok(());
+            }
+            if self.dispatch(queued)? {
+                let command = self.queue.pop_front().unwrap();
+                self.bytes -= weight(&command.command);
             }
             return Ok(());
         }
@@ -242,22 +254,5 @@ impl Runner {
 
     fn settled(&self) -> bool {
         self.queue.is_empty() && self.jobs.is_empty() && self.launches.is_empty()
-    }
-
-    fn replied(&mut self, reply: &protocol::Reply) {
-        if let Ok(protocol::Status::Applied(protocol::Outcome::Workspace(
-            workspace::Outcome::Changed(change),
-        ))) = &reply.result
-            && matches!(self.jobs.get(&reply.request), Some(Job::Spawn))
-        {
-            self.launches
-                .extend(change.created.iter().filter_map(|target| match target {
-                    Target::Pane(id) => Some(*id),
-                    _ => None,
-                }));
-        }
-        if reply.result.is_err() {
-            self.jobs.remove(&reply.request);
-        }
     }
 }

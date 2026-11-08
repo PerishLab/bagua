@@ -22,8 +22,9 @@ and installation remain separate delivery work.
 The first distribution target is Linux x86_64 GNU, delivered as a `tar.gz`
 containing one executable named `bagua` at its root. No resource directory,
 runtime Cargo invocation, development checkout or internal Rust SDK is needed.
-macOS, Windows, musl, package-manager media and automatic host startup are not
-declared distribution targets. MIT licensing covers Bagua's source; dependencies
+macOS, Windows, musl and package-manager media are not declared distribution
+targets. Source Issue #26 adds Linux automatic host startup; installed v0.1.0
+still requires explicit startup until a containing release is qualified. MIT licensing covers Bagua's source; dependencies
 retain their own licenses.
 
 The release authority is `https://releases.bagua.perish.uk`. Plumb defines the
@@ -54,9 +55,9 @@ and `--bin-dir` paths outside the stable defaults (`~/.local/share/bagua` and
 `~/.local/bin`). Keep the executable installation apart
 from the private runtime directory. The foreground `serve` command receives an
 absolute socket path under an existing, canonical, user-owned mode-0700
-directory. The CLI neither selects a default runtime home nor creates persistent
-application state or logs there; the socket is the only file Bagua creates in
-that directory. Use a fresh directory for each isolated scene, and explicit
+directory. Ordinary source entry can select and create its private runtime
+directory as described below; the socket is its only runtime file. No session
+persistence or runtime log is created there. Use a fresh directory for each isolated scene, and explicit
 homes/data for its hosted programs. No production session is a test fixture.
 
 ## Published-artifact qualification
@@ -74,7 +75,7 @@ each run's evidence. Declarations neither publish scenes nor qualify a product.
 | `bagua-flow` | Fragmented UTF-8, output floods and slow/disappearing clients preserve admitted bytes; narrow/tiny viewport clipping is bounded; reconnect/obsolete revisions require correct full state and bounded resources |
 
 Seatrial owns the independently distributed scene and assertions. It drives the
-public CLI or wire v2 using case-owned PTYs, programs, sockets and storage, with
+public CLI or the candidate’s declared wire version using case-owned PTYs, programs, sockets and storage, with
 no source checkout, private crate links, runtime Cargo builds or production test
 switch. `control` provides persistent JSON requests/results; `watch` provides
 subscriptions and `inspect` provides full screens/process facts. The host and
@@ -110,11 +111,11 @@ are resolved from that invocation, rather than silently searched.
 ```sh
 bagua --config /absolute/path/bagua.toml config
 bagua --config /absolute/path/bagua.toml --socket /absolute/private/host.sock serve
-bagua --config /absolute/path/bagua.toml --socket /absolute/private/host.sock open
+bagua --config /absolute/path/bagua.toml
 ```
 
 Schema version 1 is the default when omitted. Supported sections are `client`,
-`host`, `history` and `program`. Unknown fields, duplicate keys and unsupported versions
+`host`, `history`, `workspace` and `program`. Unknown fields, duplicate keys and unsupported versions
 refuse before interactive mode or native startup. `client.prefix` is a control
 letter such as C-g or C-q; C-h/C-i/C-j/C-m are reserved because the decoder maps
 them to navigation keys. `client.escape_ms` is 0–1000 milliseconds, default 50;
@@ -123,7 +124,7 @@ The built-in prefix remains Ctrl-G. Pressing the chosen prefix twice sends its
 literal control key to the application. Prefix-r reloads and reports its result.
 
 Reload validates the whole file before atomically replacing client prefix and
-Escape delay. Errors, missing reload input or changed host/program/history sections
+Escape delay. Errors, missing reload input or changed host/program/history/workspace sections
 preserve the old client configuration. Host socket, history budgets and program settings apply
 only to a new invocation; they never restart a host or alter running programs.
 Each client owns its preferences, including an observer, without gaining write
@@ -145,6 +146,86 @@ their executability, directory access or runtime permissions. Parse diagnostics
 report field/byte information without echoing the original TOML source line.
 Arbitrary bindings, clipboard and status sections remain unsupported
 until their owning Issues land; this example does not enable future features.
+
+## Ordinary named entry
+
+Issue #26 adds this source workflow; #31/#32 own containing release and installed
+qualification. A bare `bagua` requests control of the exact workspace named by
+`workspace.name` (default `workspace`), creating the host and workspace if absent.
+An existing controller causes refusal; it is never displaced implicitly.
+
+```sh
+bagua
+bagua enter work
+bagua enter work --existing
+bagua enter work --observe
+bagua enter work --existing --fixed
+```
+
+`--existing` forbids creation. `--observe` requires an existing workspace and
+neither starts a host nor acquires control. Explicit `--fixed` keeps the current
+canvas while acquiring, allowing recovery from a small viewport. Named entry
+commits joining and acquisition atomically; refusal preserves model identities,
+revision, membership and geometry. An empty workspace gets its first window;
+an exited or failed pane remains inspectable and is never automatically restarted.
+
+Names are exact, case-sensitive UTF-8, 1–64 bytes, without controls or surrounding
+whitespace. Session names are unique in the host; window names in their session.
+Machine `new --name NAME` and `rename session|window ID NAME` use these same rules;
+rename requires control and keeps IDs unchanged. Automatic names choose a free
+`session-N`/`window-N`. Window display indices start at 1 and close gaps after
+closure; Alt-1…Alt-9 resolves the current display index to a stable pane ID.
+There is no Alt-0 binding or nine-window model limit. Status prioritizes window
+index, role and refusal feedback before session/window labels.
+
+The default socket is `$XDG_RUNTIME_DIR/bagua/host.sock`, otherwise
+`$XDG_STATE_HOME/bagua/host.sock`, otherwise
+`$HOME/.local/state/bagua/host.sock`. Nonempty bases must be absolute. CLI
+`--socket` overrides `host.socket`, which overrides this default. Only normal
+entry and `serve` select it; machine operations do not silently discover a host.
+Bagua creates its managed directory privately and requires the endpoint parent
+to be canonical, owned by the current user and mode 0700. An explicit socket
+uses an already prepared private directory. Unknown files, stale sockets,
+symlinks and endpoints are never unlinked or replaced. Readonly entry does not
+create a missing default directory.
+
+When absent, normal entry makes one startup attempt by executing its own
+kernel-bound `/proc/self/exe`, then waits up to five seconds for the endpoint.
+A two-second Hello read checks wire version and the running executable's device
+and inode before any workspace command. Byte-identical copies at another inode
+also refuse; this is local file identity, not a content digest or release
+signature. Use one installed executable path for host and clients. Competing
+clients may both attempt startup; exclusive socket binding selects the host and
+atomic workspace acquisition selects one controller. Timeout or lost wait
+observation is an unknown outcome requiring endpoint inspection before retry.
+Kernel calls themselves have no hard wall-clock guarantee.
+
+Without a complete file/CLI program template, normal entry explicitly captures
+the invocation's absolute `$SHELL` (or `/bin/sh`), argv `-i`, cwd and UTF-8
+environment, setting `TERM=xterm-256color`. Invalid, non-UTF-8 or excessive launch
+data refuses before host startup. The resulting complete program is sent as
+data; the host never reconstructs it from another process's argv or environment.
+The background host receives only HOME/PATH, XDG directory variables, locale and
+TZ for its own startup; it does not inherit the invocation's other credentials.
+Explicit `open`/`connect` keep their complete-template requirement. A `[program]`
+section or complete CLI launch replaces the whole normal-entry default.
+
+`workspace.cwd = "foreground"` is the default. Before creating a split or window,
+the client queries the focused pane's native foreground process group. Linux
+validates its owned PTY/session, same UID, live group leader and start identity,
+then reads and checks its absolute UTF-8 cwd and search access. It rechecks group
+identity before returning. Shell `cd` and foreground TUIs therefore select the
+current directory. Exited, missing, unreadable, deleted or replaced directories
+refuse before layout mutation. An empty workspace has no pane to query and
+explicitly uses the launch cwd. `workspace.cwd = "launch"` always selects the
+complete program template's cwd. This is a point-in-time observation; a later
+filesystem race may still make native launch fail, leaving a visible failed pane.
+
+Cwd requests hold their original queue position until resolved or refused;
+later layout intents cannot pass them. Each queued intent captures its source
+pane and complete launch data. Startup of a created pane precedes unsent input
+to that pane. These source checks do not replace distributed-artifact races,
+pressure or actual daily shell/Codex qualification in Seatrial #83/#84.
 
 ## History
 
@@ -240,14 +321,15 @@ CLI grammar, interactive request constructors and programmatic callers share
 `protocol::Request`. Request numbers are nonzero; the default constructor uses
 1 for a single request, while a persistent caller supplies its own numbers.
 Connection identity is supplied by the host, never accepted from a command.
-IDs and object kinds are exact; human names and tmux target syntax are absent.
+IDs and object kinds are exact. Session/window names are explicit metadata;
+tmux target syntax is absent.
 
 The pure `bagua::evaluate` composition applies model changes. Input and pane
 retirement return accepted intents; they perform no native IO and do not
 produce completion evidence. Native completion/failure, process outcomes and
 presentation revisions have separate event types. Late outcomes for retired
-IDs cannot recreate objects. The CLI requires an explicit socket for hosted
-operations. Local capability inspection describes compiled endpoints, not whether
+IDs cannot recreate objects. Machine operations require an explicit or configured socket; normal `enter`
+and `serve` may select the private default described below. Local capability inspection describes compiled endpoints, not whether
 a host is running. Native effects report their actual completion separately.
 
 Synchronization binds target, baseline and payload revision. A replica installs
@@ -262,7 +344,8 @@ duplicate subscription idempotently. Observers must be joined to the target's
 session. Cancelling a retired target remains possible. A resume revision is a
 hint, not permission to invent a delta without its baseline. The host sends
 complete live snapshots and retains no incremental screen deltas. Scrollback is
-read separately in bounded pages. Wire version 3 uses a
+read separately in bounded pages. Wire version 4 adds named entry, native foreground-context reads and executable
+file identity in Hello. It uses a
 four-byte big-endian JSON length followed by that many UTF-8 JSON bytes.
 Request numbers strictly increase within a connection; reused or older numbers
 are refused without replay. There is no cross-connection exactly-once claim.
@@ -421,11 +504,11 @@ The Linux x86_64 client requires a modern UTF-8 VT terminal with ANSI indexed/RG
 color, alternate screen, cursor positioning, line-wrap control, bracketed paste
 and SGR mouse reports. This is an explicit terminal profile, not automatic
 capability negotiation or qualification of every terminal emulator.
-Wire v2 adds the host canvas bound to Hello and target-scoped pane subscription
-revisions. Use a matching host/client build; wire v1 is not an accepted request
-version in this source.
+Hello binds the host canvas and executable file identity; subscriptions bind
+target-scoped revisions. Use a matching host/client build and wire version 4.
+Installed v0.1.0 speaks wire 2 and cannot consume these source changes.
 
-Run the explicit host described above. Open a new session with a complete
+For explicit machine workflows, run the host described above. Open a new session with a complete
 program specification, or join an existing session. `connect` observes by
 default; `--take` explicitly acquires control. Optional `--fixed` with `--take`
 preserves the existing host canvas while acquiring control, including from a
@@ -453,8 +536,9 @@ This is a Bagua choice, not a tmux compatibility contract.
 | Key | Action |
 | --- | --- |
 | `d` or `q` | Detach; hosted programs persist |
-| `v` / `h` | Split into columns / rows and launch the configured program |
-| `n` | Add a window and launch its first pane |
+| `\` or `v` / `-` or `h` | Split into columns / rows and launch the configured program |
+| `=` or `n` | Add a window and launch its first pane |
+| Alt-1…Alt-9 (without prefix) | Select the corresponding current window display index |
 | Tab / `w` | Cycle panes / windows |
 | `a` | Explicitly acquire released control |
 | `t` | Transfer control to the first other joined client by ID |

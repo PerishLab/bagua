@@ -2,6 +2,11 @@
 allow = false
 
 [[boundary]]
+allow = ["shadow"]
+note = "This isolated composition bridge translates the PTY owner's native process observation and PathBuf into the protocol owner's UTF-8 wire result. Protocol must not acquire a dependency on the native PTY adapter or an independently writable process authority. The explicit layer translation follows structure.shadow."
+paths = ["crates/lib/src/host/context.rs"]
+
+[[boundary]]
 allow = ["comment"]
 note = "Local SAFETY explanation for the audited post-fork pre_exec closure; only owned close-on-exec slave and async-signal-safe setsid/ioctl operations enter it."
 paths = ["crates/pty/src/linux/spawn.rs"]

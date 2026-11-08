@@ -87,6 +87,9 @@ fn diagnosis() {
         ("[client]\nprefix='C-q'\nprefix='C-a'", "duplicate"),
         ("[client]\nextra=true", "unknown field"),
         ("[host]\nsocket='relative.sock'", "host.socket"),
+        ("[workspace]\nname=' bad '", "workspace.name"),
+        ("[workspace]\ncwd='infer'", "workspace.cwd"),
+        ("[workspace]\nunknown=true", "unknown field"),
     ];
     for (text, marker) in cases {
         fs::write(&path, text).unwrap();

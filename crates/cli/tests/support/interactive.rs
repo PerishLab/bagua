@@ -1,4 +1,6 @@
 use bagua::ipc::{Connection, Service};
+#[path = "interactive/startup.rs"]
+mod startup;
 use protocol::{Command, Request, wire::Message};
 use pty::{Launch, Process, Size, Transfer};
 use radicula_process::Environment;
@@ -14,7 +16,9 @@ use std::{
 };
 
 pub struct Fixture {
-    directory: tempfile::TempDir,
+    directory: Option<tempfile::TempDir>,
+    normal: bool,
+    cleanup: bool,
     stop: Arc<AtomicBool>,
     task: Option<std::thread::JoinHandle<()>>,
 }
@@ -28,13 +32,22 @@ impl Fixture {
         let flag = Arc::clone(&stop);
         let task = std::thread::spawn(move || service.run(&flag).unwrap());
         Self {
-            directory,
+            directory: Some(directory),
+            normal: false,
+            cleanup: false,
             stop,
             task: Some(task),
         }
     }
     pub fn path(&self) -> PathBuf {
-        self.directory.path().join("host.sock")
+        if self.normal {
+            self.home().join(".local/state/bagua/host.sock")
+        } else {
+            self.home().join("host.sock")
+        }
+    }
+    fn home(&self) -> &std::path::Path {
+        self.directory.as_ref().unwrap().path()
     }
     pub fn catalog(&self) -> workspace::Snapshot {
         let mut connection = Connection::connect(&self.path()).unwrap();
@@ -64,6 +77,14 @@ impl Fixture {
 
 impl Drop for Fixture {
     fn drop(&mut self) {
+        if self.cleanup && !self.shutdown() {
+            self.retain();
+            assert!(
+                std::thread::panicking(),
+                "owned host cleanup is unknown; namespace retained"
+            );
+            return;
+        }
         self.stop.store(true, Ordering::Relaxed);
         let failed = self.task.take().is_some_and(|task| task.join().is_err());
         assert!(!failed || std::thread::panicking(), "service failed");
@@ -78,6 +99,12 @@ pub struct Peer {
 
 impl Peer {
     pub fn new(fixture: &Fixture, args: &[&str], size: Size) -> Self {
+        Self::spawn(fixture, args, size, true)
+    }
+    pub fn ordinary(fixture: &Fixture, args: &[&str], size: Size) -> Self {
+        Self::spawn(fixture, args, size, false)
+    }
+    fn spawn(fixture: &Fixture, args: &[&str], size: Size, socket: bool) -> Self {
         let script = "before=$(stty -g); \"$@\"; status=$?; after=$(stty -g); if [ \"$before\" = \"$after\" ]; then printf '\\nRESTORED:%s\\n' \"$status\"; else printf '\\nBROKEN-MODE\\n'; fi";
         let mut launch = Launch::new(
             "/bin/sh".into(),
@@ -85,7 +112,7 @@ impl Peer {
             Environment::new([
                 ("PATH".into(), "/usr/bin:/bin".into()),
                 ("TERM".into(), "xterm-256color".into()),
-                ("HOME".into(), fixture.directory.path().into()),
+                ("HOME".into(), fixture.home().into()),
                 ("LC_ALL".into(), "C.UTF-8".into()),
             ]),
             size,
@@ -95,9 +122,12 @@ impl Peer {
             script.into(),
             "bagua-fixture".into(),
             env!("CARGO_BIN_EXE_bagua").into(),
-            "--socket".into(),
-            fixture.path().into(),
         ];
+        if socket {
+            launch
+                .args
+                .extend(["--socket".into(), fixture.path().into()]);
+        }
         launch.args.extend(args.iter().map(|arg| (*arg).into()));
         Self {
             process: Process::spawn(launch).unwrap(),

@@ -1,29 +1,32 @@
 use super::runner::Runner;
+mod entry;
 use crate::{
-    args::{Action, Args, Launch},
+    args::{Action, Args},
     error::Error,
     session::Session,
 };
-use protocol::{Command, Failure, wire::Program};
-use std::path::Path;
+use protocol::{Command, Failure};
 use workspace::{Geometry, Operation, Target};
 
 pub(super) fn prepare(
-    path: &Path,
+    mut rpc: Session,
     args: &Args,
     terminal: &client::Terminal,
+    config: &crate::config::Loaded,
 ) -> Result<Runner, Error> {
     let (columns, rows) = terminal.size()?;
     let viewport = super::extent(columns, rows).ok_or(Failure::Payload)?;
-    let mut rpc = Session::connect(path, args)?;
     let geometry = Geometry::new(
         viewport.width().min(rpc.canvas.columns()),
         viewport.height().min(rpc.canvas.rows()),
     )
     .unwrap();
-    let (session, launch) = match &args.action {
+    let (session, launch) = match args.selected() {
+        Action::Enter { .. } => {
+            entry::prepare(&mut rpc, args.selected(), geometry, config.workspace())?
+        }
         Action::Open { launch } => {
-            let program = program(launch)?.ok_or(Failure::Payload)?;
+            let program = crate::config::launch(launch)?.ok_or(Failure::Payload)?;
             rpc.call(Command::Workspace(Operation::Create(geometry)), false)?;
             let session = rpc
                 .created
@@ -69,7 +72,7 @@ pub(super) fn prepare(
             if *take {
                 acquire(&mut rpc, session, *fixed)?;
             }
-            (session, program(launch)?)
+            (session, crate::config::launch(launch)?)
         }
         _ => return Err(Failure::Unavailable.into()),
     };
@@ -95,26 +98,6 @@ fn join(rpc: &mut Session, session: workspace::Id, viewport: Geometry) -> Result
         false,
     )?;
     Ok(())
-}
-
-fn program(launch: &Launch) -> Result<Option<Program>, Failure> {
-    let Some(executable) = &launch.executable else {
-        return Ok(None);
-    };
-    let environment = launch
-        .environment
-        .iter()
-        .map(|entry| {
-            let (key, value) = entry.split_once('=').ok_or(Failure::Payload)?;
-            Ok((key.into(), value.into()))
-        })
-        .collect::<Result<_, Failure>>()?;
-    Ok(Some(Program {
-        executable: executable.clone(),
-        args: launch.args.clone(),
-        cwd: launch.cwd.clone().ok_or(Failure::Payload)?,
-        environment,
-    }))
 }
 
 fn acquire(rpc: &mut Session, session: workspace::Id, fixed: bool) -> Result<(), Error> {

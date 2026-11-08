@@ -10,6 +10,16 @@ pub(super) fn check(config: &bagua::config::Config) -> Result<(client::Keys, Dur
             "history: lines must be 0..=50000, bytes <=67108864 and bytes <= total <=268435456",
         )
     })?;
+    if !workspace::valid(&config.workspace.name) {
+        return Err(Error::config(
+            "workspace.name: expected 1..=64 UTF-8 bytes without controls or surrounding whitespace",
+        ));
+    }
+    if !matches!(config.workspace.cwd.as_str(), "foreground" | "launch") {
+        return Err(Error::config(
+            "workspace.cwd: expected foreground or launch",
+        ));
+    }
     if config.client.escape > 1000 {
         return Err(Error::config("client.escape_ms: expected 0..=1000"));
     }

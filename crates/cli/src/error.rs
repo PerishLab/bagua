@@ -6,6 +6,14 @@ pub(crate) struct Error {
 }
 
 impl Error {
+    pub fn endpoint(message: impl Into<String>) -> Self {
+        Self {
+            code: "endpoint".into(),
+            message: message.into(),
+            request: None,
+        }
+    }
+
     pub fn config(message: impl Into<String>) -> Self {
         Self {
             code: "configuration".into(),

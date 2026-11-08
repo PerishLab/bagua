@@ -8,6 +8,8 @@ mod serve;
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 mod session;
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+mod startup;
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 mod tui;
 
 use args::Args;
@@ -22,8 +24,12 @@ fn main() -> ExitCode {
         return ExitCode::FAILURE;
     }
     let mut args = Args::parse();
-    let result = config::load(&args, &|name| std::env::var_os(name)).and_then(|config| {
+    let result = config::load(&args, &|name| std::env::var_os(name)).and_then(|mut config| {
         config.apply(&mut args);
+        defaults(&mut args, &config)?;
+        config::validate(&args)?;
+        #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+        initialize(&args, &mut config)?;
         execute(&args, config)
     });
     match result {
@@ -35,15 +41,88 @@ fn main() -> ExitCode {
     }
 }
 
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn initialize(args: &Args, config: &mut config::Loaded) -> Result<(), Error> {
+    use std::os::unix::fs::MetadataExt;
+    if !matches!(
+        args.selected(),
+        args::Action::Enter { .. } | args::Action::Serve { .. }
+    ) {
+        return Ok(());
+    }
+    let running = std::fs::metadata("/proc/self/exe")?;
+    let image = protocol::wire::Image {
+        device: running.dev(),
+        inode: running.ino(),
+    };
+    let environment = radicula_process::Environment::new(
+        [
+            "HOME",
+            "PATH",
+            "XDG_CONFIG_HOME",
+            "XDG_RUNTIME_DIR",
+            "XDG_STATE_HOME",
+            "LANG",
+            "LC_ALL",
+            "LC_CTYPE",
+            "TZ",
+        ]
+        .into_iter()
+        .filter_map(|key| std::env::var_os(key).map(|value| (key.into(), value))),
+    );
+    config.invocation = Some(startup::Invocation { image, environment });
+    Ok(())
+}
+
+fn defaults(args: &mut Args, config: &config::Loaded) -> Result<(), Error> {
+    if !matches!(args.selected(), args::Action::Enter { observe: false, launch, .. } if launch.executable.is_none())
+    {
+        return Ok(());
+    }
+    let mut environment = std::collections::BTreeMap::new();
+    for (key, value) in std::env::vars_os() {
+        let key = key
+            .into_string()
+            .map_err(|_| Error::config("interactive default environment key must be UTF-8"))?;
+        let value = value
+            .into_string()
+            .map_err(|_| Error::config("interactive default environment value must be UTF-8"))?;
+        environment.insert(key, value);
+    }
+    let executable = environment
+        .get("SHELL")
+        .cloned()
+        .unwrap_or_else(|| "/bin/sh".into());
+    environment.insert("TERM".into(), "xterm-256color".into());
+    let cwd = std::env::current_dir()?
+        .into_os_string()
+        .into_string()
+        .map_err(|_| Error::config("interactive default cwd must be UTF-8"))?;
+    config.defaults(
+        args,
+        protocol::wire::Program {
+            executable,
+            args: vec!["-i".into()],
+            cwd,
+            environment,
+        },
+    )
+}
+
 fn execute(args: &Args, config: config::Loaded) -> Result<(), Error> {
-    if matches!(args.action, args::Action::Config) {
+    if matches!(args.selected(), args::Action::Config) {
         println!("{}", config.report(args));
         return Ok(());
     }
-    if args.socket.is_some() || matches!(args.action, args::Action::Serve | args::Action::Control) {
+    if args.socket.is_some()
+        || matches!(
+            args.selected(),
+            args::Action::Serve { .. } | args::Action::Control
+        )
+    {
         return remote::execute(args, config);
     }
-    let command = command::parse(&args.action)?;
+    let command = command::parse(args.selected())?;
     let profile = bagua::dispatch(Request::identified(args.request, command)?)?;
     if args.json {
         let components = profile

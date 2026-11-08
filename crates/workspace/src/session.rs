@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Session {
     id: Id,
+    pub(crate) name: String,
     control: Control,
     sizing: Sizing,
     clients: BTreeMap<Id, Geometry>,
@@ -15,6 +16,7 @@ impl Session {
     pub fn new(id: Id, geometry: Geometry) -> Self {
         Self {
             id,
+            name: format!("session-{}", id.value()),
             control: Control::default(),
             sizing: Sizing::Automatic(geometry),
             clients: BTreeMap::new(),
@@ -25,6 +27,9 @@ impl Session {
 
     pub fn id(&self) -> Id {
         self.id
+    }
+    pub fn name(&self) -> &str {
+        &self.name
     }
     pub fn controller(&self) -> Option<Id> {
         self.control.owner()

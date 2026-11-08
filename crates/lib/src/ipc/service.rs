@@ -22,6 +22,14 @@ impl Service {
     }
 
     pub fn configured(path: &Path, history: crate::config::History) -> io::Result<Self> {
+        Self::identified(path, history, None)
+    }
+
+    pub fn identified(
+        path: &Path,
+        history: crate::config::History,
+        identity: Option<protocol::wire::Image>,
+    ) -> io::Result<Self> {
         history.check().map_err(super::error)?;
         let mut scope = [0; 16];
         let mut filled = 0;
@@ -37,7 +45,7 @@ impl Service {
         }
         Ok(Self {
             socket: Socket::bind(path)?,
-            host: Host::configured(scope, history).map_err(super::error)?,
+            host: Host::identified(scope, history, identity).map_err(super::error)?,
             links: BTreeMap::new(),
             drain: None,
         })

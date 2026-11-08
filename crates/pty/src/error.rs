@@ -10,6 +10,7 @@ pub enum Stage {
     Resize,
     Wait,
     Close,
+    Inspect,
 }
 
 #[derive(Debug)]

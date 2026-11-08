@@ -4,6 +4,10 @@ use std::time::Duration;
 pub enum Process {}
 
 impl Process {
+    pub fn context(&self) -> Result<crate::Context, Failure> {
+        match *self {}
+    }
+
     pub fn spawn(_: Launch) -> Result<Self, Failure> {
         Err(Failure::Unsupported)
     }

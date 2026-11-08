@@ -4,15 +4,17 @@ use std::collections::BTreeMap;
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Window {
     id: Id,
+    pub(crate) name: String,
     focus: Id,
     tree: Tree,
     pub(crate) panes: BTreeMap<Id, Pane>,
 }
 
 impl Window {
-    pub(crate) fn new(id: Id, pane: Id) -> Self {
+    pub(crate) fn new(id: Id, pane: Id, name: String) -> Self {
         Self {
             id,
+            name,
             focus: pane,
             tree: Tree::Pane(pane),
             panes: [(pane, Pane::new(pane))].into(),
@@ -21,6 +23,9 @@ impl Window {
 
     pub fn id(&self) -> Id {
         self.id
+    }
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn focus(&self) -> Id {

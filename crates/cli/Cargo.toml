@@ -22,11 +22,12 @@ serde_json.workspace = true
 
 terminal.workspace = true
 radicula-config.workspace = true
+radicula-process.workspace = true
 
 [target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dependencies]
 signal-hook = "0.4"
+rustix.workspace = true
 
 [dev-dependencies]
 pty.workspace = true
-radicula-process.workspace = true
 tempfile = "3"

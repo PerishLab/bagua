@@ -89,6 +89,7 @@ dependencies = [
  "plumb",
  "radicula-config",
  "radicula-process",
+ "rustix",
  "serde_json",
  "signal-hook 0.4.6",
  "tempfile",

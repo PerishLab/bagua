@@ -13,6 +13,8 @@ pub struct Config {
     pub host: Host,
     #[cascade(section)]
     pub history: History,
+    #[cascade(section)]
+    pub workspace: Workspace,
     pub program: Option<Program>,
 }
 
@@ -23,6 +25,7 @@ impl Default for Config {
             client: Client::default(),
             host: Host::default(),
             history: History::default(),
+            workspace: Workspace::default(),
             program: None,
         }
     }
@@ -52,6 +55,23 @@ impl Default for Client {
 #[serde(default, deny_unknown_fields)]
 pub struct Host {
     pub socket: Option<PathBuf>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Cascade)]
+#[cascade(section, strict)]
+#[serde(default, deny_unknown_fields)]
+pub struct Workspace {
+    pub name: String,
+    pub cwd: String,
+}
+
+impl Default for Workspace {
+    fn default() -> Self {
+        Self {
+            name: "workspace".into(),
+            cwd: "foreground".into(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Deserialize, Cascade)]

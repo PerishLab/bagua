@@ -3,6 +3,7 @@ use std::process::Command;
 #[test]
 fn capabilities() {
     let output = Command::new(env!("CARGO_BIN_EXE_bagua"))
+        .arg("--no-config")
         .args(["capabilities", "--json"])
         .output()
         .unwrap();
@@ -33,6 +34,7 @@ fn routing() {
     ];
     for args in commands {
         let output = Command::new(env!("CARGO_BIN_EXE_bagua"))
+            .arg("--no-config")
             .args(args)
             .args(["--json", "--request", "17"])
             .output()
@@ -57,6 +59,7 @@ fn refusal() {
     ];
     for (args, error) in commands {
         let output = Command::new(env!("CARGO_BIN_EXE_bagua"))
+            .arg("--no-config")
             .args(args)
             .arg("--json")
             .output()
@@ -71,6 +74,7 @@ fn refusal() {
 #[test]
 fn unavailable() {
     let output = Command::new(env!("CARGO_BIN_EXE_bagua"))
+        .arg("--no-config")
         .args(["new", "--json"])
         .output()
         .unwrap();
@@ -83,6 +87,7 @@ fn unavailable() {
 #[test]
 fn help() {
     let output = Command::new(env!("CARGO_BIN_EXE_bagua"))
+        .arg("--no-config")
         .arg("--help")
         .output()
         .unwrap();

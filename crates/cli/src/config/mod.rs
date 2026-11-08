@@ -1,5 +1,6 @@
 mod check;
 mod launch;
+mod runtime;
 #[cfg(test)]
 mod tests;
 
@@ -10,6 +11,10 @@ use std::{
     time::Duration,
 };
 
+pub(crate) fn verify(program: &protocol::wire::Program) -> Result<(), Error> {
+    launch::check(program)
+}
+
 pub(crate) struct Loaded {
     path: Option<PathBuf>,
     explicit: bool,
@@ -17,9 +22,51 @@ pub(crate) struct Loaded {
     config: bagua::config::Config,
     keys: client::Keys,
     delay: Duration,
+    runtime: Option<PathBuf>,
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    pub(crate) invocation: Option<crate::startup::Invocation>,
+}
+
+pub(crate) fn launch(
+    launch: &crate::args::Launch,
+) -> Result<Option<protocol::wire::Program>, Error> {
+    launch::resolve(launch)
+}
+
+pub(crate) fn validate(args: &Args) -> Result<(), Error> {
+    match args.selected() {
+        crate::args::Action::Enter {
+            name, launch: data, ..
+        } => {
+            if name.as_ref().is_some_and(|name| !workspace::valid(name)) {
+                return Err(protocol::Failure::Workspace(workspace::Failure::Name).into());
+            }
+            launch(data)?;
+        }
+        crate::args::Action::Open { launch: data }
+        | crate::args::Action::Connect { launch: data, .. } => {
+            launch(data)?;
+        }
+        _ => {}
+    }
+    Ok(())
 }
 
 pub(crate) fn load(args: &Args, get: &dyn Fn(&str) -> Option<OsString>) -> Result<Loaded, Error> {
+    let mut loaded = discover(args, get)?;
+    let normal = matches!(
+        args.selected(),
+        crate::args::Action::Enter { .. }
+            | crate::args::Action::Serve { .. }
+            | crate::args::Action::Config
+    );
+    if normal && args.socket.is_none() && loaded.config.host.socket.is_none() {
+        loaded.runtime = runtime::path(get)?;
+    }
+    Ok(loaded)
+}
+
+fn discover(args: &Args, get: &dyn Fn(&str) -> Option<OsString>) -> Result<Loaded, Error> {
     if args.bare {
         return Loaded::read(None, false);
     }
@@ -73,13 +120,14 @@ impl Loaded {
             config,
             keys,
             delay,
+            runtime: None,
+            #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+            invocation: None,
         })
     }
 
     pub fn apply(&self, args: &mut Args) {
-        if args.socket.is_none() {
-            args.socket = self.config.host.socket.clone();
-        }
+        self.socket(args);
         launch::apply(args, &self.config.program);
     }
 
@@ -95,8 +143,16 @@ impl Loaded {
         self.config.history
     }
 
+    pub fn workspace(&self) -> &bagua::config::Workspace {
+        &self.config.workspace
+    }
+
     pub fn prefix(&self) -> &str {
         &self.config.client.prefix
+    }
+
+    pub fn source(&self) -> Option<&Path> {
+        self.present.then_some(self.path.as_deref()).flatten()
     }
 
     pub fn reload(&mut self) -> Result<(), Error> {
@@ -104,13 +160,17 @@ impl Loaded {
             return Err(Error::config("no configuration source selected"));
         }
         let mut next = Self::read(self.path.clone(), true)?;
-        next.explicit = self.explicit;
-        if next.config.host != self.config.host
-            || next.config.program != self.config.program
-            || next.config.history != self.config.history
+        next.runtime = self.runtime.clone();
+        #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
         {
+            next.invocation = self.invocation.clone();
+        }
+        next.explicit = self.explicit;
+        let mut startup = next.config.clone();
+        startup.client = self.config.client.clone();
+        if startup != self.config {
             return Err(Error::config(
-                "host/program/history changes require a new invocation; running host and programs were not changed",
+                "host/program/history/workspace changes require a new invocation; running host and programs were not changed",
             ));
         }
         *self = next;
@@ -124,14 +184,16 @@ impl Loaded {
             "explicit": self.explicit,
             "loaded": self.present,
             "client": {"prefix": self.prefix(), "escape_ms": self.config.client.escape},
-            "host": {"socket": args.socket},
+            "host": {"socket": args.socket.as_ref().or(self.runtime.as_ref()), "default": self.runtime.is_some()},
             "history": {"lines": self.config.history.lines, "bytes": self.config.history.bytes, "total": self.config.history.total},
+            "workspace": {"name": self.config.workspace.name, "cwd": self.config.workspace.cwd},
             "program": self.config.program.as_ref().map(|program| serde_json::json!({
                 "executable": program.executable, "cwd": program.cwd,
                 "args": program.args.len(), "environment": program.environment.keys().collect::<Vec<_>>()
             })),
+            "interactive_defaults": if self.config.program.is_none() { Some("enter uses invocation SHELL or /bin/sh, invocation cwd and an explicit snapshot of the invocation environment; TERM=xterm-256color") } else { None },
             "reload": ["client.prefix", "client.escape_ms"],
-            "restart": ["host.socket", "program", "history"],
+            "restart": ["host.socket", "program", "history", "workspace"],
             "unsupported": ["bindings", "clipboard", "status"],
         })
     }

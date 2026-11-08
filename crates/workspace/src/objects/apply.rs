@@ -3,18 +3,15 @@ use crate::{Change, Failure, Id, Operation, Outcome, Sizing, Target, Window, Wor
 impl World {
     pub fn apply(&mut self, actor: Id, operation: Operation) -> Result<Outcome, Failure> {
         match operation {
+            Operation::Enter(entry) => return self.enter(actor, entry),
+            Operation::Named { geometry, name } => {
+                let created = self.named(geometry, name)?;
+                return Ok(self.creation(created));
+            }
             Operation::Read => return Ok(Outcome::Snapshot(self.snapshot())),
             Operation::Create(geometry) => {
                 let created = self.create(geometry)?;
-                return Ok(Outcome::Changed(Change {
-                    revision: self.revision,
-                    created: vec![
-                        Target::Session(created.session),
-                        Target::Window(created.window),
-                        Target::Pane(created.pane),
-                    ],
-                    retired: Vec::new(),
-                }));
+                return Ok(self.creation(created));
             }
             _ => {}
         }
@@ -36,6 +33,7 @@ impl World {
         change: &mut Change,
     ) -> Result<(), Failure> {
         match operation {
+            Operation::Rename { target, name } => self.rename(actor, target, name)?,
             Operation::Join { session, viewport } => self.edit(session)?.join(actor, viewport)?,
             Operation::Acquire { session, fixed } => match fixed {
                 Some(geometry) => self.edit(session)?.claim(actor, geometry)?,
@@ -58,9 +56,24 @@ impl World {
             Operation::Split { pane, split } => change.created = self.split(actor, pane, split)?,
             Operation::Focus(pane) => self.focus(actor, pane)?,
             Operation::Close(target) => change.retired = self.close(actor, target)?,
-            Operation::Read | Operation::Create(_) => return Err(Failure::State),
+            Operation::Read
+            | Operation::Create(_)
+            | Operation::Enter(_)
+            | Operation::Named { .. } => return Err(Failure::State),
         }
         Ok(())
+    }
+
+    fn creation(&self, created: crate::Creation) -> Outcome {
+        Outcome::Changed(Change {
+            revision: self.revision,
+            created: vec![
+                Target::Session(created.session),
+                Target::Window(created.window),
+                Target::Pane(created.pane),
+            ],
+            retired: Vec::new(),
+        })
     }
 
     fn edit(&mut self, id: Id) -> Result<&mut crate::Session, Failure> {
@@ -75,7 +88,13 @@ impl World {
         if session.windows.len() >= 32 {
             return Err(Failure::Capacity);
         }
-        session.windows.insert(ids[0], Window::new(ids[0], ids[1]));
+        let name = crate::names::available(
+            "window",
+            session.windows.values().map(|window| window.name().into()),
+        )?;
+        session
+            .windows
+            .insert(ids[0], Window::new(ids[0], ids[1], name));
         session.selected = Some(ids[0]);
         Ok(vec![Target::Window(ids[0]), Target::Pane(ids[1])])
     }

@@ -1,5 +1,13 @@
 use super::runner::Runner;
 use protocol::Command;
+
+#[derive(Clone)]
+pub(super) struct Queued {
+    pub command: Command,
+    pub source: Option<workspace::Id>,
+    pub program: Option<protocol::wire::Program>,
+}
+
 impl Runner {
     pub(super) fn enqueue(&mut self, command: Command) {
         let bytes = weight(&command);
@@ -8,7 +16,7 @@ impl Runner {
             return;
         }
         if let Some(pending) = self.queue.back_mut()
-            && let Some(count) = append(pending, &command)
+            && let Some(count) = append(&mut pending.command, &command)
         {
             self.bytes += count;
             return;
@@ -19,7 +27,16 @@ impl Runner {
             return;
         }
         self.bytes += bytes;
-        self.queue.push_back(command);
+        let source = match &command {
+            Command::Workspace(workspace::Operation::Split { pane, .. }) => Some(*pane),
+            Command::Workspace(workspace::Operation::Window(_)) => self.app.focus(),
+            _ => None,
+        };
+        self.queue.push_back(Queued {
+            command,
+            source,
+            program: None,
+        });
     }
 }
 pub(super) fn weight(command: &Command) -> usize {

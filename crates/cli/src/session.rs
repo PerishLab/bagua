@@ -12,6 +12,8 @@ pub(crate) struct Session {
     pub actor: workspace::Id,
     pub canvas: workspace::Geometry,
     pub created: Vec<workspace::Target>,
+    pub entered: Option<workspace::Id>,
+    pub identity: Option<protocol::wire::Image>,
     pub next: u64,
     json: bool,
 }
@@ -25,13 +27,21 @@ impl Session {
         if args.request == 0 {
             return Err(Failure::Identity.into());
         }
-        let mut connection = Connection::connect(path)?;
-        let (actor, canvas) = match connection.receive()? {
+        let connection = Connection::connect(path)?;
+        Self::adopt(connection, args)
+    }
+
+    pub fn adopt(mut connection: Connection, args: &Args) -> Result<Self, Error> {
+        if args.request == 0 {
+            return Err(Failure::Identity.into());
+        }
+        let (actor, canvas, identity) = match connection.receive()? {
             Message::Hello {
                 version: protocol::VERSION,
                 client,
                 canvas,
-            } => (client, canvas),
+                identity,
+            } => (client, canvas, identity),
             _ => return Err(Failure::Version.into()),
         };
         Ok(Self {
@@ -39,9 +49,15 @@ impl Session {
             actor,
             canvas,
             created: Vec::new(),
+            entered: None,
+            identity,
             next: args.request,
             json: args.json,
         })
+    }
+
+    pub fn bounded(&self, timeout: std::time::Duration) -> Result<(), Error> {
+        Ok(self.connection.bounded(timeout)?)
     }
 
     pub fn join(&mut self, id: u64, acquire: bool) -> Result<(), Error> {
@@ -132,6 +148,14 @@ impl Session {
     }
 
     fn remember(&mut self, status: &Status) {
+        if let Status::Applied(Outcome::Workspace(workspace::Outcome::Entered {
+            session,
+            change,
+        })) = status
+        {
+            self.entered = Some(*session);
+            self.created = change.created.clone();
+        }
         if let Status::Applied(Outcome::Workspace(workspace::Outcome::Changed(change))) = status {
             self.created = change.created.clone();
         }
