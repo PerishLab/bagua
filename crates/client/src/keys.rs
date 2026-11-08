@@ -22,18 +22,59 @@ pub enum Gesture {
     Paste,
     Pan(Key),
     Help,
+    Reload,
     Ignore,
 }
 
 pub fn translate(event: KeyEvent, leader: bool) -> Result<Gesture, Failure> {
+    Keys::default().translate(event, leader)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Keys {
+    prefix: char,
+}
+
+impl Default for Keys {
+    fn default() -> Self {
+        Self { prefix: 'g' }
+    }
+}
+
+impl Keys {
+    pub fn new(prefix: char) -> Result<Self, Failure> {
+        if !prefix.is_ascii_lowercase() || matches!(prefix, 'h' | 'i' | 'j' | 'm') {
+            return Err(Failure::Payload);
+        }
+        Ok(Self { prefix })
+    }
+
+    pub fn translate(&self, event: KeyEvent, leader: bool) -> Result<Gesture, Failure> {
+        if event.kind == KeyEventKind::Release {
+            return Ok(Gesture::Ignore);
+        }
+        let prefix =
+            event.modifiers == KeyModifiers::CONTROL && event.code == KeyCode::Char(self.prefix);
+        if prefix {
+            return Ok(if leader {
+                Gesture::Input(Input::Key(Key::Control(self.prefix)))
+            } else {
+                Gesture::Leader
+            });
+        }
+        if leader {
+            if !matches!(event.modifiers, KeyModifiers::NONE | KeyModifiers::SHIFT) {
+                return Err(Failure::Unavailable);
+            }
+            return command(event.code);
+        }
+        input(event)
+    }
+}
+
+fn input(event: KeyEvent) -> Result<Gesture, Failure> {
     if event.kind == KeyEventKind::Release {
         return Ok(Gesture::Ignore);
-    }
-    if leader {
-        return command(event.code);
-    }
-    if event.modifiers == KeyModifiers::CONTROL && event.code == KeyCode::Char('g') {
-        return Ok(Gesture::Leader);
     }
     let key = match event.code {
         KeyCode::Char(c) => return character(c, event.modifiers),
@@ -97,6 +138,7 @@ fn command(code: KeyCode) -> Result<Gesture, Failure> {
         KeyCode::Up => Gesture::Pan(Key::Up),
         KeyCode::Down => Gesture::Pan(Key::Down),
         KeyCode::Char('?') => Gesture::Help,
+        KeyCode::Char('r') => Gesture::Reload,
         KeyCode::Esc => Gesture::Ignore,
         _ => return Err(Failure::Unavailable),
     })

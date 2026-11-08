@@ -1,5 +1,6 @@
 mod args;
 mod command;
+mod config;
 mod error;
 mod remote;
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
@@ -20,8 +21,12 @@ fn main() -> ExitCode {
         eprintln!("{error}");
         return ExitCode::FAILURE;
     }
-    let args = Args::parse();
-    match execute(&args) {
+    let mut args = Args::parse();
+    let result = config::load(&args, &|name| std::env::var_os(name)).and_then(|config| {
+        config.apply(&mut args);
+        execute(&args, config)
+    });
+    match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             report(error, args.json, args.request);
@@ -30,9 +35,13 @@ fn main() -> ExitCode {
     }
 }
 
-fn execute(args: &Args) -> Result<(), Error> {
+fn execute(args: &Args, config: config::Loaded) -> Result<(), Error> {
+    if matches!(args.action, args::Action::Config) {
+        println!("{}", config.report(args));
+        return Ok(());
+    }
     if args.socket.is_some() || matches!(args.action, args::Action::Serve | args::Action::Control) {
-        return remote::execute(args);
+        return remote::execute(args, config);
     }
     let command = command::parse(&args.action)?;
     let profile = bagua::dispatch(Request::identified(args.request, command)?)?;

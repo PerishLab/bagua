@@ -9,7 +9,7 @@ mod select;
 mod tty;
 
 pub use app::App;
-pub use keys::{Gesture, translate};
+pub use keys::{Gesture, Keys, translate};
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 pub use tty::Terminal;
 

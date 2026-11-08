@@ -3,6 +3,29 @@ use terminal::{Extent, Key};
 use workspace::{Id, Operation, Target};
 
 #[test]
+fn prefix() {
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    let keys = client::Keys::new('q').unwrap();
+    let key = KeyEvent::new(KeyCode::Char('q'), KeyModifiers::CONTROL);
+    assert_eq!(keys.translate(key, false), Ok(client::Gesture::Leader));
+    assert_eq!(
+        keys.translate(key, true),
+        Ok(client::Gesture::Input(Input::Key(Key::Control('q'))))
+    );
+    let old = KeyEvent::new(KeyCode::Char('g'), KeyModifiers::CONTROL);
+    assert_eq!(
+        keys.translate(old, false),
+        Ok(client::Gesture::Input(Input::Key(Key::Control('g'))))
+    );
+    assert!(keys.translate(old, true).is_err());
+    assert_eq!(
+        keys.translate(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::NONE), true),
+        Ok(client::Gesture::Reload)
+    );
+    assert!(client::Keys::new('i').is_err());
+}
+
+#[test]
 fn contract() {
     let pane = Id::new(7).unwrap();
     let view = client::View::new(Target::Pane(pane), Extent::new(80, 24).unwrap());

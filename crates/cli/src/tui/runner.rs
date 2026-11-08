@@ -1,3 +1,5 @@
+mod input;
+mod reload;
 use super::queue::weight;
 use crate::error::Error;
 use bagua::ipc::Channel;
@@ -34,6 +36,7 @@ pub(super) struct Runner {
     pub(super) queue: VecDeque<Command>,
     pub(super) bytes: usize,
     leaving: Option<Instant>,
+    pub(super) config: crate::config::Loaded,
 }
 
 impl Runner {
@@ -52,6 +55,7 @@ impl Runner {
             queue: VecDeque::new(),
             bytes: 0,
             leaving: None,
+            config: crate::config::Loaded::disabled(),
         }
     }
 
@@ -178,7 +182,7 @@ impl Runner {
     fn event(&mut self, event: Event) -> Result<(), Error> {
         if self.suspended && matches!(event, Event::Paste(_) | Event::Mouse(_)) {
             self.app
-                .status("Terminal too small; resize or Ctrl-G d to detach");
+                .status("Terminal too small; resize or prefix d to detach");
             return Ok(());
         }
         let commands = match event {
@@ -227,25 +231,6 @@ impl Runner {
         Ok(())
     }
 
-    fn key(&mut self, key: crossterm::event::KeyEvent) -> Result<Vec<Command>, Failure> {
-        let gesture = client::translate(key, self.leader);
-        self.leader = false;
-        let gesture = gesture?;
-        if gesture == Gesture::Detach {
-            self.leaving = Some(Instant::now());
-            return Ok(Vec::new());
-        }
-        if gesture == Gesture::Leader {
-            self.leader = true;
-            self.app.status("Ctrl-G: ? help, d detach");
-            return Ok(Vec::new());
-        }
-        if self.suspended && gesture != Gesture::Detach {
-            return Err(Failure::Payload);
-        }
-        self.app.handle(gesture)
-    }
-
     fn settled(&self) -> bool {
         self.queue.is_empty() && self.jobs.is_empty() && self.launches.is_empty()
     }
@@ -265,23 +250,5 @@ impl Runner {
         if reply.result.is_err() {
             self.jobs.remove(&reply.request);
         }
-    }
-
-    fn input(&mut self, terminal: &mut Terminal) -> Result<(), Error> {
-        let mut bytes = [0; 4096];
-        let length = self.keyboard.room().min(bytes.len());
-        let count = terminal.read(&mut bytes[..length])?;
-        self.keyboard.push(&bytes[..count])?;
-        for _ in 0..16 {
-            match self.keyboard.next(Instant::now()) {
-                Some(Ok(event)) => self.event(event)?,
-                Some(Err(error)) => self.app.status(error.message()),
-                None => break,
-            }
-            if self.leaving.is_some() {
-                break;
-            }
-        }
-        Ok(())
     }
 }

@@ -90,6 +90,62 @@ nonpositive. Qualification, content association, stable promotion enforcement
 and installed consumption are separate facts; no active Bagua promotion gate or
 stable/install qualification is claimed by this declaration.
 
+## User configuration
+
+The configuration source change tracked by Issue #25 adds `bagua config`,
+`--config PATH` and `--no-config`. Installed use needs a containing release;
+the earlier v0.1.0 stable does not contain these commands. The checked-in
+[bagua.toml](bagua.toml) is a runnable example, not an automatically loaded
+working-directory configuration.
+
+An explicit `--config` selects exactly that file and refuses missing or invalid
+input. Otherwise the CLI selects `$XDG_CONFIG_HOME/bagua/bagua.toml`, or
+`$HOME/.config/bagua/bagua.toml` when XDG_CONFIG_HOME is unset or empty. The
+directory must be absolute. A missing default file uses built-in defaults;
+unreadable or malformed files refuse. `--no-config` bypasses file discovery.
+No parent-directory search, shell expansion, script execution or BAGUA-prefixed
+environment overrides occur. Relative paths supplied explicitly with --config
+are resolved from that invocation, rather than silently searched.
+
+```sh
+bagua --config /absolute/path/bagua.toml config
+bagua --config /absolute/path/bagua.toml --socket /absolute/private/host.sock serve
+bagua --config /absolute/path/bagua.toml --socket /absolute/private/host.sock open
+```
+
+Schema version 1 is the default when omitted. Supported sections are `client`,
+`host` and `program`. Unknown fields, duplicate keys and unsupported versions
+refuse before interactive mode or native startup. `client.prefix` is a control
+letter such as C-g or C-q; C-h/C-i/C-j/C-m are reserved because the decoder maps
+them to navigation keys. `client.escape_ms` is 0–1000 milliseconds, default 50;
+zero makes an isolated Escape immediate and may split fragmented Alt input.
+The built-in prefix remains Ctrl-G. Pressing the chosen prefix twice sends its
+literal control key to the application. Prefix-r reloads and reports its result.
+
+Reload validates the whole file before atomically replacing client prefix and
+Escape delay. Errors, missing reload input or changed host/program sections
+preserve the old client configuration. Host socket and program settings apply
+only to a new invocation; they never restart a host or alter running programs.
+Each client owns its preferences, including an observer, without gaining write
+or geometry authority. A disabled or undiscoverable source cannot reload.
+
+`host.socket` supplies an absolute socket path; --socket overrides it.
+`program` supplies the complete executable, argv, absolute cwd and explicit
+environment for interactive open/connect and later splits/windows. A complete
+CLI --executable/--cwd launch replaces that whole template, including argv and
+environment. Nothing implicitly inherits the host environment. Values remain
+literal data; add application HOME or other variables explicitly when needed.
+Reloading a program template requires a new invocation even if that invocation
+had overridden it with CLI launch data.
+
+`bagua config` reports the selected source, whether it was loaded, the effective
+socket, client settings and reload policy. It shows program paths and only
+argument counts/environment key names. It neither starts programs nor proves
+their executability, directory access or runtime permissions. Parse diagnostics
+report field/byte information without echoing the original TOML source line.
+History, arbitrary bindings, clipboard and status sections remain unsupported
+until their owning Issues land; this example does not enable future features.
+
 ## Workspace and control
 
 `workspace::World` owns one session/window/pane tree. IDs are nonzero and never
@@ -325,8 +381,8 @@ flags to `connect` when that client will create further panes. Split/window
 creation from the interactive client refuses without an explicit program;
 it does not infer a shell or reconstruct another process's launch data.
 
-Press Ctrl-G followed by one command. This prefix is a Bagua choice, not a
-tmux compatibility contract.
+Press the configured prefix followed by one command (Ctrl-G by default).
+This is a Bagua choice, not a tmux compatibility contract.
 
 | Key | Action |
 | --- | --- |
@@ -341,6 +397,7 @@ tmux compatibility contract.
 | Arrows | Pan the local viewport without changing host geometry |
 | `[` / `c` / `p` | Begin selection / copy / paste the local buffer |
 | `?` | Show the command hints |
+| `r` | Validate and atomically reload client configuration |
 
 Ordinary keys go to the focused pane only for the controller. The profile
 includes UTF-8 text, ASCII control keys, printable Alt characters, arrows,

@@ -4,7 +4,11 @@ use workspace::{Geometry, Operation, Ratio, Sizing, Split, Target};
 
 pub(crate) fn parse(action: &Action) -> Result<Command, Failure> {
     let operation = match action {
-        Action::Open { .. } | Action::Connect { .. } | Action::Serve | Action::Control => {
+        Action::Config
+        | Action::Open { .. }
+        | Action::Connect { .. }
+        | Action::Serve
+        | Action::Control => {
             return Err(Failure::Unavailable);
         }
         Action::Shutdown => return Ok(Command::Shutdown),
