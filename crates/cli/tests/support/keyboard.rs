@@ -4,8 +4,15 @@ use std::fs;
 
 #[test]
 fn negotiated() {
+    negotiate(1);
+    negotiate(5);
+    negotiate(7);
+}
+
+fn negotiate(flags: u16) {
     let fixture = Fixture::new();
     let script = r"stty raw -echo; printf '\033[>1u\033[?u\033[c'; od -An -tx1 -N12; printf '\r\nNEGOTIATED\r\n'; od -An -tx1 -N8; printf '\r\nDISTINCT\r\n'; printf '\033[<u'; od -An -tx1 -N1; printf '\r\nLEGACY\r\n'; exec /bin/sleep 60";
+    let script = script.replace(">1u", &format!(">{flags}u"));
     let mut peer = Peer::new(
         &fixture,
         &[
@@ -16,7 +23,7 @@ fn negotiated() {
             "/",
             "--arg=-c",
             "--arg",
-            script,
+            &script,
             "--env",
             "PATH=/usr/bin:/bin",
             "--env",

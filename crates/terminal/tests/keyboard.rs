@@ -87,3 +87,76 @@ fn lifetimes() {
     engine.feed(b"\x1b[?1049l").unwrap();
     assert_eq!(engine.modes().keyboard, 0);
 }
+
+#[test]
+fn combinations() {
+    for flags in [5, 7, 31, 65535] {
+        let mut engine = engine();
+        let report = engine
+            .feed(format!("\x1b[>{flags}u\x1b[?u").as_bytes())
+            .unwrap();
+        assert_eq!(report.unsupported, 1);
+        assert_eq!(report.replies, b"\x1b[?1u");
+        assert_eq!(engine.snapshot().modes().keyboard, 1);
+        assert_eq!(engine.encode(key(13, true)).unwrap(), b"\x1b[13;2u");
+        assert_eq!(engine.encode(Input::Key(Key::Enter)).unwrap(), b"\r");
+        let report = engine.feed(b"\x1b[>4u\x1b[?u\x1b[<u\x1b[?u").unwrap();
+        assert_eq!(report.unsupported, 1);
+        assert_eq!(report.replies, b"\x1b[?0u\x1b[?1u");
+        let report = engine.feed(b"\x1b[?1049h\x1b[?u\x1b[>7u\x1b[?u").unwrap();
+        assert_eq!(report.unsupported, 1);
+        assert_eq!(report.replies, b"\x1b[?0u\x1b[?1u");
+        engine.feed(b"\x1b[?1049l\x1b[<2u").unwrap();
+        assert_eq!(engine.modes().keyboard, 0);
+        engine.feed(b"\x1b[?1049h").unwrap();
+        assert_eq!(engine.modes().keyboard, 1);
+        engine.feed(b"\x1bc\x1b[?1049h").unwrap();
+        assert_eq!(engine.modes().keyboard, 0);
+        engine.feed(b"\x1b[?1049l").unwrap();
+        assert_eq!(engine.modes().keyboard, 0);
+    }
+}
+
+#[test]
+fn masks() {
+    let mut engine = engine();
+    for (sequence, flags) in [
+        ("\x1b[=7u", 1),
+        ("\x1b[=4;2u", 1),
+        ("\x1b[=4;3u", 1),
+        ("\x1b[=4;1u", 0),
+        ("\x1b[=5;2u", 1),
+        ("\x1b[=7;3u", 0),
+        ("\x1b[=7;0u", 1),
+        ("\x1b[=4;0u", 0),
+    ] {
+        let report = engine.feed(sequence.as_bytes()).unwrap();
+        assert_eq!(report.unsupported, 1);
+        assert_eq!(engine.modes().keyboard, flags);
+        assert_eq!(
+            engine.feed(b"\x1b[?u").unwrap().replies,
+            format!("\x1b[?{flags}u").as_bytes()
+        );
+    }
+}
+
+#[test]
+fn malformed() {
+    let mut engine = engine();
+    engine.feed(b"\x1b[>1u").unwrap();
+    for sequence in [
+        "\x1b[>7;1u",
+        "\x1b[=4;4u",
+        "\x1b[=4;1;2u",
+        "\x1b[>4:1u",
+        "\x1b[<2;1u",
+        "\x1b[?7u",
+    ] {
+        let report = engine.feed(sequence.as_bytes()).unwrap();
+        assert_eq!(report.unsupported, 1);
+        assert_eq!(engine.modes().keyboard, 1);
+    }
+    let report = engine.feed(b"\x1b[<7u\x1b[?u").unwrap();
+    assert_eq!(report.unsupported, 0);
+    assert_eq!(report.replies, b"\x1b[?0u");
+}

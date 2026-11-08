@@ -44,12 +44,15 @@ impl Events {
     ) {
         if action == 'u'
             && prefix.1.is_none()
-            && let Some(reply) = prefix.0.and_then(|prefix| {
+            && let Some((reply, partial)) = prefix.0.and_then(|prefix| {
                 self.keyboard
                     .apply(screen.alternate_screen(), prefix, params)
             })
         {
             self.replies.extend(reply);
+            if partial {
+                self.discard();
+            }
             return;
         }
         match query(screen, prefix, params, action) {
