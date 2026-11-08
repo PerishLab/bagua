@@ -15,7 +15,8 @@ pub(super) fn prepare(
     config: &crate::config::Loaded,
 ) -> Result<Runner, Error> {
     let (columns, rows) = terminal.size()?;
-    let viewport = super::extent(columns, rows).ok_or(Failure::Payload)?;
+    let viewport =
+        super::extent(columns, rows, config.decor().status.separator).ok_or(Failure::Payload)?;
     let geometry = Geometry::new(
         viewport.width().min(rpc.canvas.columns()),
         viewport.height().min(rpc.canvas.rows()),

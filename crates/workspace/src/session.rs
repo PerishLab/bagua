@@ -10,6 +10,7 @@ pub struct Session {
     clients: BTreeMap<Id, Geometry>,
     pub(crate) windows: BTreeMap<Id, Window>,
     pub(crate) selected: Option<Id>,
+    header: bool,
 }
 
 impl Session {
@@ -22,6 +23,7 @@ impl Session {
             clients: BTreeMap::new(),
             windows: BTreeMap::new(),
             selected: None,
+            header: false,
         }
     }
 
@@ -39,6 +41,28 @@ impl Session {
     }
     pub fn geometry(&self) -> Geometry {
         self.sizing.geometry()
+    }
+    pub fn header(&self) -> bool {
+        self.header
+    }
+    pub fn canvas(&self) -> crate::Canvas {
+        crate::Canvas {
+            geometry: self.geometry(),
+            header: self.header,
+        }
+    }
+
+    pub(crate) fn reserve(&mut self, actor: Id, header: bool) -> Result<(), Failure> {
+        self.require(actor)?;
+        let canvas = crate::Canvas {
+            header,
+            ..self.canvas()
+        };
+        for window in self.windows.values() {
+            window.placements(canvas)?;
+        }
+        self.header = header;
+        Ok(())
     }
     pub fn selected(&self) -> Option<Id> {
         self.selected
@@ -149,7 +173,10 @@ impl Session {
             return Err(Failure::Geometry);
         }
         for window in self.windows.values() {
-            window.placements(geometry)?;
+            window.placements(crate::Canvas {
+                geometry,
+                header: self.header,
+            })?;
         }
         Ok(())
     }

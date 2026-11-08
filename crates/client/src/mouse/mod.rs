@@ -23,6 +23,9 @@ impl App {
         if let Some(commands) = self.captured(event, point)? {
             return Ok(commands);
         }
+        if let Some(commands) = self.heading(event, point)? {
+            return Ok(commands);
+        }
         if self.divider(event, point)? {
             return Ok(Vec::new());
         }
@@ -70,6 +73,26 @@ impl App {
         }
         commands.extend(self.application(place, point, event)?);
         Ok(commands)
+    }
+
+    fn heading(&self, event: MouseEvent, point: Point) -> Result<Option<Vec<Command>>, Failure> {
+        if event.kind != MouseEventKind::Down(MouseButton::Left)
+            || !self.session().is_some_and(|session| session.header())
+        {
+            return Ok(None);
+        }
+        let place = self.placements()?.into_iter().find(|place| {
+            point.y == place.frame.y
+                && (place.frame.x..place.frame.x + place.frame.geometry.columns())
+                    .contains(&point.x)
+        });
+        let Some(place) = place else {
+            return Ok(None);
+        };
+        if self.controller() && self.focus() != Some(place.pane) {
+            return Ok(Some(vec![Command::Workspace(Operation::Focus(place.pane))]));
+        }
+        Ok(Some(Vec::new()))
     }
 
     fn application(

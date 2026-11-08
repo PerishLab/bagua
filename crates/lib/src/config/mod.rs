@@ -1,7 +1,9 @@
+mod view;
 use protocol::wire::Program;
 use radicula_config::Cascade;
 use serde::Deserialize;
 use std::path::PathBuf;
+pub use view::{Header, Status};
 
 #[derive(Clone, Debug, PartialEq, Cascade)]
 #[cascade(strict)]
@@ -21,6 +23,10 @@ pub struct Config {
     pub mouse: Mouse,
     #[cascade(section)]
     pub clipboard: Clipboard,
+    #[cascade(section)]
+    pub header: Header,
+    #[cascade(section)]
+    pub status: Status,
     pub program: Option<Program>,
 }
 
@@ -35,6 +41,8 @@ impl Default for Config {
             bindings: Bindings::default(),
             mouse: Mouse::default(),
             clipboard: Clipboard::default(),
+            header: Header::default(),
+            status: Status::default(),
             program: None,
         }
     }

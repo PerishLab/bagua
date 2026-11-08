@@ -4,7 +4,7 @@ impl Runner {
     pub(super) fn stage(&mut self, gesture: Gesture) -> Result<(), Failure> {
         if self.paused {
             self.app
-                .status("Input paused after a failed intent; Escape resumes without replay");
+                .error("Input paused after a failed intent; Escape resumes without replay");
             return Ok(());
         }
         let bytes = size(&gesture);
@@ -58,11 +58,12 @@ impl Runner {
     pub(super) fn event(&mut self, event: Event) -> Result<(), Error> {
         if matches!(event, Event::Paste(_)) {
             self.leader = false;
+            self.app.prefix(None);
         }
         if self.suspended && matches!(event, Event::Paste(_) | Event::Mouse(_)) {
             self.app.cancel();
             self.app
-                .status("Terminal too small; resize or use the configured detach binding");
+                .error("Terminal too small; resize or use the configured detach binding");
             return Ok(());
         }
         let commands = match event {
@@ -75,13 +76,15 @@ impl Runner {
                 if self.fenced() || self.paused || !self.intents.is_empty() {
                     self.app.cancel();
                     self.app
-                        .status("Layout pending or input paused; mouse gesture was not admitted");
+                        .error("Layout pending or input paused; mouse gesture was not admitted");
                     return Ok(());
                 }
                 self.app.mouse(mouse)
             }
             Event::Resize(columns, rows) => {
-                let Some(extent) = crate::tui::extent(columns, rows) else {
+                let Some(extent) =
+                    crate::tui::extent(columns, rows, self.config.decor().status.separator)
+                else {
                     self.suspended = true;
                     return Ok(());
                 };
@@ -104,7 +107,7 @@ impl Runner {
         let commands = match commands {
             Ok(commands) => commands,
             Err(error) => {
-                self.app.status(error.message());
+                self.app.error(error.message());
                 return Ok(());
             }
         };

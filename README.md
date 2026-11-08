@@ -62,6 +62,12 @@ homes/data for its hosted programs. No production session is a test fixture.
 
 ## Published-artifact qualification
 
+The daily-use source declaration adds `bagua-config`, `bagua-entry`,
+`bagua-history`, `bagua-input`, `bagua-mouse` and `bagua-display` to the original
+three cases below. Seatrial #83 owns publication of their independent materials;
+#31/#84 require the complete matching declaration on the exact candidate.
+Declaring these names does not claim publication or a passing qualification.
+
 `plumb.toml` declares Linux cases `bagua-workspace`, `bagua-lifecycle` and
 `bagua-flow`, with the official Seatrial runner and Depot scene channel following
 stable and the Images runtime following stable. The exact resolved generations,
@@ -124,11 +130,11 @@ The built-in prefix remains Ctrl-G. Pressing the chosen prefix twice sends its
 literal control key to the application. Prefix-r reloads and reports its result.
 
 Reload validates the whole file before atomically replacing client prefix,
-Escape delay, bindings, mouse and clipboard preferences. Errors, missing reload input or changed host/program/history/workspace sections
+Escape delay, bindings, mouse, clipboard, header and status preferences. Errors, missing reload input or changed host/program/history/workspace sections
 preserve the old client configuration. Host socket, history budgets and program settings apply
 only to a new invocation; they never restart a host or alter running programs.
-Each client owns its preferences, including an observer, without gaining write
-or geometry authority. A disabled or undiscoverable source cannot reload.
+Each client owns its preferences, including an observer. Preferences grant no
+control; only a controller can adopt a header inset through a model operation. A disabled or undiscoverable source cannot reload.
 
 `host.socket` supplies an absolute socket path; --socket overrides it.
 `program` supplies the complete executable, argv, absolute cwd and explicit
@@ -144,8 +150,8 @@ socket, client settings and reload policy. It shows program paths and only
 argument counts/environment key names. It neither starts programs nor proves
 their executability, directory access or runtime permissions. Parse diagnostics
 report field/byte information without echoing the original TOML source line.
-Typed bindings, mouse and clipboard are described below; status sections remain
-unsupported until their owning Issues land.
+Typed bindings, mouse, clipboard, header and status are described below.
+Unknown sections/components refuse instead of executing shell formats.
 
 ## Ordinary named entry
 
@@ -364,6 +370,103 @@ pure protocol checks retain text until fresh model/start evidence and refuse
 writes after transfer. These source checks do not replace Seatrial #83's
 independent distributed-artifact workflow qualification.
 
+## Header, status and low traffic display
+
+Issue #30 adds this source profile; formal release/installed qualification is
+separate. The example `bagua.toml` selects pane headers, a status separator,
+indexed blue/dark activity colors and a fifteen-second Asia/Shanghai clock.
+Headers are off by default; their one-row reservation becomes session layout
+state only through a controller's explicit `Workspace.Header { session, enabled }`
+operation. `bagua config` reports desired preferences, not proof of adoption.
+
+```toml
+[header]
+enabled = true
+components = ["pane", "command", "cwd"]
+color = true
+active = 4
+inactive = 8
+
+[status]
+components = ["session", "windows", "prefix", "notice", "clock"]
+color = true
+active = 4
+inactive = 8
+separator = true
+timezone = "Asia/Shanghai"
+refresh_seconds = 15
+```
+
+Header components are unique `pane`, `command` and `cwd` selections. Status
+components are unique `session`, `windows`, `prefix`, `notice` and `clock`
+selections; each list has at most eight entries and may be empty. There is no
+format language, shell evaluation or arbitrary escape-string component. Colors
+are indexed values 0..=255. Header/background activity uses `active`/`inactive`;
+body cells retain application styles and the terminal's default background.
+`color=false` uses default colors and an inverse/bold active indication. Indexed
+palette appearance belongs to the outer terminal; this does not promise pixel
+identity across ET/emulators or infer a queried foreground/background color.
+
+World placements expose an outer frame and an application content rectangle.
+An enabled header consumes one row per pane while retaining a minimum content
+row; split/resize/transfer/new-window admission uses that same budget. Native
+PTY sizing and terminal grids use content rectangles. A header never obscures a
+row while pretending that the application has more space. Insufficient geometry
+refuses a reservation; automatic adoption reports this and leaves the actual
+layout unchanged. Existing geometry that cannot shrink further is cropped/panned
+under the existing viewport rules. Observers follow the actual session inset,
+without changing it through their own preference file. Clicking a header focuses
+its pane only for the controller. Divider rectangles remain outer-frame geometry.
+
+The optional status separator and status row are removed from the client's
+reported viewport before layout, including startup/reload. Header/style/status
+preferences validate atomically with keys, mouse and clipboard. Native header
+adoption is a separate operation and can refuse after preferences are accepted;
+a failed or unverified operation is never presented as adopted geometry. A later
+layout change can make a previously unavailable reservation possible.
+
+Headers show stable pane IDs and process state. Commands/directories come only
+from the existing owned-PTY foreground-context read; no argv/environment or
+unrelated process inspection is added. Only visible running panes are polled,
+with at most two metadata jobs inside the existing sixteen-job client bound,
+after queued input/start work. `cmd~`/`cwd~` mean point-in-time observations,
+not a real-time claim; `cmd?`/`cwd?` mean missing, refused or expired data.
+Records expire after two refresh intervals, and retired/exited panes discard them.
+Display caching never supplies the fresh cwd lookup used for splits/windows.
+Metadata refusal updates its unavailable state without pausing user input or
+erasing feedback. Text controls are replaced, wide fields are clipped, and
+unsupported shaping retains the declared terminal-profile limits.
+
+The base status identifies current window and role. Selected window labels use
+continuous one-based display indices from current order, matching direct-window
+bindings; these never replace stable IDs. Long lists keep the current window in
+the visible segment with overflow marks. Prefix waiting is a separate state,
+shown first when selected, followed by the last feedback before window/session
+fields, so background notices cannot leave a stale waiting cue. Narrow displays
+hide the clock during errors or prefix waiting to retain the reason/action. The clock sits at the right; very narrow viewports
+prioritize the base context. Only `UTC` and current `Asia/Shanghai` (UTC+08:00)
+are supported; this is not a historical IANA/DST database. Refresh is 1..=3600
+seconds, default 15. The clock is sampled on that schedule; scheduling or
+output backpressure can delay display further, without claiming a wall-clock SLO. Header metadata uses the same interval. No shell timer runs.
+
+A paint contains complete validated rows and cursor state. The TTY writer
+computes its difference against the last **fully written** paint, and commits
+that baseline only when all frame bytes are written. Replaced latest paints
+cannot become a false baseline. Unchanged pictures emit zero bytes, a clock-only
+change rewrites one status row, and geometry changes request a full refresh.
+Reliable OSC52 effects stay between frames and leave the display baseline intact.
+The writer bounds the latest, active and committed paints to 4 MiB each, plus at
+most 4 MiB for encoded active display bytes, alongside the independent reliable
+copy budget. Per-turn writes and the 16 ms presentation interval remain bounded.
+
+Source checks cover observation expiry, prefix/error coexistence, Unicode/long
+fields, thirty-two windows, narrow/resize geometry, slow partial output with a
+dropped intermediate paint and a reliable effect, and unchanged/single-row
+traffic. Real own-CLI PTYs check application sizes, observed shell cwd changes,
+atomic reload/adoption, tiny-terminal fallback and a sixty-update counter's
+bounded output. These do not replace formal distributed-artifact/ET pressure
+qualification or the user's final visual verification.
+
 ## History
 
 Issue #27 adds source history; a containing candidate, independent qualification
@@ -481,7 +584,7 @@ duplicate subscription idempotently. Observers must be joined to the target's
 session. Cancelling a retired target remains possible. A resume revision is a
 hint, not permission to invent a delta without its baseline. The host sends
 complete live snapshots and retains no incremental screen deltas. Scrollback is
-read separately in bounded pages. Wire version 6 includes validated divider adjustments, named entry, native foreground-context reads, executable
+read separately in bounded pages. Wire version 7 includes session header reservation, validated divider adjustments, named entry, native foreground-context reads, executable
 file identity in Hello, keyboard mode flags and typed modified input. It uses a
 four-byte big-endian JSON length followed by that many UTF-8 JSON bytes.
 Request numbers strictly increase within a connection; reused or older numbers
@@ -642,7 +745,7 @@ color, alternate screen, cursor positioning, line-wrap control, bracketed paste
 and SGR mouse reports. This is an explicit terminal profile, not automatic
 capability negotiation or qualification of every terminal emulator.
 Hello binds the host canvas and executable file identity; subscriptions bind
-target-scoped revisions. Use a matching host/client build and wire version 6.
+target-scoped revisions. Use a matching host/client build and wire version 7.
 Installed v0.1.0 speaks wire 2 and cannot consume these source changes.
 
 For explicit machine workflows, run the host described above. Open a new session with a complete
@@ -762,8 +865,8 @@ Use an independent terminal for the trial, explicitly enable the appropriate
 outer-terminal policy, and verify actual copy/paste manually in #33. Formal
 candidate/ET qualification remains separate from the source-native PTY checks.
 
-One terminal row is reserved for status. The local drawable viewport is bounded
-to 512×255, with the host's narrower 256×64 canvas limits applied separately.
+One terminal row is reserved for status, plus the optional separator row.
+The local drawable viewport is bounded to 512 columns and 256 minus those reserved rows, with the host's narrower 256×64 canvas limits applied separately.
 Observers crop and pan independently. A physical terminal smaller than two
 columns/two rows suspends drawing and application input until resized; detach
 remains available. Fixed canvas reporting never adopts observer geometry.
@@ -782,9 +885,8 @@ one pane. At most 16 requests await completion; the channel independently bounds
 Detach drains queued operations and waits for results, with a ten-second bound;
 an unfinished operation remains uncertain on timeout or connection loss.
 
-Repaints are limited to one per 16 ms. Output holds one active frame and one
-latest replacement, each at most 4 MiB, plus the independent reliable-copy budget
-described above; each turn writes at most 65,536 TTY bytes.
+Repaints are limited to one per 16 ms. Output holds active/latest/committed paints and the encoded active frame
+under the independent byte bounds described above, plus the reliable-copy budget; each turn writes at most 65,536 TTY bytes.
 The client opens its own nonblocking `/dev/tty` descriptor, preserving inherited
 file-description flags. Normal detach, startup errors and handled SIGINT/SIGTERM
 restore raw mode and the selected display modes. Native tests compare the exact

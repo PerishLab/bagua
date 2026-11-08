@@ -1,5 +1,6 @@
 mod check;
 mod launch;
+mod report;
 mod runtime;
 #[cfg(test)]
 mod tests;
@@ -21,6 +22,7 @@ pub(crate) struct Loaded {
     present: bool,
     config: bagua::config::Config,
     keys: client::Keys,
+    decor: client::Decor,
     delay: Duration,
     runtime: Option<PathBuf>,
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
@@ -113,12 +115,14 @@ impl Loaded {
         let config = bagua::config::Config::resolve(source, "BAGUA", &|_| None).map_err(fault)?;
         let (keys, delay) = check::check(&config)
             .map_err(|error| Error::config(format!("{}: {}", display(&path), error.message())))?;
+        let decor = check::decor(&config)?;
         Ok(Self {
             path,
             explicit,
             present,
             config,
             keys,
+            decor,
             delay,
             runtime: None,
             #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
@@ -133,6 +137,9 @@ impl Loaded {
 
     pub fn keys(&self) -> &client::Keys {
         &self.keys
+    }
+    pub fn decor(&self) -> &client::Decor {
+        &self.decor
     }
 
     pub fn delay(&self) -> Duration {
@@ -183,6 +190,8 @@ impl Loaded {
         startup.bindings = self.config.bindings.clone();
         startup.mouse = self.config.mouse;
         startup.clipboard = self.config.clipboard.clone();
+        startup.header = self.config.header.clone();
+        startup.status = self.config.status.clone();
         if startup != self.config {
             return Err(Error::config(
                 "host/program/history/workspace changes require a new invocation; running host and programs were not changed",
@@ -190,30 +199,6 @@ impl Loaded {
         }
         *self = next;
         Ok(())
-    }
-
-    pub fn report(&self, args: &Args) -> serde_json::Value {
-        serde_json::json!({
-            "version": self.config.version,
-            "source": self.path,
-            "explicit": self.explicit,
-            "loaded": self.present,
-            "client": {"prefix": self.prefix(), "escape_ms": self.config.client.escape},
-            "host": {"socket": args.socket.as_ref().or(self.runtime.as_ref()), "default": self.runtime.is_some()},
-            "history": {"lines": self.config.history.lines, "bytes": self.config.history.bytes, "total": self.config.history.total},
-            "workspace": {"name": self.config.workspace.name, "cwd": self.config.workspace.cwd},
-            "program": self.config.program.as_ref().map(|program| serde_json::json!({
-                "executable": program.executable, "cwd": program.cwd,
-                "args": program.args.len(), "environment": program.environment.keys().collect::<Vec<_>>()
-            })),
-            "interactive_defaults": if self.config.program.is_none() { Some("enter uses invocation SHELL or /bin/sh, invocation cwd and an explicit snapshot of the invocation environment; TERM=xterm-256color") } else { None },
-            "bindings": {"prefix": self.config.bindings.prefix, "direct": self.config.bindings.direct},
-            "mouse": {"enabled": self.config.mouse.enabled, "resize": self.config.mouse.resize, "copy_on_release": self.config.mouse.release},
-            "clipboard": {"target": self.config.clipboard.target, "limit": self.config.clipboard.limit},
-            "reload": ["client.prefix", "client.escape_ms", "bindings", "mouse", "clipboard"],
-            "restart": ["host.socket", "program", "history", "workspace"],
-            "unsupported": ["status"],
-        })
     }
 }
 

@@ -11,6 +11,9 @@ impl Runner {
         self.keyboard.delay(self.config.delay());
         self.app
             .preferences(self.config.mouse(), self.config.clipboard());
+        self.app.decorate(self.config.decor().clone());
+        self.header = None;
+        self.size = (0, 0);
     }
 
     pub(super) fn reload(&mut self) {
@@ -22,7 +25,7 @@ impl Runner {
             }
             Err(error) => self
                 .app
-                .status(format!("Configuration unchanged: {}", error.message())),
+                .error(format!("Configuration unchanged: {}", error.message())),
         }
     }
 }

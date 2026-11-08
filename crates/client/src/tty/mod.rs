@@ -67,6 +67,9 @@ impl Terminal {
     pub fn offer(&mut self, frame: Vec<u8>) -> io::Result<()> {
         self.output.offer(frame)
     }
+    pub fn present(&mut self, paint: crate::Paint) -> io::Result<()> {
+        self.output.present(paint)
+    }
 
     pub fn copy(&mut self, copy: &crate::Copy) -> bool {
         self.output.copy(copy)

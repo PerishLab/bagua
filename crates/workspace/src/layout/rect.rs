@@ -42,6 +42,7 @@ pub struct Rect {
 pub struct Placement {
     pub pane: Id,
     pub rect: Rect,
+    pub frame: Rect,
 }
 
 impl Rect {

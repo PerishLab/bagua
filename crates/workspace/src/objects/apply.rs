@@ -55,6 +55,9 @@ impl World {
             Operation::Window(session) => change.created = self.window(actor, session)?,
             Operation::Split { pane, split } => change.created = self.split(actor, pane, split)?,
             Operation::Focus(pane) => self.focus(actor, pane)?,
+            Operation::Header { session, enabled } => {
+                self.edit(session)?.reserve(actor, enabled)?
+            }
             Operation::Adjust {
                 window,
                 divider,
@@ -63,7 +66,7 @@ impl World {
                 let (session, _) = self.location(Target::Window(window))?;
                 let session = self.edit(session)?;
                 session.require(actor)?;
-                let geometry = session.geometry();
+                let geometry = session.canvas();
                 session
                     .windows
                     .get_mut(&window)
@@ -107,9 +110,9 @@ impl World {
             "window",
             session.windows.values().map(|window| window.name().into()),
         )?;
-        session
-            .windows
-            .insert(ids[0], Window::new(ids[0], ids[1], name));
+        let window = Window::new(ids[0], ids[1], name);
+        window.placements(session.canvas())?;
+        session.windows.insert(ids[0], window);
         session.selected = Some(ids[0]);
         Ok(vec![Target::Window(ids[0]), Target::Pane(ids[1])])
     }
@@ -120,7 +123,7 @@ impl World {
         let (session, window) = self.location(Target::Pane(pane))?;
         let session = self.edit(session)?;
         session.require(actor)?;
-        let geometry = session.geometry();
+        let geometry = session.canvas();
         session
             .windows
             .get_mut(&window.unwrap())

@@ -1,3 +1,4 @@
+mod decor;
 mod gating;
 use super::*;
 use bagua::ipc::Connection;

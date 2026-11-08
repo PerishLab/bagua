@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod checks;
 mod context;
+mod decor;
+mod dispatch;
 mod flow;
 mod input;
 mod intent;
@@ -23,6 +25,14 @@ use workspace::{Id, Operation};
 
 enum Job {
     Ordinary,
+    Header {
+        refused: bool,
+    },
+    Metadata {
+        pane: Id,
+        at: Instant,
+        received: bool,
+    },
     Spawn(Program),
     Start,
     Resolve {
@@ -45,6 +55,7 @@ pub(super) struct Runner {
     staged: usize,
     fence: Option<intent::Fence>,
     paused: bool,
+    header: Option<(u64, bool)>,
     suspended: bool,
     keyboard: client::Keyboard,
     size: (u16, u16),
@@ -68,6 +79,7 @@ impl Runner {
             staged: 0,
             fence: None,
             paused: false,
+            header: None,
             suspended: false,
             keyboard: client::Keyboard::default(),
             size: (0, 0),
@@ -81,6 +93,7 @@ impl Runner {
     pub fn run(&mut self, terminal: &mut Terminal, stop: &AtomicBool) -> Result<(), Error> {
         let mut painted = Instant::now() - Duration::from_secs(1);
         while !stop.load(Ordering::Relaxed) {
+            self.app.tick(Instant::now(), std::time::SystemTime::now());
             self.copies(terminal);
             if self.app.done() && self.leaving.is_none() {
                 self.leaving = Some(Instant::now());
@@ -118,7 +131,7 @@ impl Runner {
             }
             if self.app.dirty() && !self.suspended && painted.elapsed() >= Duration::from_millis(16)
             {
-                terminal.offer(self.app.draw()?)?;
+                terminal.present(self.app.paint()?)?;
                 self.app.clean();
                 painted = Instant::now();
             }
@@ -145,6 +158,10 @@ impl Runner {
     }
 
     fn receive(&mut self, message: Message) -> Result<(), Error> {
+        if self.metadata(&message)? {
+            return Ok(());
+        }
+        let rejected = self.rejected(&message);
         let refusal = self.settlement(&message);
         if let Message::Context {
             request,
@@ -167,77 +184,13 @@ impl Runner {
             self.jobs.remove(request);
         }
         self.app.accept(message)?;
-        if let Some(reason) = refusal {
+        if rejected {
+            self.app
+                .status("Header reservation refused; application layout unchanged");
+        } else if let Some(reason) = refusal {
             self.pause(&reason);
         }
         Ok(())
-    }
-
-    fn pending(&mut self) -> Result<(), Error> {
-        if self.jobs.len() >= 16 {
-            return Ok(());
-        }
-        if let Some((pane, program)) = self.launches.front().cloned() {
-            if self.submit(Command::Start { pane, program }, Job::Start)? {
-                self.launches.pop_front();
-            }
-            return Ok(());
-        }
-        if let Some(queued) = self.queue.front().cloned() {
-            if let Command::History { pane, read } = &queued.command
-                && !self.app.current(*pane, read)
-            {
-                self.bytes -= weight(&self.queue.pop_front().unwrap().command);
-                return Ok(());
-            }
-            if self.dispatch(queued)? {
-                let command = self.queue.pop_front().unwrap();
-                self.bytes -= weight(&command.command);
-            }
-            return Ok(());
-        }
-        if self.leaving.is_some() {
-            return Ok(());
-        }
-        if let Some(pane) = self.app.missing().into_iter().find(|pane| {
-            !self
-                .jobs
-                .values()
-                .any(|job| matches!(job,Job::Inspect(id) if id == pane))
-        }) {
-            self.submit(Command::Inspect(pane), Job::Inspect(pane))?;
-        }
-        Ok(())
-    }
-
-    fn submit(&mut self, command: Command, job: Job) -> Result<bool, Error> {
-        if intent::mutation(&command) && self.fence.is_some() {
-            return Ok(false);
-        }
-        if self.jobs.len() >= 16 {
-            self.app
-                .status("Request budget full; operation was not admitted");
-            return Ok(false);
-        }
-        let request = Request::identified(self.next, command)?;
-        match self.channel.send(&request) {
-            Ok(()) => {}
-            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
-                self.app
-                    .status("Transport budget full; operation was not admitted");
-                return Ok(false);
-            }
-            Err(error) => return Err(error.into()),
-        }
-        if let Command::History { pane, read } = &request.command {
-            self.app.bind(self.next, *pane, read);
-        }
-        if intent::mutation(&request.command) {
-            self.fence = Some(intent::Fence::new(&request));
-        }
-        self.jobs.insert(self.next, job);
-        self.next = self.next.checked_add(1).ok_or(Failure::Identity)?;
-        Ok(true)
     }
 
     fn settled(&self) -> bool {

@@ -62,6 +62,10 @@ pub enum Operation {
         split: Split,
     },
     Focus(Id),
+    Header {
+        session: Id,
+        enabled: bool,
+    },
     Adjust {
         window: Id,
         divider: crate::Divider,

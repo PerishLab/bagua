@@ -22,6 +22,22 @@ copy_on_release = true
 target = "osc52"
 limit = 262144
 
+[header]
+enabled = true
+components = ["pane", "command", "cwd"]
+color = true
+active = 4
+inactive = 8
+
+[status]
+components = ["session", "windows", "prefix", "notice", "clock"]
+color = true
+active = 4
+inactive = 8
+separator = true
+timezone = "Asia/Shanghai"
+refresh_seconds = 15
+
 [history]
 lines = 50000
 bytes = 67108864

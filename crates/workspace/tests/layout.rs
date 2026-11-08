@@ -172,3 +172,90 @@ fn dividers() {
         Err(Failure::State)
     );
 }
+#[test]
+fn headers() {
+    let geometry = Geometry::new(81, 5).unwrap();
+    let mut fixture = Fixture::new(geometry);
+    fixture.split(fixture.creation.pane, Axis::Rows);
+    fixture
+        .apply(Operation::Header {
+            session: fixture.creation.session,
+            enabled: true,
+        })
+        .unwrap();
+    let session = fixture.world.session(fixture.creation.session).unwrap();
+    assert!(session.header());
+    let places = session
+        .windows()
+        .next()
+        .unwrap()
+        .placements(session.canvas())
+        .unwrap();
+    for place in places {
+        assert_eq!(place.rect.y, place.frame.y + 1);
+        assert_eq!(place.rect.geometry.rows(), 1);
+        assert_eq!(place.frame.geometry.rows(), 2);
+    }
+    let before = fixture.world.snapshot();
+    assert_eq!(
+        fixture.apply(Operation::Resize {
+            session: fixture.creation.session,
+            geometry: Geometry::new(81, 4).unwrap()
+        }),
+        Err(Failure::Geometry)
+    );
+    assert_eq!(fixture.world.snapshot(), before);
+    assert_eq!(
+        fixture.world.apply(
+            workspace::Id::new(999).unwrap(),
+            Operation::Header {
+                session: fixture.creation.session,
+                enabled: false
+            }
+        ),
+        Err(Failure::Observer)
+    );
+    assert_eq!(fixture.world.snapshot(), before);
+    fixture
+        .apply(Operation::Header {
+            session: fixture.creation.session,
+            enabled: false,
+        })
+        .unwrap();
+    assert!(
+        !fixture
+            .world
+            .session(fixture.creation.session)
+            .unwrap()
+            .header()
+    );
+}
+
+#[test]
+fn empty() {
+    let mut fixture = Fixture::new(Geometry::new(2, 1).unwrap());
+    let before = fixture.world.snapshot();
+    assert_eq!(
+        fixture.apply(Operation::Header {
+            session: fixture.creation.session,
+            enabled: true
+        }),
+        Err(Failure::Geometry)
+    );
+    assert_eq!(fixture.world.snapshot(), before);
+    fixture
+        .apply(Operation::Close(Target::Pane(fixture.creation.pane)))
+        .unwrap();
+    fixture
+        .apply(Operation::Header {
+            session: fixture.creation.session,
+            enabled: true,
+        })
+        .unwrap();
+    let before = fixture.world.snapshot();
+    assert_eq!(
+        fixture.apply(Operation::Window(fixture.creation.session)),
+        Err(Failure::Geometry)
+    );
+    assert_eq!(fixture.world.snapshot(), before);
+}

@@ -1,6 +1,8 @@
 #![cfg(all(target_os = "linux", target_arch = "x86_64"))]
 #[path = "support/configure.rs"]
 mod configure;
+#[path = "support/display.rs"]
+mod display;
 #[path = "support/entry.rs"]
 mod entry;
 #[path = "support/history.rs"]

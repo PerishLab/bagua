@@ -78,3 +78,70 @@ fn failure() {
     output.drain(&mut bytes).unwrap();
     assert_eq!(bytes, b"reliable");
 }
+fn paint(text: &str, bar: &str) -> Paint {
+    Paint {
+        rows: vec![
+            format!("\x1b[0m\x1b[1;1H\x1b[2K{text:12}\x1b[0m"),
+            format!("\x1b[0m\x1b[2;1H\x1b[2K{bar:12}\x1b[0m"),
+        ],
+        cursor: None,
+        extent: terminal::Extent::new(12, 2).unwrap(),
+    }
+}
+
+#[test]
+fn baseline() {
+    let mut output = Output::default();
+    let mut writer = Slow::default();
+    let first = paint("A", "X").render(None);
+    output.present(paint("A", "X")).unwrap();
+    output.flush(&mut writer).unwrap();
+    output.flush(&mut writer).unwrap();
+    assert!(output.baseline.is_none());
+    output.present(paint("B", "X")).unwrap();
+    let effect = b"\x1b]52;c;QQ==\x1b\\";
+    assert!(output.copy(&Copy(effect.to_vec())));
+    output.present(paint("B", "Y")).unwrap();
+    for _ in 0..2000 {
+        output.flush(&mut writer).unwrap();
+    }
+    assert_eq!(&writer.bytes[..first.len()], first);
+    assert_eq!(
+        &writer.bytes[first.len()..first.len() + effect.len()],
+        effect
+    );
+    let mut engine = terminal::Engine::new(terminal::Extent::new(12, 2).unwrap(), 0).unwrap();
+    for chunk in writer.bytes.chunks(terminal::CHUNK) {
+        engine.feed(chunk).unwrap();
+    }
+    assert_eq!(
+        engine
+            .snapshot()
+            .cell(terminal::Point { x: 0, y: 0 })
+            .unwrap()
+            .text,
+        "B"
+    );
+    assert_eq!(
+        engine
+            .snapshot()
+            .cell(terminal::Point { x: 0, y: 1 })
+            .unwrap()
+            .text,
+        "Y"
+    );
+    output.present(paint("B", "Y")).unwrap();
+    let mut bytes = Vec::new();
+    output.flush(&mut bytes).unwrap();
+    assert!(bytes.is_empty());
+    output.present(paint("B", "Z")).unwrap();
+    output.flush(&mut bytes).unwrap();
+    assert_eq!(
+        bytes
+            .windows(4)
+            .filter(|bytes| *bytes == b"\x1b[2K")
+            .count(),
+        1
+    );
+    assert!(!bytes.windows(4).any(|bytes| bytes == b"\x1b[2J"));
+}

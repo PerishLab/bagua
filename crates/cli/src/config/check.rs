@@ -1,6 +1,23 @@
 use crate::error::Error;
 use std::time::Duration;
 
+pub(super) fn decor(config: &bagua::config::Config) -> Result<client::Decor, Error> {
+    let mut header = client::Header::new(&config.header.components).map_err(|_| {
+        Error::config("header.components: expected unique pane/command/cwd components")
+    })?;
+    header.enabled = config.header.enabled;
+    header.color = config.header.color;
+    header.active = config.header.active;
+    header.inactive = config.header.inactive;
+    let mut status = client::Status::new(&config.status.components, &config.status.timezone, config.status.refresh)
+        .map_err(|_| Error::config("status: expected unique session/windows/prefix/notice/clock components, UTC or Asia/Shanghai, and refresh_seconds 1..=3600"))?;
+    status.color = config.status.color;
+    status.active = config.status.active;
+    status.inactive = config.status.inactive;
+    status.separator = config.status.separator;
+    Ok(client::Decor { header, status })
+}
+
 pub(super) fn check(config: &bagua::config::Config) -> Result<(client::Keys, Duration), Error> {
     if config.version != 1 {
         return Err(Error::config("version: expected configuration version 1"));

@@ -4,13 +4,14 @@ mod draw;
 mod keyboard;
 mod keys;
 mod mouse;
-pub use app::preferences::{Clipboard, Mouse};
+pub use app::preferences::{Clipboard, Decor, Header, Mouse, Status};
 pub use keyboard::Keyboard;
 mod select;
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 mod tty;
 
 pub use app::App;
+pub use draw::Paint;
 pub use keys::{Gesture, Keys, translate};
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 pub use tty::Terminal;

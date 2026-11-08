@@ -9,6 +9,7 @@ impl Runner {
         if key.kind == crossterm::event::KeyEventKind::Release {
             return Ok(Vec::new());
         }
+        self.app.prefix(None);
         if self.app.pointing()
             && key.code == crossterm::event::KeyCode::Esc
             && key.modifiers.is_empty()
@@ -48,8 +49,7 @@ impl Runner {
         }
         if gesture == Gesture::Leader {
             self.leader = true;
-            self.app
-                .status(format!("{}: prefix pending", self.config.prefix()));
+            self.app.prefix(Some(self.config.prefix()));
             return Ok(Vec::new());
         }
         if self.suspended && gesture != Gesture::Detach {
@@ -74,7 +74,8 @@ impl Runner {
                 Some(Ok(event)) => self.event(event)?,
                 Some(Err(error)) => {
                     self.leader = false;
-                    self.app.status(error.message());
+                    self.app.prefix(None);
+                    self.app.error(error.message());
                 }
                 None => break,
             }
