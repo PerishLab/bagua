@@ -8,10 +8,16 @@ pub struct Snapshot {
     offset: usize,
     rows: Vec<(Vec<Cell>, bool)>,
     column: u16,
+    keyboard: u8,
 }
 
 impl Snapshot {
-    pub(crate) fn new(screen: vt100::Screen, revision: Revision, history: History) -> Self {
+    pub(crate) fn new(
+        screen: vt100::Screen,
+        revision: Revision,
+        history: History,
+        keyboard: u8,
+    ) -> Self {
         Self {
             screen,
             revision,
@@ -19,6 +25,7 @@ impl Snapshot {
             offset: 0,
             rows: Vec::new(),
             column: 0,
+            keyboard,
         }
     }
 
@@ -88,7 +95,9 @@ impl Snapshot {
     }
 
     pub fn modes(&self) -> Modes {
-        Modes::from(&self.screen)
+        let mut modes = Modes::from(&self.screen);
+        modes.keyboard = self.keyboard;
+        modes
     }
 
     pub fn history(&self) -> usize {

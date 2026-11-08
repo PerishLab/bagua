@@ -1,16 +1,20 @@
 use crate::events::Events;
 
 #[derive(Default)]
-pub(crate) struct Reset(pub bool);
+pub(crate) struct Reset {
+    pub clear: bool,
+    pub reset: bool,
+}
 
 impl vte::Perform for Reset {
     fn csi_dispatch(&mut self, params: &vte::Params, intermediates: &[u8], _: bool, action: char) {
         let first = params.iter().next().and_then(|group| group.first());
-        self.0 = intermediates.is_empty() && action == 'J' && first == Some(&3);
+        self.clear = intermediates.is_empty() && action == 'J' && first == Some(&3);
     }
 
     fn esc_dispatch(&mut self, intermediates: &[u8], _: bool, byte: u8) {
-        self.0 = intermediates.is_empty() && byte == b'c';
+        self.reset = intermediates.is_empty() && byte == b'c';
+        self.clear = self.reset;
     }
 }
 

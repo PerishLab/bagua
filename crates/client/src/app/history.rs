@@ -14,6 +14,12 @@ pub(super) struct Past {
     ticket: u64,
 }
 
+impl Past {
+    pub(super) fn active(&self) -> bool {
+        self.view.is_some() || self.wanted.is_some()
+    }
+}
+
 impl App {
     pub(super) fn browsing(&mut self, input: protocol::Input) -> Result<Vec<Command>, Failure> {
         match input {

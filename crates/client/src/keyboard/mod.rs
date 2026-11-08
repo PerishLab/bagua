@@ -1,3 +1,5 @@
+mod extended;
+mod mouse;
 mod paste;
 mod sequence;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};

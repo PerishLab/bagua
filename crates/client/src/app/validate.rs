@@ -11,6 +11,9 @@ pub(super) fn screen(screen: &Screen) -> Result<(), Failure> {
     if screen.cells.len() != width * height || screen.wrapped.len() != height {
         return Err(Failure::Payload);
     }
+    if screen.modes.keyboard > 1 {
+        return Err(Failure::Payload);
+    }
     if screen.cursor.position.x >= screen.extent.width()
         || screen.cursor.position.y >= screen.extent.height()
     {

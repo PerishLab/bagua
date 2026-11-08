@@ -76,6 +76,7 @@ impl Engine {
             self.parser.screen().clone(),
             self.revision,
             self.history().clone(),
+            self.modes().keyboard,
         )
     }
 
@@ -96,7 +97,9 @@ impl Engine {
     }
 
     pub fn modes(&self) -> Modes {
-        Modes::from(self.parser.screen())
+        let mut modes = Modes::from(self.parser.screen());
+        modes.keyboard = self.parser.callbacks().keyboard.flags(modes.alternate);
+        modes
     }
 
     pub fn encode(&self, input: Input<'_>) -> Result<Vec<u8>, Failure> {

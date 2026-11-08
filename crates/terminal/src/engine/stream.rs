@@ -12,14 +12,17 @@ impl Stream {
         let mut start = 0;
         for (index, byte) in bytes.iter().enumerate() {
             self.parser.advance(&mut reset, std::slice::from_ref(byte));
-            if reset.0 {
+            if reset.clear {
                 target.process(&bytes[start..=index]);
                 if !target.screen().alternate_screen() {
                     target.callbacks_mut().history.clear();
                     epochs += 1;
                 }
                 start = index + 1;
-                reset.0 = false;
+                if reset.reset {
+                    target.callbacks_mut().keyboard = Default::default();
+                }
+                reset = Reset::default();
             }
         }
         target.process(&bytes[start..]);

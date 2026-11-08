@@ -4,6 +4,15 @@ version = 1
 prefix = "C-q"
 escape_ms = 50
 
+[bindings.prefix]
+'\' = "split-columns"
+'-' = "split-rows"
+'=' = "window"
+r = "reload"
+
+[bindings.direct]
+Alt-q = "detach"
+
 [history]
 lines = 50000
 bytes = 67108864

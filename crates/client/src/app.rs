@@ -195,7 +195,7 @@ impl App {
             });
         self.catalog = Some(snapshot);
         self.clamp();
-        if focus != self.focus() {
+        if focus != self.focus() && (self.past.active() || self.selection.is_some()) {
             self.live();
         }
         if let Some(view) = &self.past.view

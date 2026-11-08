@@ -7,6 +7,8 @@ mod entry;
 mod history;
 #[path = "support/interactive.rs"]
 mod interactive;
+#[path = "support/keyboard.rs"]
+mod keyboard;
 use interactive::{Fixture, Peer, SHELL};
 use pty::Size;
 use std::time::{Duration, Instant};

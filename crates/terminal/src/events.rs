@@ -12,6 +12,7 @@ pub struct Report {
 pub(crate) struct Events {
     pub history: crate::History,
     pub columns: u16,
+    pub keyboard: crate::keyboard::Keyboard,
     unsupported: u64,
     bells: u64,
     replies: Vec<u8>,
@@ -41,6 +42,16 @@ impl Events {
         params: &[&[u16]],
         action: char,
     ) {
+        if action == 'u'
+            && prefix.1.is_none()
+            && let Some(reply) = prefix.0.and_then(|prefix| {
+                self.keyboard
+                    .apply(screen.alternate_screen(), prefix, params)
+            })
+        {
+            self.replies.extend(reply);
+            return;
+        }
         match query(screen, prefix, params, action) {
             Some(reply) => self.replies.extend_from_slice(reply.as_bytes()),
             None => self.discard(),
@@ -67,6 +78,7 @@ fn query(
         return None;
     }
     match (action, params[0][0]) {
+        ('c', 0) => Some("\x1b[?1;2c".into()),
         ('n', 5) => Some("\x1b[0n".into()),
         ('n', 6) => {
             let (row, col) = screen.cursor_position();

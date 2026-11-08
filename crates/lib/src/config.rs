@@ -15,6 +15,8 @@ pub struct Config {
     pub history: History,
     #[cascade(section)]
     pub workspace: Workspace,
+    #[cascade(section)]
+    pub bindings: Bindings,
     pub program: Option<Program>,
 }
 
@@ -26,9 +28,18 @@ impl Default for Config {
             host: Host::default(),
             history: History::default(),
             workspace: Workspace::default(),
+            bindings: Bindings::default(),
             program: None,
         }
     }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Deserialize, Cascade)]
+#[cascade(section, strict)]
+#[serde(default, deny_unknown_fields)]
+pub struct Bindings {
+    pub prefix: std::collections::BTreeMap<String, String>,
+    pub direct: std::collections::BTreeMap<String, String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Cascade)]

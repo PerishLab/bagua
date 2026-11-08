@@ -99,3 +99,52 @@ fn recovery() {
         matches!(keyboard.next(now),Some(Ok(Event::Key(key))) if key.code == KeyCode::Char('z'))
     );
 }
+
+#[test]
+fn modifiers() {
+    let now = Instant::now();
+    let mut keyboard = Keyboard::default();
+    for byte in b"\x1b[13;2u" {
+        keyboard.push(&[*byte]).unwrap();
+        if *byte != b'u' {
+            assert!(keyboard.next(now).is_none());
+        }
+    }
+    let Some(Ok(Event::Key(key))) = keyboard.next(now) else {
+        panic!("missing modified key")
+    };
+    assert_eq!(key.code, KeyCode::Enter);
+    assert_eq!(key.modifiers, KeyModifiers::SHIFT);
+    assert!(matches!(
+        client::translate(key, false),
+        Ok(client::Gesture::Input(protocol::Input::Key(
+            terminal::Key::Modified { code: 13, .. }
+        )))
+    ));
+    for bytes in [b"\x1b[97;6u".as_slice(), b"\x1b[1;5A", b"\x1b[5;2~"] {
+        keyboard.push(bytes).unwrap();
+        assert!(matches!(keyboard.next(now), Some(Ok(Event::Key(_)))));
+    }
+    keyboard.push(b"\x1b[97;1:3u").unwrap();
+    let Some(Ok(Event::Key(key))) = keyboard.next(now) else {
+        panic!("missing release")
+    };
+    assert_eq!(
+        client::translate(key, false).unwrap(),
+        client::Gesture::Ignore
+    );
+    for bytes in [
+        b"\x1b[13;9u".as_slice(),
+        b"\x1b[55296;2u",
+        b"\x1b[97;2;65u",
+        b"\x1b[0u",
+        b"\x1b[13;2:9u",
+    ] {
+        keyboard.push(bytes).unwrap();
+        assert!(matches!(keyboard.next(now), Some(Err(_))));
+    }
+    keyboard.push(b"z").unwrap();
+    assert!(
+        matches!(keyboard.next(now), Some(Ok(Event::Key(key))) if key.code == KeyCode::Char('z'))
+    );
+}

@@ -5,6 +5,7 @@ mod engine;
 mod events;
 mod history;
 mod input;
+mod keyboard;
 mod mouse;
 mod profile;
 mod screen;
