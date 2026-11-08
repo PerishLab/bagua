@@ -9,6 +9,16 @@ impl Runner {
         if key.kind == crossterm::event::KeyEventKind::Release {
             return Ok(Vec::new());
         }
+        if self.paused && key.code == crossterm::event::KeyCode::Esc && key.modifiers.is_empty() {
+            self.paused = false;
+            self.leader = false;
+            self.app.status(if self.fenced() {
+                "Acknowledged; waiting for the layout outcome"
+            } else {
+                "Input resumed; buffered gestures were not replayed"
+            });
+            return Ok(Vec::new());
+        }
         let gesture = self.config.keys().translate(key, self.leader);
         self.leader = false;
         let gesture = gesture?;
@@ -17,7 +27,11 @@ impl Runner {
             return Ok(Vec::new());
         }
         if gesture == Gesture::Reload {
-            self.reload();
+            if self.paused || (!self.fenced() && self.intents.is_empty()) {
+                self.reload();
+            } else {
+                self.stage(gesture)?;
+            }
             return Ok(Vec::new());
         }
         if gesture == Gesture::Detach {
@@ -33,7 +47,10 @@ impl Runner {
         if self.suspended && gesture != Gesture::Detach {
             return Err(Failure::Payload);
         }
-        self.app.handle(gesture)
+        if gesture != Gesture::Ignore {
+            self.stage(gesture)?;
+        }
+        Ok(Vec::new())
     }
 
     pub(super) fn input(&mut self, terminal: &mut Terminal) -> Result<(), Error> {
@@ -42,6 +59,9 @@ impl Runner {
         let count = terminal.read(&mut bytes[..length])?;
         self.keyboard.push(&bytes[..count])?;
         for _ in 0..16 {
+            if self.intents.len() >= 64 || self.staged > 65_536 - terminal::CHUNK {
+                break;
+            }
             match self.keyboard.next(Instant::now()) {
                 Some(Ok(event)) => self.event(event)?,
                 Some(Err(error)) => {

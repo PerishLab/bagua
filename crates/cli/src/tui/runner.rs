@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod checks;
 mod context;
+mod flow;
 mod input;
+mod intent;
 mod reload;
 use super::queue::{Queued, weight};
 use crate::error::Error;
@@ -22,6 +24,7 @@ use workspace::{Id, Operation};
 enum Job {
     Ordinary,
     Spawn(Program),
+    Start,
     Resolve {
         pane: Id,
         command: Command,
@@ -38,6 +41,10 @@ pub(super) struct Runner {
     jobs: BTreeMap<u64, Job>,
     launches: VecDeque<(Id, Program)>,
     leader: bool,
+    intents: VecDeque<Gesture>,
+    staged: usize,
+    fence: Option<intent::Fence>,
+    paused: bool,
     suspended: bool,
     keyboard: client::Keyboard,
     size: (u16, u16),
@@ -57,6 +64,10 @@ impl Runner {
             jobs: BTreeMap::new(),
             launches: VecDeque::new(),
             leader: false,
+            intents: VecDeque::new(),
+            staged: 0,
+            fence: None,
+            paused: false,
             suspended: false,
             keyboard: client::Keyboard::default(),
             size: (0, 0),
@@ -97,6 +108,8 @@ impl Runner {
             if self.leaving.is_none() {
                 self.input(terminal)?;
             }
+            self.release();
+            self.drain()?;
             let size = terminal.size()?;
             if size != self.size {
                 self.size = size;
@@ -115,6 +128,7 @@ impl Runner {
     }
 
     fn receive(&mut self, message: Message) -> Result<(), Error> {
+        let refusal = self.settlement(&message);
         if let Message::Context {
             request,
             pane,
@@ -136,6 +150,9 @@ impl Runner {
             self.jobs.remove(request);
         }
         self.app.accept(message)?;
+        if let Some(reason) = refusal {
+            self.pause(&reason);
+        }
         Ok(())
     }
 
@@ -144,7 +161,7 @@ impl Runner {
             return Ok(());
         }
         if let Some((pane, program)) = self.launches.front().cloned() {
-            if self.submit(Command::Start { pane, program }, Job::Ordinary)? {
+            if self.submit(Command::Start { pane, program }, Job::Start)? {
                 self.launches.pop_front();
             }
             return Ok(());
@@ -177,6 +194,9 @@ impl Runner {
     }
 
     fn submit(&mut self, command: Command, job: Job) -> Result<bool, Error> {
+        if intent::mutation(&command) && self.fence.is_some() {
+            return Ok(false);
+        }
         if self.jobs.len() >= 16 {
             self.app
                 .status("Request budget full; operation was not admitted");
@@ -195,67 +215,22 @@ impl Runner {
         if let Command::History { pane, read } = &request.command {
             self.app.bind(self.next, *pane, read);
         }
+        if intent::mutation(&request.command) {
+            self.fence = Some(intent::Fence::new(&request));
+        }
         self.jobs.insert(self.next, job);
         self.next = self.next.checked_add(1).ok_or(Failure::Identity)?;
         Ok(true)
     }
 
-    fn event(&mut self, event: Event) -> Result<(), Error> {
-        if matches!(event, Event::Paste(_)) {
-            self.leader = false;
-        }
-        if self.suspended && matches!(event, Event::Paste(_) | Event::Mouse(_)) {
-            self.app
-                .status("Terminal too small; resize or use the configured detach binding");
-            return Ok(());
-        }
-        let commands = match event {
-            Event::Key(key) => self.key(key),
-            Event::Paste(text) => self
-                .app
-                .handle(Gesture::Input(protocol::Input::Paste(text))),
-            Event::Mouse(mouse) => self.app.mouse(mouse),
-            Event::Resize(columns, rows) => {
-                let Some(extent) = super::extent(columns, rows) else {
-                    self.suspended = true;
-                    return Ok(());
-                };
-                self.suspended = false;
-                self.app.resize(extent);
-                Ok(vec![Command::Workspace(Operation::Resize {
-                    session: self.app.target(),
-                    geometry: self.app.geometry(),
-                })])
-            }
-            _ => return Ok(()),
-        };
-        self.commands(commands)
-    }
-
-    fn commands(&mut self, commands: Result<Vec<Command>, Failure>) -> Result<(), Error> {
-        let commands = match commands {
-            Ok(commands) => commands,
-            Err(error) => {
-                self.app.status(error.message());
-                return Ok(());
-            }
-        };
-        for command in commands {
-            if matches!(
-                command,
-                Command::Workspace(Operation::Split { .. } | Operation::Window(_))
-            ) && self.program.is_none()
-            {
-                self.app
-                    .status("Provide --executable and --cwd to create interactive panes");
-                continue;
-            }
-            self.enqueue(command);
-        }
-        Ok(())
-    }
-
     fn settled(&self) -> bool {
-        self.queue.is_empty() && self.jobs.is_empty() && self.launches.is_empty()
+        match (
+            self.queue.front(),
+            self.jobs.first_key_value(),
+            self.intents.front(),
+        ) {
+            (None, None, None) => self.gate() == intent::Gate::Open,
+            _ => false,
+        }
     }
 }

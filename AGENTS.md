@@ -216,3 +216,13 @@ Inner application negotiation produces replies only for its owned PTY. The
 interactive client independently pushes/pops its outer terminal mode; hosted
 escape strings never cross that boundary. Automatic focus updates preserve
 unrelated client feedback when no paused history or selection needs clearing.
+
+Layout/focus intentions bind subsequent input only after reliable completion,
+the applied revision in a validated catalog, and any created pane's start result.
+Deferred client gestures are bounded FIFO data, not a second World or replay
+log. Retire carries an applied model change before native cleanup completes.
+Failures explicitly pause/refuse following unsent gestures; Escape acknowledges
+without replay and never bypasses an unknown model outcome. Already admitted
+commands keep their exact targets and byte custody. Viewport reports preserve
+focus. Pointer coordinates never overtake earlier keyboard intentions or get
+silently rebound to a changed layout.

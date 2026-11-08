@@ -1,3 +1,4 @@
+mod gating;
 use super::*;
 use bagua::ipc::Connection;
 use protocol::wire::{Context, Decoder, REQUEST};
@@ -27,7 +28,7 @@ impl Wire {
     }
 }
 
-fn setup() -> (Runner, Wire) {
+fn setup() -> (Runner, Wire, workspace::World) {
     let directory = tempfile::tempdir().unwrap();
     std::fs::set_permissions(directory.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
     let path = directory.path().join("wire.sock");
@@ -69,6 +70,7 @@ fn setup() -> (Runner, Wire) {
             decoder: Decoder::new(REQUEST),
             _directory: directory,
         },
+        world,
     )
 }
 
@@ -84,7 +86,7 @@ fn split(axis: workspace::Axis) -> Command {
 
 #[test]
 fn order() {
-    let (mut runner, mut wire) = setup();
+    let (mut runner, mut wire, _) = setup();
     let first = split(workspace::Axis::Columns);
     let second = split(workspace::Axis::Rows);
     runner.enqueue(first.clone());
@@ -127,7 +129,7 @@ fn order() {
 
 #[test]
 fn refusal() {
-    let (mut runner, mut wire) = setup();
+    let (mut runner, mut wire, _) = setup();
     runner.enqueue(split(workspace::Axis::Columns));
     runner.enqueue(split(workspace::Axis::Rows));
     runner.pending().unwrap();
@@ -152,7 +154,7 @@ fn refusal() {
 #[test]
 fn prefix() {
     use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-    let (mut runner, _) = setup();
+    let (mut runner, _, _) = setup();
     let control = KeyEvent::new(KeyCode::Char('g'), KeyModifiers::CONTROL);
     runner.key(control).unwrap();
     assert!(runner.leader);
@@ -165,6 +167,8 @@ fn prefix() {
     assert!(runner.leader);
     runner.event(Event::Paste("=\\".into())).unwrap();
     assert!(!runner.leader);
+    runner.drain().unwrap();
+    assert_eq!(runner.queue.len(), 1);
     assert!(
         runner
             .queue

@@ -9,22 +9,22 @@ pub(super) struct Queued {
 }
 
 impl Runner {
-    pub(super) fn enqueue(&mut self, command: Command) {
+    pub(super) fn enqueue(&mut self, command: Command) -> bool {
         let bytes = weight(&command);
         if self.bytes + bytes > 65_536 {
             self.app.status("Input byte budget full; operation refused");
-            return;
+            return false;
         }
         if let Some(pending) = self.queue.back_mut()
             && let Some(count) = append(&mut pending.command, &command)
         {
             self.bytes += count;
-            return;
+            return true;
         }
         if self.queue.len() >= 64 {
             self.app
                 .status("Input operation budget full; operation refused");
-            return;
+            return false;
         }
         self.bytes += bytes;
         let source = match &command {
@@ -37,6 +37,7 @@ impl Runner {
             source,
             program: None,
         });
+        true
     }
 }
 pub(super) fn weight(command: &Command) -> usize {
