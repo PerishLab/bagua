@@ -230,3 +230,18 @@ without replay and never bypasses an unknown model outcome. Already admitted
 commands keep their exact targets and byte custody. Viewport reports preserve
 focus. Pointer coordinates never overtake earlier keyboard intentions or get
 silently rebound to a changed layout.
+
+Mouse captures bind a pane rectangle or an exact model divider, and cancel on
+invalidated geometry, retirement or local admission refusal. Local drag selection
+does not grant control. Divider adjustment validates its prior split and geometry
+atomically in World; release commits one command. Application tracking and local
+selection have distinct routing, with Shift selecting locally.
+
+Client copy limits are independent of the host paste budget. Overflow preserves
+the previous buffer. Only explicit user selection can enqueue an outer OSC52
+effect, under client configuration. Application OSC strings never pass through.
+Copy effects retain bounded FIFO custody separately from coalescing frames; one
+TTY writer finishes the active frame before starting an effect. Reload governs
+future effects and does not cancel admitted ones. Cleanup drains active output
+and reliable effects within its bound, reports incomplete output as unknown,
+and attempts terminal restoration. Sending OSC52 never proves the OS clipboard.

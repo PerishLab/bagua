@@ -40,6 +40,47 @@ impl Window {
         self.tree.placements(geometry)
     }
 
+    pub fn dividers(&self, geometry: Geometry) -> Result<Vec<crate::Divider>, Failure> {
+        self.tree.dividers(geometry)
+    }
+
+    pub fn preview(
+        &self,
+        divider: crate::Divider,
+        ratio: crate::Ratio,
+        geometry: Geometry,
+    ) -> Result<Vec<Placement>, Failure> {
+        self.adjusted(divider, ratio, geometry)?
+            .placements(geometry)
+    }
+
+    pub(crate) fn adjust(
+        &mut self,
+        divider: crate::Divider,
+        ratio: crate::Ratio,
+        geometry: Geometry,
+    ) -> Result<(), Failure> {
+        self.tree = self.adjusted(divider, ratio, geometry)?;
+        Ok(())
+    }
+
+    fn adjusted(
+        &self,
+        divider: crate::Divider,
+        ratio: crate::Ratio,
+        geometry: Geometry,
+    ) -> Result<Tree, Failure> {
+        if !self.tree.dividers(geometry)?.contains(&divider) {
+            return Err(Failure::State);
+        }
+        let mut next = self.tree.clone();
+        if !next.adjust(divider, ratio) {
+            return Err(Failure::Missing);
+        }
+        next.placements(geometry)?;
+        Ok(next)
+    }
+
     pub(crate) fn select(&mut self, pane: Id) -> Result<(), Failure> {
         if !self.tree.contains(pane) {
             return Err(Failure::Missing);

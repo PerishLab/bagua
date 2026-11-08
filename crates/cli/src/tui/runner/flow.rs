@@ -60,6 +60,7 @@ impl Runner {
             self.leader = false;
         }
         if self.suspended && matches!(event, Event::Paste(_) | Event::Mouse(_)) {
+            self.app.cancel();
             self.app
                 .status("Terminal too small; resize or use the configured detach binding");
             return Ok(());
@@ -72,6 +73,7 @@ impl Runner {
             Event::Mouse(mouse) => {
                 self.drain()?;
                 if self.fenced() || self.paused || !self.intents.is_empty() {
+                    self.app.cancel();
                     self.app
                         .status("Layout pending or input paused; mouse gesture was not admitted");
                     return Ok(());

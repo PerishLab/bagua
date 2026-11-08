@@ -1,8 +1,10 @@
 mod app;
+pub use select::Copy;
 mod draw;
 mod keyboard;
 mod keys;
 mod mouse;
+pub use app::preferences::{Clipboard, Mouse};
 pub use keyboard::Keyboard;
 mod select;
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]

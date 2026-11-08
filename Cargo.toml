@@ -28,3 +28,4 @@ rustix = { version = "1", features = ["event", "fs", "net", "process", "pty", "t
 
 crossterm = { version = "0.29", default-features = false, features = ["events", "bracketed-paste", "use-dev-tty"] }
 unicode-width = "0.2"
+base64 = "0"

@@ -55,6 +55,21 @@ impl World {
             Operation::Window(session) => change.created = self.window(actor, session)?,
             Operation::Split { pane, split } => change.created = self.split(actor, pane, split)?,
             Operation::Focus(pane) => self.focus(actor, pane)?,
+            Operation::Adjust {
+                window,
+                divider,
+                ratio,
+            } => {
+                let (session, _) = self.location(Target::Window(window))?;
+                let session = self.edit(session)?;
+                session.require(actor)?;
+                let geometry = session.geometry();
+                session
+                    .windows
+                    .get_mut(&window)
+                    .unwrap()
+                    .adjust(divider, ratio, geometry)?;
+            }
             Operation::Close(target) => change.retired = self.close(actor, target)?,
             Operation::Read
             | Operation::Create(_)

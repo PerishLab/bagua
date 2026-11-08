@@ -9,6 +9,14 @@ impl Runner {
         if key.kind == crossterm::event::KeyEventKind::Release {
             return Ok(Vec::new());
         }
+        if self.app.pointing()
+            && key.code == crossterm::event::KeyCode::Esc
+            && key.modifiers.is_empty()
+        {
+            self.app.cancel();
+            self.app.status("Pointer gesture cancelled");
+            return Ok(Vec::new());
+        }
         if self.paused && key.code == crossterm::event::KeyCode::Esc && key.modifiers.is_empty() {
             self.paused = false;
             self.leader = false;

@@ -93,3 +93,37 @@ fn encoding() {
     program.args = vec!["x".repeat(30_000)];
     assert!(super::launch::check(&program).is_ok());
 }
+#[test]
+fn pointer() {
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("bagua.toml");
+    fs::write(&path, "[client]\nprefix='C-q'\n").unwrap();
+    let mut config = Loaded::read(Some(path.clone()), true).unwrap();
+    for source in [
+        "[client]\nprefix='C-a'\n[clipboard]\ntarget='shell'\n",
+        "[clipboard]\nlimit=0\n",
+        "[clipboard]\nlimit=1048577\n",
+        "[mouse]\nunknown=true\n",
+    ] {
+        fs::write(&path, source).unwrap();
+        assert!(config.reload().is_err());
+        assert_eq!(config.prefix(), "C-q");
+        assert_eq!(config.clipboard(), client::Clipboard::default());
+        assert_eq!(config.mouse(), client::Mouse::default());
+    }
+    fs::write(&path, "[client]\nprefix='C-a'\n[mouse]\nenabled=false\nresize=false\ncopy_on_release=false\n[clipboard]\ntarget='osc52'\nlimit=8192\n").unwrap();
+    config.reload().unwrap();
+    assert_eq!(config.prefix(), "C-a");
+    assert_eq!(
+        config.clipboard(),
+        client::Clipboard::new("osc52", 8192).unwrap()
+    );
+    assert_eq!(
+        config.mouse(),
+        client::Mouse {
+            enabled: false,
+            resize: false,
+            release: false
+        }
+    );
+}

@@ -102,6 +102,7 @@ dependencies = [
  "bagua-protocol",
  "bagua-terminal",
  "bagua-workspace",
+ "base64",
  "crossterm",
  "rustix",
  "unicode-width",

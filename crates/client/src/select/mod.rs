@@ -1,4 +1,9 @@
+#[cfg(test)]
+mod checks;
+mod copy;
 use crate::App;
+pub(crate) use copy::Copies;
+pub use copy::Copy;
 use protocol::{Failure, Input};
 use terminal::{Key, Point};
 use workspace::Id;
@@ -87,7 +92,10 @@ impl App {
         let width = usize::from(screen.extent.width());
         let mut copied = String::new();
         for y in start.y..=end.y {
-            let first = if y == start.y { start.x } else { 0 };
+            let mut first = if y == start.y { start.x } else { 0 };
+            if first > 0 && screen.cells[usize::from(y) * width + usize::from(first)].width == 0 {
+                first -= 1;
+            }
             let last = if y == end.y {
                 end.x
             } else {
@@ -109,15 +117,21 @@ impl App {
             if y < end.y && !screen.wrapped[usize::from(y)] {
                 copied.push('\n');
             }
-            if copied.len() > terminal::CHUNK {
+            if copied.len() > self.copying.limit {
                 return Err(Failure::Capacity);
             }
         }
+        self.copies.push(&copied, self.copying.outer)?;
         self.clipboard = copied;
         self.selection = None;
         self.status(format!(
-            "Copied {} bytes to local buffer; use the configured paste binding",
-            self.clipboard.len()
+            "Copied {} bytes locally{}",
+            self.clipboard.len(),
+            if self.copying.outer {
+                "; OSC52 pending, OS clipboard unverified"
+            } else {
+                "; use the configured paste binding"
+            }
         ));
         Ok(())
     }

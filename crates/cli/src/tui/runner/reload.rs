@@ -9,6 +9,8 @@ impl Runner {
 
     fn delay(&mut self) {
         self.keyboard.delay(self.config.delay());
+        self.app
+            .preferences(self.config.mouse(), self.config.clipboard());
     }
 
     pub(super) fn reload(&mut self) {

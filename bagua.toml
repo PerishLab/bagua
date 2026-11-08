@@ -13,6 +13,15 @@ r = "reload"
 [bindings.direct]
 Alt-q = "detach"
 
+[mouse]
+enabled = true
+resize = true
+copy_on_release = true
+
+[clipboard]
+target = "osc52"
+limit = 262144
+
 [history]
 lines = 50000
 bytes = 67108864
