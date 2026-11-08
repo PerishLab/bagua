@@ -81,7 +81,7 @@ fn navigation() {
 fn negotiation() {
     let mut terminal = engine();
     let report = terminal.feed(b"\x1b[>1u\x1b[?u").unwrap();
-    assert_eq!(report.unsupported, 2);
-    assert!(report.replies.is_empty());
+    assert_eq!(report.unsupported, 0);
+    assert_eq!(report.replies, b"\x1b[?1u");
     assert_eq!(terminal.encode(Input::Key(Key::Up)).unwrap(), b"\x1b[A");
 }

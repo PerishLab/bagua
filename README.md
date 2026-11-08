@@ -115,16 +115,16 @@ bagua --config /absolute/path/bagua.toml
 ```
 
 Schema version 1 is the default when omitted. Supported sections are `client`,
-`host`, `history`, `workspace` and `program`. Unknown fields, duplicate keys and unsupported versions
+`host`, `history`, `workspace`, `bindings` and `program`. Unknown fields, duplicate keys and unsupported versions
 refuse before interactive mode or native startup. `client.prefix` is a control
 letter such as C-g or C-q; C-h/C-i/C-j/C-m are reserved because the decoder maps
 them to navigation keys. `client.escape_ms` is 0–1000 milliseconds, default 50;
-zero makes an isolated Escape immediate and may split fragmented Alt input.
+zero makes an isolated Escape immediate and may split fragmented Alt or CSI input.
 The built-in prefix remains Ctrl-G. Pressing the chosen prefix twice sends its
 literal control key to the application. Prefix-r reloads and reports its result.
 
-Reload validates the whole file before atomically replacing client prefix and
-Escape delay. Errors, missing reload input or changed host/program/history/workspace sections
+Reload validates the whole file before atomically replacing client prefix,
+Escape delay and bindings. Errors, missing reload input or changed host/program/history/workspace sections
 preserve the old client configuration. Host socket, history budgets and program settings apply
 only to a new invocation; they never restart a host or alter running programs.
 Each client owns its preferences, including an observer, without gaining write
@@ -144,8 +144,8 @@ socket, client settings and reload policy. It shows program paths and only
 argument counts/environment key names. It neither starts programs nor proves
 their executability, directory access or runtime permissions. Parse diagnostics
 report field/byte information without echoing the original TOML source line.
-Arbitrary bindings, clipboard and status sections remain unsupported
-until their owning Issues land; this example does not enable future features.
+Typed bindings are described below; clipboard and status sections remain
+unsupported until their owning Issues land.
 
 ## Ordinary named entry
 
@@ -226,6 +226,93 @@ later layout intents cannot pass them. Each queued intent captures its source
 pane and complete launch data. Startup of a created pane precedes unsent input
 to that pane. These source checks do not replace distributed-artifact races,
 pressure or actual daily shell/Codex qualification in Seatrial #83/#84.
+
+## Key bindings and modified input
+
+Issue #28 adds source configuration and an end-to-end keyboard subset. These
+changes still require the containing candidate and independent qualification.
+Bindings are data, compiled by the client before host startup or atomic reload:
+
+```toml
+[client]
+prefix = "C-q"
+escape_ms = 50
+
+[bindings.prefix]
+'\' = "split-columns"
+'-' = "split-rows"
+'=' = "window"
+r = "reload"
+
+[bindings.direct]
+Alt-q = "detach"
+```
+
+Prefix and direct tables overlay the documented defaults. An ordinary unbound
+key goes to the application; an unknown key after the prefix refuses. `pass`
+explicitly removes a command binding and submits that key as application input;
+`ignore` consumes it locally. The prefix itself is reserved in both tables:
+one press waits with feedback, two presses submit the literal control key using
+the application's current encoding. Escape cancels the waiting prefix. A release
+event does not complete it; a paste or decoder refusal cancels it. Paste text
+never enters either key table, and embedded controls/escape delimiters still
+refuse under the existing paste contract. Observers cannot gain application
+write or workspace control through a binding.
+
+Key names are one printable Unicode character, `Space`, `Enter`, `Tab`,
+`Backspace`, `Escape`, arrows, `Home`, `End`, `PageUp`, `PageDown`, `Insert`,
+`Delete` or `F1`–`F12`, optionally prefixed by `Ctrl-`, `Alt-`, `Shift-` once each.
+`Shift-Tab` includes legacy Backtab. Ctrl-only ASCII letters normalize case.
+Duplicate equivalent selectors, repeated modifiers, unknown keys/actions,
+reserved prefix overrides and more than 128 total entries refuse. Actions are
+`detach`, `split-columns`, `split-rows`, `window`, `window-1`–`window-32`, `pane`,
+`next-window`, `acquire`, `transfer`, `fixed`, `automatic`, `close-pane`,
+`close-session`, `select`, `copy`, `paste`, `help`, `reload`, `page-up`,
+`page-down`, `live`, `left`, `right`, `up`, `down`, `pass` and `ignore`.
+`bagua config` reports the overrides. Help identifies the active prefix and
+labels its hints as defaults for keys without overrides. Complete validation
+includes the changed prefix and key tables together; failed reload keeps both.
+Bindings, prefix and Escape delay are client-local and never restart the host.
+
+The outer decoder accepts bounded `CSI codepoint ; modifiers u` with optional
+press/repeat/release suffix `:1`/`:2`/`:3`; press is the default and repeat acts
+as a press. Releases are ignored rather than sent to applications. The modifier
+number is 1 plus Shift=1, Alt=2 and Ctrl=4. It also accepts xterm modified
+navigation/F1–F12. Unicode scalars, Enter/Tab/Backspace/Escape and the declared
+navigation/function keys are supported; C1 controls, surrogate values, other
+private function keys, lock/super/media/keypad keys, alternate-key fields and
+associated-text fields refuse. Existing 64-byte sequence and 8 KiB staging
+bounds apply. No input sequence is forwarded as unchecked raw bytes.
+
+For the inner application, the terminal engine implements the flag-1
+(disambiguation) subset of the [Kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/).
+`CSI ? u` returns its current flags; `CSI > flags u`, `CSI < count u` and
+`CSI = flags ; mode u` push, pop and set them. Flag values 0/1 and set modes
+1/2/3 are supported; omitted/zero set mode uses replacement, and omitted/zero
+pop count means one in this subset. Unknown flags or forms increment unsupported
+without changing mode. Primary and alternate screens retain separate stacks,
+each bounded to 16 entries including its current state; overflow evicts the
+oldest entry. Exhausting a stack resets to zero; RIS clears both. Primary device
+attributes (`CSI c`/`CSI 0 c`) reply `CSI ? 1 ; 2 c` to complete protocol detection.
+
+Ordinary Enter remains CR. With flag 1, Shift+Enter becomes `CSI 13 ; 2 u`,
+Ctrl/Alt/combined modified keys retain their distinctions, and Escape becomes
+CSI-u. Modified navigation/F1–F12 retain unambiguous xterm encodings even in
+legacy mode. Other modified keys that legacy encoding cannot distinguish
+refuse; Shift+Enter is never silently collapsed into Enter. Text stays UTF-8
+and paste keeps its own framing. The host encodes against the authoritative
+current pane mode, so a delayed client view cannot force an obsolete encoding.
+Full enhancement flags 2/4/8/16 and inner release reporting are outside this
+contract; applications may query the supported result and fall back.
+
+The interactive client pushes flag 1 in its own outer alternate screen, and
+pops it before leaving that screen on normal/error cleanup. The inner application's
+requests never pass through to the outer terminal. A legacy outer terminal can
+continue sending its existing input, but cannot recover a distinction it never
+encoded. Source PTY tests observe the application's exact query replies and
+Enter/Shift+Enter bytes, withdrawal to legacy mode, configuration reload and
+terminal restoration. Actual terminal emulator/Codex behavior and pressure
+remain Seatrial qualification, rather than a full Kitty support claim.
 
 ## History
 
@@ -344,8 +431,8 @@ duplicate subscription idempotently. Observers must be joined to the target's
 session. Cancelling a retired target remains possible. A resume revision is a
 hint, not permission to invent a delta without its baseline. The host sends
 complete live snapshots and retains no incremental screen deltas. Scrollback is
-read separately in bounded pages. Wire version 4 adds named entry, native foreground-context reads and executable
-file identity in Hello. It uses a
+read separately in bounded pages. Wire version 5 includes named entry, native foreground-context reads, executable
+file identity in Hello, keyboard mode flags and typed modified input. It uses a
 four-byte big-endian JSON length followed by that many UTF-8 JSON bytes.
 Request numbers strictly increase within a connection; reused or older numbers
 are refused without replay. There is no cross-connection exactly-once claim.
@@ -505,7 +592,7 @@ color, alternate screen, cursor positioning, line-wrap control, bracketed paste
 and SGR mouse reports. This is an explicit terminal profile, not automatic
 capability negotiation or qualification of every terminal emulator.
 Hello binds the host canvas and executable file identity; subscriptions bind
-target-scoped revisions. Use a matching host/client build and wire version 4.
+target-scoped revisions. Use a matching host/client build and wire version 5.
 Installed v0.1.0 speaks wire 2 and cannot consume these source changes.
 
 For explicit machine workflows, run the host described above. Open a new session with a complete
@@ -552,8 +639,8 @@ This is a Bagua choice, not a tmux compatibility contract.
 
 Ordinary keys go to the focused pane only for the controller. The profile
 includes UTF-8 text, ASCII control keys, printable Alt characters, arrows,
-navigation, F1–F12 and Backtab. Modified navigation/function keys and extended
-keyboard protocols are refused. Escape uses a 50 ms disambiguation interval.
+navigation, F1–F12 and Backtab. Modified navigation/function keys use bounded typed input; the supported
+keyboard enhancement subset and its refusals are described below. Escape uses a 50 ms disambiguation interval.
 Bracketed paste accepts at most 4096 UTF-8 bytes; overflow is drained to its
 terminator and refused, with bounded storage. Unsupported or oversized CSI
 input is refused. The client uses a bounded decoder instead of an unbounded
@@ -636,11 +723,12 @@ keeps its original text and column count. These choices require further
 qualification with actual applications before the Linux product closes.
 
 Input supports application-cursor arrows, navigation, F1–F12, explicit control
-keys, UTF-8 text, bracketed paste and requested mouse tracking. Paste refuses
+keys, the keyboard enhancement subset below, UTF-8 text, bracketed paste and
+requested mouse tracking. Paste refuses
 embedded controls except CR/LF/TAB, including any embedded ESC delimiter.
 Legacy mouse coordinates stop at column/row 223; SGR uses the declared screen
-bounds. UTF-8 mouse encoding is explicitly refused. Extended/modified keyboard
-protocols are excluded; their negotiation is reported as unhandled. OSC
+bounds. UTF-8 mouse encoding is explicitly refused. Keyboard enhancement flags beyond the declared subset refuse without changing
+mode and remain counted as unsupported. OSC
 metadata, clipboard, images, hyperlinks,
 window resize requests and other DCS extensions have no external effect.
 

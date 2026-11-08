@@ -35,6 +35,8 @@ pub(super) fn check(config: &bagua::config::Config) -> Result<(client::Keys, Dur
         Error::config(
             "client.prefix: use C-a..C-z except C-h/C-i/C-j/C-m, which decode as navigation keys",
         )
+    })?.bind(&config.bindings.prefix, &config.bindings.direct).map_err(|_| {
+        Error::config("bindings: invalid key/action, duplicate key, reserved prefix or more than 128 entries")
     })?;
     if config
         .host

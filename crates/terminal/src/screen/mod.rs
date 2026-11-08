@@ -80,6 +80,7 @@ pub enum Encoding {
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Modes {
+    pub keyboard: u8,
     pub cursor: bool,
     pub keypad: bool,
     pub paste: bool,
@@ -103,6 +104,7 @@ impl From<&vt100::Screen> for Modes {
             vt100::MouseProtocolEncoding::Sgr => Encoding::Sgr,
         };
         Self {
+            keyboard: 0,
             cursor: screen.application_cursor(),
             keypad: screen.application_keypad(),
             paste: screen.bracketed_paste(),

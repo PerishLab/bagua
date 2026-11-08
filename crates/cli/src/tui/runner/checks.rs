@@ -148,3 +148,27 @@ fn refusal() {
     );
     assert!(wire.take().is_none());
 }
+
+#[test]
+fn prefix() {
+    use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+    let (mut runner, _) = setup();
+    let control = KeyEvent::new(KeyCode::Char('g'), KeyModifiers::CONTROL);
+    runner.key(control).unwrap();
+    assert!(runner.leader);
+    let release = KeyEvent::new_with_kind(
+        KeyCode::Char('g'),
+        KeyModifiers::CONTROL,
+        KeyEventKind::Release,
+    );
+    runner.key(release).unwrap();
+    assert!(runner.leader);
+    runner.event(Event::Paste("=\\".into())).unwrap();
+    assert!(!runner.leader);
+    assert!(
+        runner
+            .queue
+            .iter()
+            .all(|item| matches!(item.command, Command::Send { .. }))
+    );
+}

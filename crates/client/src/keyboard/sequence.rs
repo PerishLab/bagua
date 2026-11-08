@@ -1,6 +1,4 @@
-use crossterm::event::{
-    Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
-};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use protocol::Failure;
 
 pub(super) fn parse(bytes: &[u8]) -> Option<(usize, Result<Event, Failure>)> {
@@ -47,7 +45,7 @@ pub(super) fn parse(bytes: &[u8]) -> Option<(usize, Result<Event, Failure>)> {
     let body = &bytes[2..end];
     let finalizer = bytes[end];
     let event = if body.starts_with(b"<") {
-        mouse(body, finalizer)
+        super::mouse::parse(body, finalizer)
     } else {
         key(body, finalizer, prefix)
     };
@@ -55,6 +53,30 @@ pub(super) fn parse(bytes: &[u8]) -> Option<(usize, Result<Event, Failure>)> {
 }
 
 fn key(body: &[u8], finalizer: u8, prefix: u8) -> Result<Event, Failure> {
+    if prefix == b'[' && finalizer == b'u' {
+        return super::extended::parse(body);
+    }
+    if prefix == b'['
+        && let Some(split) = body.iter().position(|byte| *byte == b';')
+    {
+        let text = std::str::from_utf8(&body[split + 1..]).map_err(|_| Failure::Payload)?;
+        let modifiers = super::extended::modifiers(text)?;
+        let head = &body[..split];
+        let base = if head == b"1" && finalizer != b'~' {
+            &[][..]
+        } else {
+            head
+        };
+        let Event::Key(mut event) = legacy(base, finalizer, prefix)? else {
+            return Err(Failure::Payload);
+        };
+        event.modifiers |= modifiers;
+        return Ok(Event::Key(event));
+    }
+    legacy(body, finalizer, prefix)
+}
+
+fn legacy(body: &[u8], finalizer: u8, prefix: u8) -> Result<Event, Failure> {
     let mut modifiers = KeyModifiers::NONE;
     let code = match (body, finalizer) {
         (b"", b'A') => KeyCode::Up,
@@ -92,96 +114,4 @@ fn function(body: &[u8]) -> Result<KeyCode, Failure> {
         .position(|v| *v == value)
         .map(|index| KeyCode::F(index as u8 + 1))
         .ok_or(Failure::Unavailable)
-}
-
-fn mouse(body: &[u8], finalizer: u8) -> Result<Event, Failure> {
-    let text = std::str::from_utf8(&body[1..]).map_err(|_| Failure::Payload)?;
-    let values: Vec<u16> = text
-        .split(';')
-        .map(|p| p.parse().map_err(|_| Failure::Payload))
-        .collect::<Result<_, _>>()?;
-    let [code, column, row] = values.as_slice() else {
-        return Err(Failure::Payload);
-    };
-    if *code > 127 || *column == 0 || *row == 0 {
-        return Err(Failure::Payload);
-    }
-    let mut modifiers = KeyModifiers::NONE;
-    for (mask, flag) in [
-        (4, KeyModifiers::SHIFT),
-        (8, KeyModifiers::ALT),
-        (16, KeyModifiers::CONTROL),
-    ] {
-        if code & mask != 0 {
-            modifiers |= flag;
-        }
-    }
-    let button = match code & 3 {
-        0 => MouseButton::Left,
-        1 => MouseButton::Middle,
-        _ => MouseButton::Right,
-    };
-    let release = match finalizer {
-        b'M' => false,
-        b'm' => true,
-        _ => return Err(Failure::Payload),
-    };
-    let report = Report {
-        wheel: code & 64 != 0,
-        motion: code & 32 != 0,
-        button: code & 3,
-        release,
-    };
-    let kind = match report {
-        Report {
-            wheel: true,
-            motion: false,
-            button: 0,
-            release: false,
-        } => MouseEventKind::ScrollUp,
-        Report {
-            wheel: true,
-            motion: false,
-            button: 1,
-            release: false,
-        } => MouseEventKind::ScrollDown,
-        Report {
-            wheel: false,
-            motion: true,
-            button: 3,
-            release: false,
-        } => MouseEventKind::Moved,
-        Report {
-            wheel: false,
-            motion: true,
-            button: 0..=2,
-            release: false,
-        } => MouseEventKind::Drag(button),
-        Report {
-            wheel: false,
-            motion: false,
-            button: 0..=2,
-            release: false,
-        } => MouseEventKind::Down(button),
-        Report {
-            wheel: false,
-            motion: false,
-            button: 0..=2,
-            release: true,
-        } => MouseEventKind::Up(button),
-        _ => return Err(Failure::Unavailable),
-    };
-    Ok(Event::Mouse(MouseEvent {
-        kind,
-        column: column - 1,
-        row: row - 1,
-        modifiers,
-    }))
-}
-
-struct Report {
-    wheel: bool,
-    motion: bool,
-    button: u16,
-    release: bool,
 }

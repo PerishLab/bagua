@@ -258,6 +258,11 @@ fn numbering() {
         vec![Command::Workspace(Operation::Focus(Id::new(3).unwrap()))]
     );
     world
+        .apply(actor, Operation::Focus(Id::new(3).unwrap()))
+        .unwrap();
+    app.catalog(world.snapshot()).unwrap();
+    app.status("Configuration unchanged");
+    world
         .apply(actor, Operation::Close(Target::Window(Id::new(2).unwrap())))
         .unwrap();
     app.catalog(world.snapshot()).unwrap();
@@ -272,4 +277,15 @@ fn numbering() {
         screen.feed(bytes).unwrap();
     }
     assert!(screen.snapshot().contents().contains("bagua w1"));
+    app.resize(Extent::new(80, 3).unwrap());
+    screen.resize(Extent::new(80, 3).unwrap()).unwrap();
+    for bytes in app.draw().unwrap().chunks(terminal::CHUNK) {
+        screen.feed(bytes).unwrap();
+    }
+    assert!(
+        screen
+            .snapshot()
+            .contents()
+            .contains("Configuration unchanged")
+    );
 }

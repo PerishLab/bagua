@@ -121,7 +121,7 @@ These exclusions do not change how applications use their own shells.
 The anchor library owns the configuration schema through the published Radicula
 configuration capability. The CLI owns `bagua.toml` discovery and startup composition. Only `main` captures process environment.
 Configuration chooses client preferences and explicit launch data; it grants no
-host authority. Client prefix and Escape delay can reload after complete
+host authority. Client prefix, Escape delay and typed binding tables can reload after complete
 validation. Startup socket, program and history sections require a new invocation;
 reload never restarts a host or changes existing programs. Unknown fields and
 future capability sections refuse instead of implying implemented behavior.
@@ -155,8 +155,8 @@ feature transitively without requalifying the resource contract. The isolated
 callback adapter preserves only upstream trait signatures; event and query
 policy remains Bagua source outside that Ectropy boundary.
 
-Full grapheme shaping, history reflow, DECAWM switching and extended keyboard
-protocols are outside the current profile. Actual application needs may
+Full grapheme shaping, history reflow, DECAWM switching and keyboard enhancements
+beyond the declared flag-1 subset are outside the current profile. Actual application needs may
 challenge that selection before the first Linux closure. Preserve explicit
 unsupported reports and refusals rather than reporting full VT coverage.
 The terminal and PTY components are hosted on Linux x86_64, with explicit launch data, bounded
@@ -206,3 +206,13 @@ not workspace authority or permission to inspect arbitrary processes. Cwd lookup
 retains queue order and refuses before layout mutation on missing native facts.
 A subsequent launch race remains an observable failed pane. Wire identity and
 context are protocol data; native PathBuf/process access stays in the PTY adapter.
+
+Keyboard bindings are bounded client preferences, never program execution or
+control authority. Prefix literal transmission, releases, paste and malformed
+input have distinct state transitions. Terminal owns per-pane keyboard mode,
+independent bounded primary/alternate stacks and fresh encoding of typed keys.
+Flag-1 support never claims other enhancement flags or unchecked raw transport.
+Inner application negotiation produces replies only for its owned PTY. The
+interactive client independently pushes/pops its outer terminal mode; hosted
+escape strings never cross that boundary. Automatic focus updates preserve
+unrelated client feedback when no paused history or selection needs clearing.

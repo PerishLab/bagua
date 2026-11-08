@@ -20,6 +20,10 @@ pub enum Key {
     Escape,
     Function(u8),
     Control(char),
+    Modified {
+        code: u32,
+        modifiers: crate::Modifiers,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -45,7 +49,7 @@ impl Input<'_> {
                     Ok(text.as_bytes().into())
                 }
             }
-            Self::Key(key) => key.encode(modes.cursor),
+            Self::Key(key) => key.encode(modes),
             Self::Mouse(mouse) => mouse.encode(modes, extent),
         }
     }
@@ -65,7 +69,11 @@ fn check(text: &str, paste: bool) -> Result<(), Failure> {
 }
 
 impl Key {
-    fn encode(self, application: bool) -> Result<Vec<u8>, Failure> {
+    fn encode(self, modes: Modes) -> Result<Vec<u8>, Failure> {
+        if let Some(result) = extended(self, modes.keyboard) {
+            return result;
+        }
+        let application = modes.cursor;
         let prefix = if application { "\x1bO" } else { "\x1b[" };
         match self {
             Self::Up => Ok(format!("{prefix}A").into_bytes()),
@@ -87,8 +95,86 @@ impl Key {
             Self::Escape => Ok(b"\x1b".into()),
             Self::Function(number) => function(number),
             Self::Control(c) => control(c),
+            Self::Modified { .. } => Err(Failure::Unsupported),
         }
     }
+}
+
+fn extended(key: Key, flags: u8) -> Option<Result<Vec<u8>, Failure>> {
+    let (code, modifiers) = match key {
+        Key::Modified { code, modifiers } => (code, modifiers),
+        Key::Control(c) if flags == 1 && !c.is_control() => (
+            u32::from(c.to_ascii_lowercase()),
+            crate::Modifiers {
+                shift: false,
+                alt: false,
+                control: true,
+            },
+        ),
+        Key::Alt(c) if flags == 1 && !c.is_control() => (
+            u32::from(c),
+            crate::Modifiers {
+                shift: false,
+                alt: true,
+                control: false,
+            },
+        ),
+        Key::Escape if flags == 1 => (27, crate::Modifiers::default()),
+        Key::Backtab if flags == 1 => (
+            9,
+            crate::Modifiers {
+                shift: true,
+                alt: false,
+                control: false,
+            },
+        ),
+        _ => return None,
+    };
+    Some(modified(code, modifiers, flags))
+}
+
+fn modified(code: u32, modifiers: crate::Modifiers, flags: u8) -> Result<Vec<u8>, Failure> {
+    if !valid(code) || flags > 1 {
+        return Err(Failure::Unsupported);
+    }
+    let value = 1
+        + u8::from(modifiers.shift)
+        + 2 * u8::from(modifiers.alt)
+        + 4 * u8::from(modifiers.control);
+    if value == 1 && matches!(code, 13 | 9 | 127) {
+        return Ok(vec![if code == 13 { b'\r' } else { code as u8 }]);
+    }
+    let navigation = match code {
+        57348 => Some("2~"),
+        57349 => Some("3~"),
+        57350 => Some("1D"),
+        57351 => Some("1C"),
+        57352 => Some("1A"),
+        57353 => Some("1B"),
+        57354 => Some("5~"),
+        57355 => Some("6~"),
+        57356 => Some("1H"),
+        57357 => Some("1F"),
+        57364..=57367 => Some(["1P", "1Q", "1R", "1S"][(code - 57364) as usize]),
+        57368..=57375 => {
+            Some(["15~", "17~", "18~", "19~", "20~", "21~", "23~", "24~"][(code - 57368) as usize])
+        }
+        _ => None,
+    };
+    if let Some(sequence) = navigation {
+        let (number, suffix) = sequence.split_at(sequence.len() - 1);
+        return Ok(format!("\x1b[{number};{value}{suffix}").into_bytes());
+    }
+    if flags == 0 {
+        return Err(Failure::Unsupported);
+    }
+    Ok(format!("\x1b[{code};{value}u").into_bytes())
+}
+
+fn valid(code: u32) -> bool {
+    matches!(code, 9 | 13 | 27 | 127 | 57348..=57357 | 57364..=57375)
+        || char::from_u32(code)
+            .is_some_and(|c| !c.is_control() && !(0xe000..=0xf8ff).contains(&code))
 }
 
 fn function(number: u8) -> Result<Vec<u8>, Failure> {

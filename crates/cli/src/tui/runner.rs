@@ -201,6 +201,9 @@ impl Runner {
     }
 
     fn event(&mut self, event: Event) -> Result<(), Error> {
+        if matches!(event, Event::Paste(_)) {
+            self.leader = false;
+        }
         if self.suspended && matches!(event, Event::Paste(_) | Event::Mouse(_)) {
             self.app
                 .status("Terminal too small; resize or prefix d to detach");

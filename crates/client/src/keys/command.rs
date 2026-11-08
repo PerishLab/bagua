@@ -1,0 +1,31 @@
+use super::*;
+pub(super) fn command(code: KeyCode) -> Result<Gesture, Failure> {
+    Ok(match code {
+        KeyCode::Char('d' | 'q') => Gesture::Detach,
+        KeyCode::Char('v' | '\\') => Gesture::Split(workspace::Axis::Columns),
+        KeyCode::Char('h' | '-') => Gesture::Split(workspace::Axis::Rows),
+        KeyCode::Char('n' | '=') => Gesture::Window,
+        KeyCode::Tab => Gesture::Pane,
+        KeyCode::Char('w') => Gesture::Next,
+        KeyCode::Char('a') => Gesture::Acquire,
+        KeyCode::Char('t') => Gesture::Transfer,
+        KeyCode::Char('f') => Gesture::Fixed,
+        KeyCode::Char('u') => Gesture::Automatic,
+        KeyCode::Char('x') => Gesture::Close,
+        KeyCode::Char('!') => Gesture::Destroy,
+        KeyCode::Char('[') => Gesture::Select,
+        KeyCode::Char('c') => Gesture::Copy,
+        KeyCode::Char('p') => Gesture::Paste,
+        KeyCode::Left => Gesture::Pan(Key::Left),
+        KeyCode::Right => Gesture::Pan(Key::Right),
+        KeyCode::Up => Gesture::Pan(Key::Up),
+        KeyCode::Down => Gesture::Pan(Key::Down),
+        KeyCode::Char('?') => Gesture::Help,
+        KeyCode::Char('r') => Gesture::Reload,
+        KeyCode::PageUp => Gesture::History(-1),
+        KeyCode::PageDown => Gesture::History(1),
+        KeyCode::End => Gesture::Live,
+        KeyCode::Esc => Gesture::Ignore,
+        _ => return Err(Failure::Unavailable),
+    })
+}

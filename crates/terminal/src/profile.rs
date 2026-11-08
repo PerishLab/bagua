@@ -14,15 +14,17 @@ pub const PROFILE: &[&str] = &[
     "indexed/RGB colors, bold, dim, italic, underline and inverse",
     "bounded primary history and immutable revision-bound snapshots",
     "legacy arrows, navigation, F1-F12, control keys and bracketed paste",
+    "CSI-u flag 1 negotiation with separate bounded primary/alternate stacks",
+    "typed Shift/Alt/Ctrl keys and unambiguous modified navigation/F1-F12",
     "X10/normal/drag/motion tracking with legacy or SGR mouse encoding",
-    "status/cursor/character-size queries, explicit replies and bell counts",
+    "primary device/status/cursor/character-size queries, explicit replies and bell counts",
 ];
 
 pub const EXCLUDED: &[&str] = &[
     "DECAWM switching; wrapping stays enabled in this profile",
     "full grapheme shaping, emoji ZWJ and unbounded combining sequences",
     "history reflow when changing column count",
-    "UTF-8 mouse encoding, modified function keys and extended keyboard protocols",
+    "UTF-8 mouse encoding; keyboard enhancement flags 2/4/8/16, lock/super/media/keypad keys",
     "OSC metadata, clipboard, hyperlinks, images and DCS extensions",
     "application-requested window resize and external terminal side effects",
     "malformed UTF-8 replacement display and full VT standards conformance",

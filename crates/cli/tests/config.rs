@@ -90,6 +90,9 @@ fn diagnosis() {
         ("[workspace]\nname=' bad '", "workspace.name"),
         ("[workspace]\ncwd='infer'", "workspace.cwd"),
         ("[workspace]\nunknown=true", "unknown field"),
+        ("[bindings.direct]\n'Ctrl-g'='detach'", "bindings"),
+        ("[bindings.direct]\n'Alt-q'='unknown'", "bindings"),
+        ("[bindings]\nunknown=true", "unknown field"),
     ];
     for (text, marker) in cases {
         fs::write(&path, text).unwrap();

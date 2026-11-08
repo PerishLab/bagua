@@ -168,6 +168,7 @@ impl Loaded {
         next.explicit = self.explicit;
         let mut startup = next.config.clone();
         startup.client = self.config.client.clone();
+        startup.bindings = self.config.bindings.clone();
         if startup != self.config {
             return Err(Error::config(
                 "host/program/history/workspace changes require a new invocation; running host and programs were not changed",
@@ -192,9 +193,10 @@ impl Loaded {
                 "args": program.args.len(), "environment": program.environment.keys().collect::<Vec<_>>()
             })),
             "interactive_defaults": if self.config.program.is_none() { Some("enter uses invocation SHELL or /bin/sh, invocation cwd and an explicit snapshot of the invocation environment; TERM=xterm-256color") } else { None },
-            "reload": ["client.prefix", "client.escape_ms"],
+            "bindings": {"prefix": self.config.bindings.prefix, "direct": self.config.bindings.direct},
+            "reload": ["client.prefix", "client.escape_ms", "bindings"],
             "restart": ["host.socket", "program", "history", "workspace"],
-            "unsupported": ["bindings", "clipboard", "status"],
+            "unsupported": ["clipboard", "status"],
         })
     }
 }
