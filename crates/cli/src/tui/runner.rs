@@ -206,7 +206,7 @@ impl Runner {
         }
         if self.suspended && matches!(event, Event::Paste(_) | Event::Mouse(_)) {
             self.app
-                .status("Terminal too small; resize or prefix d to detach");
+                .status("Terminal too small; resize or use the configured detach binding");
             return Ok(());
         }
         let commands = match event {

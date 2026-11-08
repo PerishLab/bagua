@@ -50,7 +50,9 @@ impl App {
                 });
             }
         }
-        self.status("Selection: arrows extend, Ctrl-G c copies, Esc cancels");
+        self.status(
+            "Selection: default arrows extend/Escape cancels; use the configured copy binding",
+        );
         Ok(())
     }
 
@@ -114,7 +116,7 @@ impl App {
         self.clipboard = copied;
         self.selection = None;
         self.status(format!(
-            "Copied {} bytes to local buffer; Ctrl-G p pastes",
+            "Copied {} bytes to local buffer; use the configured paste binding",
             self.clipboard.len()
         ));
         Ok(())
