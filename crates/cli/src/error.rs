@@ -3,6 +3,7 @@ pub(crate) struct Error {
     code: String,
     message: String,
     request: Option<u64>,
+    failure: Option<protocol::Failure>,
 }
 
 impl Error {
@@ -11,6 +12,7 @@ impl Error {
             code: "endpoint".into(),
             message: message.into(),
             request: None,
+            failure: None,
         }
     }
 
@@ -19,7 +21,22 @@ impl Error {
             code: "configuration".into(),
             message: message.into(),
             request: None,
+            failure: None,
         }
+    }
+
+    pub fn taking(mut self) -> Self {
+        if self.failure.is_none() {
+            self.message = format!(
+                "Take outcome unconfirmed; inspect the current owner before another attempt: {}",
+                self.message
+            );
+        }
+        self
+    }
+
+    pub fn refused(&self, failure: protocol::Failure) -> bool {
+        self.failure == Some(failure)
     }
 
     pub fn at(mut self, request: u64) -> Self {
@@ -41,6 +58,7 @@ impl From<protocol::Failure> for Error {
     fn from(error: protocol::Failure) -> Self {
         Self {
             request: None,
+            failure: Some(error),
             code: error.code().into(),
             message: error.message().into(),
         }
@@ -51,6 +69,7 @@ impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
         Self {
             request: None,
+            failure: None,
             code: "io".into(),
             message: error.to_string(),
         }
@@ -61,6 +80,7 @@ impl From<protocol::wire::Fault> for Error {
     fn from(error: protocol::wire::Fault) -> Self {
         Self {
             request: None,
+            failure: None,
             code: error.code,
             message: error.message,
         }

@@ -44,6 +44,10 @@ pub(crate) struct Args {
         help = "First nonzero request number; explicit session setup consumes additional numbers"
     )]
     pub request: u64,
+    #[arg(long, global = true, conflicts_with_all = ["observe", "control", "observer"], help = "Explicitly take interactive control and detach the previous client")]
+    pub take: bool,
+    #[arg(long, global = true, conflicts_with_all = ["take", "control", "observer"], help = "Enter an interactive read-only observer")]
+    pub observe: bool,
     #[command(subcommand)]
     pub action: Option<Action>,
 }
@@ -78,8 +82,6 @@ pub(crate) enum Action {
         name: Option<String>,
         #[arg(long, help = "Require an existing named workspace")]
         existing: bool,
-        #[arg(long, help = "Observe an existing workspace without acquiring control")]
-        observe: bool,
         #[arg(
             long,
             conflicts_with = "observe",
@@ -99,8 +101,6 @@ pub(crate) enum Action {
     #[command(about = "Connect an interactive observer; --take explicitly acquires control")]
     Connect {
         session: u64,
-        #[arg(long)]
-        take: bool,
         #[arg(long, requires = "take")]
         fixed: bool,
         #[command(flatten)]
@@ -233,7 +233,6 @@ impl Action {
         Self::Enter {
             name: None,
             existing: false,
-            observe: false,
             fixed: false,
             launch: Launch {
                 executable: None,

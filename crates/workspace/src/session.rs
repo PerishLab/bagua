@@ -114,6 +114,30 @@ impl Session {
         Ok(())
     }
 
+    pub fn take(
+        &mut self,
+        actor: Id,
+        expected: Option<Id>,
+        fixed: Option<Geometry>,
+    ) -> Result<(), Failure> {
+        let viewport = self.viewport(actor).ok_or(Failure::Missing)?;
+        match fixed {
+            Some(geometry) => self.fit(geometry)?,
+            None => self.preview(viewport)?,
+        }
+        self.control.take(actor, expected)?;
+        match fixed {
+            Some(geometry) => self.sizing = Sizing::Fixed(geometry),
+            None => self.follow(viewport),
+        }
+        if let Some(previous) = expected
+            && previous != actor
+        {
+            self.clients.remove(&previous);
+        }
+        Ok(())
+    }
+
     pub fn require(&self, actor: Id) -> Result<(), Failure> {
         self.control.require(actor)
     }

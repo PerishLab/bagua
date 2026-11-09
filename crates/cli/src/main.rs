@@ -75,7 +75,8 @@ fn initialize(args: &Args, config: &mut config::Loaded) -> Result<(), Error> {
 }
 
 fn defaults(args: &mut Args, config: &config::Loaded) -> Result<(), Error> {
-    if !matches!(args.selected(), args::Action::Enter { observe: false, launch, .. } if launch.executable.is_none())
+    if args.observe
+        || !matches!(args.selected(), args::Action::Enter { launch, .. } if launch.executable.is_none())
     {
         return Ok(());
     }

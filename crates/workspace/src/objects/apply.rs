@@ -40,6 +40,11 @@ impl World {
                 None => self.edit(session)?.acquire(actor)?,
             },
             Operation::Transfer { session, next } => self.edit(session)?.transfer(actor, next)?,
+            Operation::Take {
+                session,
+                expected,
+                fixed,
+            } => self.edit(session)?.take(actor, expected, fixed)?,
             Operation::Detach(session) => {
                 let session = self.edit(session)?;
                 session.viewport(actor).ok_or(Failure::Missing)?;

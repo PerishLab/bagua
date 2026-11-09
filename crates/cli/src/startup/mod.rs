@@ -26,14 +26,14 @@ pub(crate) fn connect(path: &Path, args: &Args, config: &Loaded) -> Result<Sessi
         .invocation
         .as_ref()
         .ok_or(protocol::Failure::Unavailable)?;
-    let create = matches!(
-        args.selected(),
-        Action::Enter {
-            existing: false,
-            observe: false,
-            ..
-        }
-    );
+    let create = !args.observe
+        && matches!(
+            args.selected(),
+            Action::Enter {
+                existing: false,
+                ..
+            }
+        );
     let path = directory::location(path, config.runtime().is_some(), create)?;
     match Connection::connect(&path) {
         Ok(connection) => return adopt(connection, args, invocation),

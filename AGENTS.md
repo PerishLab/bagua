@@ -84,7 +84,13 @@ destruction remain separate transitions. Preserving arbitrary processes and
 recovering terminal state after host restart is outside the first contract.
 
 Each session has one control client. Other connections observe without
-implicitly acquiring control. Transfer is explicit; owner disconnect releases
+implicitly acquiring control. Explicit takeover compares the expected current
+owner and validates the joined recipient and viewport before atomically changing
+control and removing the displaced membership. Failure before model application
+preserves the old controller. Displaced interactive clients leave and restore
+TTY state; no host or application retirement follows. Unknown applied outcomes
+retain their existing no-replay rule. Normal occupied entry offers Take, Observe
+or Cancel; --take is explicit and --observe never requests control. Transfer is explicit; owner disconnect releases
 control. Automatic geometry comes from the control client; observers have
 independent viewports. Fixed geometry is explicit.
 
