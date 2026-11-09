@@ -4,6 +4,7 @@ mod feedback;
 mod history;
 mod install;
 pub(super) mod preferences;
+mod process;
 mod timing;
 mod validate;
 
@@ -30,6 +31,7 @@ pub struct App {
     pub(super) recovering: bool,
     pub(super) done: bool,
     pub(super) dirty: bool,
+    faults: BTreeMap<Id, protocol::wire::Fault>,
     past: history::Past,
     pub(super) mouse: crate::Mouse,
     pub(super) copying: crate::Clipboard,
@@ -60,6 +62,7 @@ impl App {
             recovering: false,
             done: false,
             dirty: true,
+            faults: BTreeMap::new(),
             past: history::Past::default(),
             mouse: crate::Mouse::default(),
             copying: crate::Clipboard::default(),
@@ -185,8 +188,7 @@ impl App {
                 fault: Some(fault),
                 ..
             } => {
-                self.records.remove(&pane);
-                self.error(fault.message);
+                self.process(pane, fault);
             }
             Message::Hello { .. } => return Err(Failure::Version),
             _ => {}
@@ -211,6 +213,7 @@ impl App {
             self.done = true;
             self.screens.clear();
             self.records.clear();
+            self.faults.clear();
             self.cancel();
             self.live();
             self.catalog = Some(snapshot);
@@ -235,6 +238,7 @@ impl App {
                 (Some(_), None) => true,
                 _ => false,
             });
+        self.faults.retain(|id, _| extents.contains_key(id));
         self.catalog = Some(snapshot);
         self.retain();
         self.pointer();

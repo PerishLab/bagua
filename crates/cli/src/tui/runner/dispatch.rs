@@ -6,7 +6,7 @@ impl Runner {
             return Ok(());
         }
         if let Some((pane, program)) = self.launches.front().cloned() {
-            if self.submit(Command::Start { pane, program }, Job::Start)? {
+            if self.submit(Command::Start { pane, program }, Job::Start(pane))? {
                 self.launches.pop_front();
             }
             return Ok(());

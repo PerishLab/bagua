@@ -157,7 +157,15 @@ fn workflow() {
         std::thread::sleep(Duration::from_millis(5));
     }
     peer.detach();
-    let snapshot = fixture.catalog();
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let snapshot = loop {
+        let snapshot = fixture.catalog();
+        if snapshot.sessions().next().unwrap().controller().is_none() {
+            break snapshot;
+        }
+        assert!(Instant::now() < deadline, "host did not release control");
+        std::thread::sleep(Duration::from_millis(2));
+    };
     let session = snapshot.sessions().next().unwrap();
     assert_eq!(session.controller(), None);
     assert!(

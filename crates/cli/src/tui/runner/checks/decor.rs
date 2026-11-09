@@ -93,3 +93,39 @@ fn context() {
             .is_err()
     );
 }
+
+#[test]
+fn duplicate() {
+    let (mut runner, _, _) = setup();
+    let fault = protocol::wire::Fault {
+        code: "io".into(),
+        message: "executable missing".into(),
+    };
+    runner.jobs.insert(1, Job::Start(Id::new(3).unwrap()));
+    runner
+        .receive(Message::Finished {
+            request: 1,
+            result: Err(fault.clone()),
+        })
+        .unwrap();
+    runner
+        .receive(Message::Process {
+            pane: Id::new(3).unwrap(),
+            io: false,
+            closing: false,
+            exited: false,
+            code: None,
+            signal: None,
+            eof: false,
+            fault: Some(fault),
+        })
+        .unwrap();
+    assert!(
+        runner
+            .app
+            .draw()
+            .unwrap()
+            .windows(10)
+            .any(|bytes| bytes == b"Start pane")
+    );
+}
