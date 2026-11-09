@@ -8,7 +8,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 skill = false
 
 [windtun]
-cases = ["bagua-workspace", "bagua-lifecycle", "bagua-flow", "bagua-config", "bagua-entry", "bagua-history", "bagua-input", "bagua-mouse", "bagua-display"]
+cases = ["bagua-workspace", "bagua-lifecycle", "bagua-flow", "bagua-config", "bagua-entry", "bagua-history", "bagua-input", "bagua-mouse", "bagua-display", "bagua-interaction"]
 image = "ghcr.io/perishlab/images:stable"
 
 [windtun.scenes]
