@@ -12,3 +12,5 @@ pub use pane::{Pane, State};
 pub use snapshot::Snapshot;
 pub use window::Window;
 pub use world::World;
+
+mod retire;

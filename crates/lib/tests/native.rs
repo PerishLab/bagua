@@ -10,7 +10,7 @@ fn disconnect() {
     let mut driver = Driver::new();
     driver.create();
     driver
-        .start("stty -echo; printf READY; IFS= read -r line; printf 'RESULT:%s' \"$line\"; exit 7");
+        .start("stty -echo; printf READY; IFS= read -r line; printf 'RESULT:%s' \"$line\"; read -r finish; exit 7");
     driver.until(|d| d.contains("READY"));
     driver.host.disconnect(driver.actor).unwrap();
     assert_eq!(
@@ -55,8 +55,21 @@ fn disconnect() {
         })
         .unwrap();
     driver.until(|d| d.contains("RESULT:hello"));
-    driver.until(|d| d.host.world().pane(id(3)).unwrap().state() == State::Exited(Some(7)));
-    driver.call(Command::Inspect(id(3))).unwrap();
+    driver
+        .call(Command::Send {
+            pane: id(3),
+            input: Input::Key(terminal::Key::Enter),
+        })
+        .unwrap();
+    driver.until(|d| d.host.world().pane(id(3)).is_none());
+    assert!(driver.messages.iter().any(|m| matches!(
+        m,
+        Message::Process {
+            exited: true,
+            code: Some(7),
+            ..
+        }
+    )));
 }
 
 #[test]
@@ -91,10 +104,12 @@ fn slow() {
     driver
         .call(Command::Start {
             pane: id(3),
-            program: program("stty raw -echo; head -c 131072 /dev/zero; printf END"),
+            program: program(
+                "stty raw -echo; head -c 131072 /dev/zero; printf END; head -c 1 >/dev/null",
+            ),
         })
         .unwrap();
-    driver.until(|d| d.host.world().pane(id(3)).unwrap().state() == State::Exited(Some(0)));
+    driver.until(|d| d.contains("END"));
     driver.call(Command::Inspect(id(3))).unwrap();
     driver.until(|d| d.contains("END"));
     assert!(
@@ -110,7 +125,7 @@ fn slow() {
 fn presentation() {
     let mut driver = Driver::new();
     driver.create();
-    driver.start("stty raw -echo; head -c 131072 /dev/zero; printf END");
+    driver.start("stty raw -echo; head -c 131072 /dev/zero; printf END; head -c 1 >/dev/null");
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
     while !driver.contains("END") {
         assert!(std::time::Instant::now() < deadline);
@@ -124,9 +139,15 @@ fn presentation() {
 fn query() {
     let mut driver = Driver::new();
     driver.create();
-    driver.start(r"stty raw -echo; printf '\033[5n'; od -An -tx1 -N4");
+    driver.start(r"stty raw -echo; printf '\033[5n'; od -An -tx1 -N4; head -c 1 >/dev/null");
     driver.until(|d| d.contains("1b 5b 30 6e"));
-    driver.until(|d| d.host.world().pane(id(3)).unwrap().state() == State::Exited(Some(0)));
+    driver
+        .call(Command::Send {
+            pane: id(3),
+            input: Input::Text("x".into()),
+        })
+        .unwrap();
+    driver.until(|d| d.host.world().pane(id(3)).is_none());
 }
 
 #[test]

@@ -652,10 +652,16 @@ an explicit fixed size when automatic sizing cannot fit the current layout.
 Column and row splits use a ratio of 1–999 thousandths and one separator cell.
 Panes need at least two columns and one row. A refused model split, handoff or resize
 preserves the previous tree, focus, policy, revision and ID allocator. Closing
-a pane collapses its split; an empty window is removed, while an empty session
-remains until explicitly closed. Focus falls back to the lowest surviving ID.
-New windows and splits select their newly created object. Process exit retains
-the pane and its outcome. Disconnect releases control without closing objects.
+a pane collapses its split; an empty window is removed, and removing the last
+window removes its session. Focus falls back to the lowest surviving ID.
+New windows and splits select their newly created object. The host automatically
+closes successfully started panes after process exit, PTY EOF, admitted input
+completion and native reaping, for every exit code or signal. Startup failures
+and native faults remain diagnosable. Attached clients leave a removed session
+and restore their terminal; the host and other applications stay alive. A new
+entry with the same name creates fresh identities and a new shell. This changes
+the v0.3.0 behavior, which retained exited panes. Disconnect still releases
+control without closing objects.
 
 The model limits one world to 32 sessions and 4096 panes, one session to
 32 windows and 64 attached clients, and one window to 64 panes and 16 tree

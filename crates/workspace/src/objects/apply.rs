@@ -152,35 +152,8 @@ impl World {
     }
 
     fn close(&mut self, actor: Id, target: Target) -> Result<Vec<Id>, Failure> {
-        let (session, window) = self.location(target)?;
+        let (session, _) = self.location(target)?;
         self.sessions[&session].require(actor)?;
-        if let Target::Session(_) = target {
-            let session = self.sessions.remove(&session).unwrap();
-            return Ok(session
-                .windows()
-                .flat_map(Window::panes)
-                .map(|pane| pane.id())
-                .collect());
-        }
-        let session = self.edit(session)?;
-        let window = window.unwrap();
-        let retired = match target {
-            Target::Pane(pane) => {
-                session.windows.get_mut(&window).unwrap().remove(pane);
-                vec![pane]
-            }
-            Target::Window(_) => session.windows[&window].panes.keys().copied().collect(),
-            Target::Session(_) => return Err(Failure::State),
-        };
-        if matches!(target, Target::Window(_)) || session.windows[&window].panes.is_empty() {
-            session.windows.remove(&window);
-        }
-        if session
-            .selected
-            .is_some_and(|id| !session.windows.contains_key(&id))
-        {
-            session.selected = session.windows.keys().next().copied();
-        }
-        Ok(retired)
+        self.remove(target)
     }
 }

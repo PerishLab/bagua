@@ -51,8 +51,12 @@ encoding before actual transport qualification.
 World owns the authoritative object tree and ID allocation. Snapshots expose
 read-only copies, not another writable authority. Window/pane ownership is
 unique; IDs are not reused within one world. Closing a last pane removes its
-window, while a session can remain empty. Exit retains the pane. Trusted native
-outcomes use World observation, not a client command. A retired ID cannot be
+window; removing its last window removes the session. Trusted native outcomes
+use World observation, not a client command. The host automatically retires a
+successfully started pane after exit, PTY EOF, input completion and native
+reaping. Exit codes and signals do not retain ordinary panes. Startup failures
+and native faults remain diagnosable. Session retirement ends attached clients
+without stopping the host or other applications. A retired ID cannot be
 recreated by a late outcome. Model retirement returns exact cleanup intents;
 the host retains resource custody until actual native completion.
 

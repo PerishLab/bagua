@@ -106,6 +106,7 @@ impl Host {
         self.pump()?;
         self.settle()?;
         self.publish()?;
+        self.reap()?;
         Ok(())
     }
 

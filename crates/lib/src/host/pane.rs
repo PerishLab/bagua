@@ -46,6 +46,21 @@ impl Pane {
         })
     }
 
+    pub fn finished(&self) -> bool {
+        match self {
+            Self {
+                exit: Some(_),
+                eof: true,
+                process: None,
+                retiring: false,
+                fault: None,
+                cleanup: None,
+                ..
+            } => self.input.is_empty() && self.replies.is_empty(),
+            _ => false,
+        }
+    }
+
     pub fn pending(&self, actor: Id) -> bool {
         self.input.iter().any(|write| write.actor == actor)
     }
