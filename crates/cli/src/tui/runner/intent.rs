@@ -67,7 +67,7 @@ impl Runner {
             self.launches.front(),
             self.jobs
                 .values()
-                .find(|job| matches!(job, Job::Resolve { .. } | Job::Start)),
+                .find(|job| matches!(job, Job::Resolve { .. } | Job::Start(_))),
         ) {
             (None, None) => Gate::Open,
             _ => Gate::Native,
@@ -89,7 +89,7 @@ impl Runner {
         {
             return;
         }
-        if !self.launches.is_empty() || self.jobs.values().any(|job| matches!(job, Job::Start)) {
+        if !self.launches.is_empty() || self.jobs.values().any(|job| matches!(job, Job::Start(_))) {
             return;
         }
         if fence.focus.is_some() && fence.focus != self.app.focus() {
@@ -107,7 +107,7 @@ impl Runner {
         }
         match self.jobs.get(&request) {
             Some(Job::Resolve { .. }) => "Read current directory",
-            Some(Job::Start) => "Start pane",
+            Some(Job::Start(_)) => "Start pane",
             _ => "Workspace operation",
         }
     }
@@ -126,7 +126,7 @@ impl Runner {
         };
         let native = matches!(
             self.jobs.get(&request),
-            Some(Job::Start | Job::Resolve { .. })
+            Some(Job::Start(_) | Job::Resolve { .. })
         );
         if !self.owns(request) && !native {
             return None;

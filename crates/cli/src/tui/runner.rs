@@ -36,7 +36,7 @@ enum Job {
         received: bool,
     },
     Spawn(Program),
-    Start,
+    Start(Id),
     Resolve {
         pane: Id,
         command: Command,
@@ -188,6 +188,9 @@ impl Runner {
                     return Err(Failure::Payload.into());
                 }
                 self.refused(*request);
+            }
+            if let (Some(Job::Start(pane)), Err(fault)) = (self.jobs.get(request), result) {
+                self.app.reported(*pane, fault.clone());
             }
             self.jobs.remove(request);
         }
