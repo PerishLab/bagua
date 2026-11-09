@@ -241,6 +241,14 @@ does not grant control. Divider adjustment validates its prior split and geometr
 atomically in World; release commits one command. Application tracking and local
 selection have distinct routing, with Shift selecting locally.
 
+Live Escape belongs to the application. Prefix Escape cancels only the prefix;
+Copy Escape returns to Live. Successful explicit copy and copy-on-release also
+return to Live; unsuccessful copy preserves its selection and prior buffer.
+Explicit history browsing stays frozen until exit, independent of new output.
+Mode, observation role and connection recovery remain visible separately from
+transient notices. Notices expire after two seconds without consuming input;
+narrow viewports give mode and actionable feedback priority over decorations.
+
 Client copy limits are independent of the host paste budget. Overflow preserves
 the previous buffer. Only explicit user selection can enqueue an outer OSC52
 effect, under client configuration. Application OSC strings never pass through.

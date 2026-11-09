@@ -463,7 +463,11 @@ refresh_seconds = 15
 Header components are unique `pane`, `command` and `cwd` selections. Status
 components are unique `session`, `windows`, `prefix`, `notice` and `clock`
 selections; each list has at most eight entries and may be empty. There is no
-format language, shell evaluation or arbitrary escape-string component. Colors
+format language, shell evaluation or arbitrary escape-string component.
+Ordinary notices expire after two seconds without consuming a key. Live/Copy,
+Observe and Recovering are independent client states; observation and recovery
+remain visible. Narrow status rows prioritize mode, prefix and actionable
+errors before window details, clocks and decoration. Colors
 are indexed values 0..=255. Header/background activity uses `active`/`inactive`;
 body cells retain application styles and the terminal's default background.
 `color=false` uses default colors and an inverse/bold active indication. Indexed
@@ -556,9 +560,13 @@ while paused navigate by one pane height. Prefix End, ordinary End or Escape
 returns live. Wheel moves three rows when application tracking is off; Shift-wheel
 explicitly reads history even when tracking is active. An observer may read
 history without acquiring control. Wheels target the focused pane. Ordinary
-application input while paused refuses until returning live; selection retains
-its existing arrow/copy semantics. Ongoing output neither changes the frozen
-page nor scrolls it. Focus/geometry changes discard the paused view and selection.
+application input in Copy refuses until returning Live. Escape cancels both
+selection and history browsing. Successful explicit copy and copy-on-release
+return to Live immediately, so the next key reaches the application without an
+extra Escape. A failed copy retains the selection and previous buffer. Ongoing
+output neither changes the frozen page nor scrolls it. Focus/geometry changes
+discard the frozen view and selection. Copy mode and its position remain visible
+even after its transient notice expires.
 
 Rows have monotonically increasing identities. Requests carry host context,
 pane and geometry/reset epoch plus absolute row position. Foreign contexts,

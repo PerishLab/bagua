@@ -63,8 +63,7 @@ impl App {
 
     pub(super) fn selecting(&mut self, input: Input) -> Result<(), Failure> {
         if input == Input::Key(Key::Escape) {
-            self.selection = None;
-            self.dirty = true;
+            self.live();
             return Ok(());
         }
         let selection = self.selection.as_ref().unwrap();
@@ -123,8 +122,7 @@ impl App {
         }
         self.copies.push(&copied, self.copying.outer)?;
         self.clipboard = copied;
-        self.selection = None;
-        self.pointer = None;
+        self.live();
         self.status(format!(
             "Copied {} bytes locally{}",
             self.clipboard.len(),
