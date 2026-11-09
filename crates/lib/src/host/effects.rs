@@ -30,7 +30,7 @@ impl Host {
             _ => Vec::new(),
         };
         self.reply(actor, request, Ok(status))?;
-        let result = self.geometry();
+        let result = self.geometry()?.map_or(Ok(()), Err);
         if !retired.is_empty() {
             self.retire(&retired);
             self.closing.push(Closing {
@@ -59,7 +59,7 @@ impl Host {
         .unwrap())
     }
 
-    fn geometry(&mut self) -> Result<(), Fault> {
+    fn geometry(&mut self) -> Result<Option<Fault>, Failure> {
         let ids: Vec<_> = self
             .world
             .snapshot()
@@ -68,29 +68,28 @@ impl Host {
             .flat_map(|w| w.panes())
             .map(|p| p.id())
             .collect();
-        let mut result = Ok(());
+        let mut result = None;
         for id in ids {
-            let extent = self.extent(id).map_err(Fault::from)?;
+            let extent = self.extent(id)?;
             if let std::collections::btree_map::Entry::Vacant(entry) = self.panes.entry(id) {
-                entry.insert(Pane::new(extent, self.history).map_err(Fault::from)?);
+                entry.insert(Pane::new(extent, self.history)?);
             }
             let pane = self.panes.get_mut(&id).unwrap();
             if pane.engine.extent() == extent {
                 continue;
             }
-            pane.engine
-                .resize(extent)
-                .map_err(|_| Fault::from(Failure::Payload))?;
+            pane.engine.resize(extent).map_err(|_| Failure::Payload)?;
             if let Some(process) = &pane.process
                 && let Err(error) =
                     process.resize(pty::Size::new(extent.width(), extent.height()).unwrap())
             {
                 let error = fault(error);
                 pane.fault = Some(error.clone());
-                result = Err(error);
+                pane.reported = false;
+                result = Some(error);
             }
         }
-        result
+        Ok(result)
     }
 
     fn retire(&mut self, ids: &[Id]) {
@@ -113,6 +112,42 @@ impl Host {
         self.stopping = Some((actor, request));
         let ids: Vec<_> = self.panes.keys().copied().collect();
         self.retire(&ids);
+        Ok(())
+    }
+
+    pub(super) fn reap(&mut self) -> Result<(), Failure> {
+        if self.stopping.is_some() {
+            return Ok(());
+        }
+        let ids: Vec<_> = self
+            .panes
+            .iter()
+            .filter(|(id, pane)| pane.finished() && self.world.pane(**id).is_some())
+            .map(|(id, _)| *id)
+            .collect();
+        for id in &ids {
+            self.world.finish(*id)?;
+            self.panes.remove(id);
+            let mut pending = Vec::new();
+            for (actor, client) in &mut self.clients {
+                if let Some(request) = client.wanted.remove(id) {
+                    pending.push((*actor, request));
+                }
+                if client
+                    .history
+                    .as_ref()
+                    .is_some_and(|(_, pane, _)| pane == id)
+                {
+                    pending.push((*actor, client.history.take().unwrap().0));
+                }
+            }
+            for (actor, request) in pending {
+                self.complete(actor, request, Err(Failure::Target.into()))?;
+            }
+        }
+        if !ids.is_empty() {
+            self.geometry()?;
+        }
         Ok(())
     }
 

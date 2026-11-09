@@ -42,6 +42,7 @@ fn exit() {
         Err(Failure::State)
     );
     let before = fixture.world.snapshot();
+    assert_eq!(fixture.world.finish(pane), Err(Failure::State));
     assert_eq!(
         fixture.world.observe(pane, State::Exited(Some(0))),
         Err(Failure::State)
@@ -49,6 +50,7 @@ fn exit() {
     assert_eq!(fixture.world.snapshot(), before);
     fixture.world.observe(pane, State::Running).unwrap();
     fixture.world.input(fixture.actor, pane).unwrap();
+    assert_eq!(fixture.world.finish(pane), Err(Failure::State));
     fixture.world.observe(pane, State::Exited(Some(7))).unwrap();
     assert_eq!(
         fixture.world.pane(pane).unwrap().state(),
@@ -62,13 +64,15 @@ fn exit() {
         fixture.world.observe(pane, State::Running),
         Err(Failure::State)
     );
-    let change = fixture.apply(Operation::Close(Target::Pane(pane))).unwrap();
+    let change = fixture.world.finish(pane).unwrap();
     assert_eq!(change.retired, vec![pane]);
     assert!(fixture.world.pane(pane).is_none());
-    let session = fixture.world.session(fixture.creation.session).unwrap();
-    assert_eq!(session.selected(), None);
-    assert_eq!(session.windows().count(), 0);
-    assert_eq!(session.controller(), Some(fixture.actor));
+    assert!(fixture.world.session(fixture.creation.session).is_none());
+    assert_eq!(
+        fixture.world.observe(pane, State::Exited(Some(0))),
+        Err(Failure::Missing)
+    );
+    assert_eq!(fixture.world.finish(pane), Err(Failure::Missing));
 }
 
 #[test]
@@ -92,18 +96,13 @@ fn retirement() {
             .count(),
         2
     );
-    let created = fixture
-        .apply(Operation::Window(fixture.creation.session))
-        .unwrap();
-    let Target::Window(window) = created.created[0] else {
-        panic!()
-    };
-    assert!(window > second);
-    let change = fixture
-        .apply(Operation::Close(Target::Session(fixture.creation.session)))
-        .unwrap();
-    assert_eq!(change.retired.len(), 1);
     assert!(fixture.world.session(fixture.creation.session).is_none());
+    let created = fixture
+        .world
+        .create(Geometry::new(81, 25).unwrap())
+        .unwrap();
+    assert!(created.session > second);
+    assert!(created.pane > created.window);
 }
 
 #[test]

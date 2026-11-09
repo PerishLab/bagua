@@ -134,3 +134,38 @@ fn cwd() {
     assert!(fixture.shutdown());
     peer.until("RESTORED:2");
 }
+
+#[test]
+fn departure() {
+    let mut fixture = Fixture::cold();
+    let mut peer = Peer::ordinary(&fixture, &[], Size::new(80, 24).unwrap());
+    peer.until("bagua w1 control");
+    let original = fixture.catalog().sessions().next().unwrap().id();
+    peer.send(b"\x07\\");
+    wait(&mut peer, || panes(&fixture) == 2 && running(&fixture));
+    peer.send(b"printf '\\123PLIT_READY\\n'\r");
+    peer.until("SPLIT_READY");
+    peer.send(b"exit\r");
+    wait(&mut peer, || panes(&fixture) == 1);
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while peer.text().contains("SPLIT_READY") {
+        assert!(Instant::now() < deadline);
+        peer.pump();
+    }
+    assert_eq!(fixture.catalog().sessions().next().unwrap().id(), original);
+    peer.send(b"printf '\\101LIVE\\n'\r");
+    peer.until("ALIVE");
+    peer.send(b"exit 7\r");
+    peer.until("RESTORED:0");
+    assert!(!peer.text().contains("BROKEN-MODE"));
+    assert_eq!(fixture.catalog().sessions().count(), 0);
+    let mut again = Peer::ordinary(&fixture, &[], Size::new(80, 24).unwrap());
+    again.until("bagua w1 control");
+    let fresh = fixture.catalog();
+    let session = fresh.sessions().next().unwrap();
+    assert_eq!(session.name(), "workspace");
+    assert!(session.id() > original);
+    assert!(running(&fixture));
+    again.detach();
+    assert!(fixture.shutdown());
+}

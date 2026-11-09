@@ -67,7 +67,7 @@ fn custody() {
 fn input() {
     let mut driver = Driver::new();
     driver.create();
-    driver.start("stty raw -echo; printf READY; head -c 65536 | wc -c");
+    driver.start("stty raw -echo; printf READY; head -c 65536 | wc -c; head -c 1 >/dev/null");
     driver.until(|d| d.contains("READY"));
     for _ in 0..16 {
         driver.submit(Command::Send {

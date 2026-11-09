@@ -246,16 +246,13 @@ fn empty() {
     fixture
         .apply(Operation::Close(Target::Pane(fixture.creation.pane)))
         .unwrap();
-    fixture
-        .apply(Operation::Header {
-            session: fixture.creation.session,
-            enabled: true,
-        })
-        .unwrap();
     let before = fixture.world.snapshot();
     assert_eq!(
-        fixture.apply(Operation::Window(fixture.creation.session)),
-        Err(Failure::Geometry)
+        fixture.apply(Operation::Header {
+            session: fixture.creation.session,
+            enabled: true,
+        }),
+        Err(Failure::Missing)
     );
     assert_eq!(fixture.world.snapshot(), before);
 }

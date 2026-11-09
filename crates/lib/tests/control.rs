@@ -157,7 +157,7 @@ fn retirement() {
     };
     assert_eq!(change.retired, vec![created.pane]);
     assert!(world.pane(created.pane).is_none());
-    assert!(world.session(created.session).is_some());
+    assert!(world.session(created.session).is_none());
     assert_eq!(
         world.observe(created.pane, State::Exited(Some(0))),
         Err(workspace::Failure::Missing)
