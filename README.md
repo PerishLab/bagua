@@ -404,18 +404,31 @@ is unresolved or earlier gestures still need draining refuses explicitly; its
 coordinates are never silently interpreted against a different layout. Local
 pointer policies are further specified by Issue #29.
 
-A rejected layout/focus intent or native start pauses application input and
-explicitly refuses the following unsent gestures. They are never sent to the
-old pane as a fallback. Press an unmodified Escape to acknowledge and resume;
-Escape is reserved for this acknowledgement while paused. Buffered gestures are
-not replayed. Acknowledgement does not bypass an unresolved model outcome: a
-missing applied revision remains unknown and requires host inspection or detach.
-Help, reload and detach remain available while paused. Loss of the connection
-keeps the existing uncertain-outcome rule and never authorizes replay.
+A known layout/focus refusal or native start failure ends the affected intent
+chain. Its dependent, unsent gestures are discarded instead of being sent to
+the old pane. Fresh intentions continue without an Escape acknowledgement.
+Intent sequence and dependency identities span TTY reads; a read or packet is
+never a command group. An incomplete keyboard sequence or paste belonging to
+the failed chain is consumed without delivering its remaining content.
+Already admitted commands retain their exact targets and byte custody.
+
+An invalid window index reports the available range and leaves focus unchanged.
+Selecting the current window or cycling a single pane is a no-op. These local
+navigation outcomes create no layout barrier and do not discard following text.
+An unmodified Escape in Live goes to the application; while waiting for a
+prefix it cancels that prefix.
+
+An unconfirmed model outcome enters bounded recovery. New application input
+is refused; Escape cannot confirm the outcome or authorize replay. After
+outstanding reliable work settles, an explicit complete catalog read and its
+completion establish the current model before fresh intentions resume. If
+confirmation cannot finish within the recovery budget, only the client exits
+and restores its terminal; the host and applications remain. Help, reload and
+detach remain available. A lost connection never authorizes replay.
 
 The own-CLI regression checks batch shortcuts and literal shell commands in one
 PTY write, then independently inspect each pane. They cover split, new window,
-Alt return, mouse focus, close/fallback and explicit failure acknowledgement;
+Alt return, mouse focus, close/fallback and refusal without Escape;
 pure protocol checks retain text until fresh model/start evidence and refuse
 writes after transfer. These source checks do not replace Seatrial #83's
 independent distributed-artifact workflow qualification.
