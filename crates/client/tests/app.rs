@@ -195,6 +195,12 @@ fn browsing() {
     let pane = Id::new(3).unwrap();
     assert_eq!(app.screen(pane).unwrap().cells[0].text, "z");
     let paused = app.screen(pane).unwrap().clone();
+    app.tick(
+        std::time::Instant::now() + std::time::Duration::from_secs(5),
+        std::time::SystemTime::now(),
+    );
+    let bytes = app.draw().unwrap();
+    assert!(bytes.windows(4).any(|bytes| bytes == b"Copy"));
     for _ in 0..30 {
         engine.feed(b"\r\nNEW").unwrap();
     }
@@ -203,8 +209,8 @@ fn browsing() {
     app.select(pane, Point { x: 0, y: 0 }, false).unwrap();
     app.select(pane, Point { x: 3, y: 0 }, true).unwrap();
     app.handle(Gesture::Copy).unwrap();
-    assert_eq!(app.screen(pane).unwrap(), &paused);
-    app.handle(Gesture::Live).unwrap();
+    assert!(app.history(pane).is_none());
+    assert_ne!(app.screen(pane).unwrap(), &paused);
     assert!(app.history(pane).is_none());
     assert_eq!(
         app.handle(Gesture::Paste).unwrap(),

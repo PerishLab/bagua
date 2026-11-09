@@ -53,7 +53,7 @@ impl App {
         }
     }
 
-    pub(super) fn live(&mut self) {
+    pub(crate) fn live(&mut self) {
         self.cancel();
         self.past.view = None;
         self.past.wanted = None;

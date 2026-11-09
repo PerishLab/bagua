@@ -19,6 +19,12 @@ impl App {
 
     pub fn tick(&mut self, now: Instant, wall: SystemTime) {
         self.now = now;
+        if self.expires.is_some_and(|expires| now >= expires) {
+            self.expires = None;
+            self.notice.clear();
+            self.urgent = false;
+            self.dirty = true;
+        }
         if self.next.is_some_and(|next| now < next) {
             return;
         }

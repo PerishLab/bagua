@@ -42,8 +42,9 @@ impl Runner {
                         catalog: false,
                     });
                 }
+                self.app.recovering(true);
                 self.app
-                    .error("Recovering; uncertain input will not be replayed");
+                    .error("Uncertain input discarded; detach remains available");
             }
         }
     }
@@ -92,6 +93,7 @@ impl Runner {
                     self.fence = None;
                     self.routing.settle(&mut self.intents);
                     self.recovery = None;
+                    self.app.recovering(false);
                     self.app
                         .status("Live; uncertain input discarded, no replay");
                 }

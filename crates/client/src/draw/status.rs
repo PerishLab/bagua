@@ -9,24 +9,37 @@ impl App {
         let active = tone(status.color, status.active, true);
         let mut row = Row::new(width);
         row.fill(0..width, style);
-        let urgent = self.urgent || self.leader.is_some();
+        let mode = self.mode();
+        let priority = self.urgent || self.leader.is_some() || mode != "Live";
         let clock = !matches!(
-            (width, urgent, status.components.contains(&Component::Clock)),
+            (
+                width,
+                priority,
+                status.components.contains(&Component::Clock)
+            ),
             (_, _, false) | (0..=11, _, _) | (12..=63, true, _)
         );
         let end = if clock { width - 6 } else { width };
+        let mut x = 0;
+        if mode != "Live" {
+            x = row.label(x..end, &format!("{mode} | "), active);
+        }
+        if let Some(prefix) = &self.leader
+            && status.components.contains(&Component::Prefix)
+        {
+            x = row.label(x..end, &format!("{prefix}: prefix pending | "), active);
+        }
+        if self.urgent {
+            x = row.label(x..end, &format!("{} | ", self.notice), active);
+        }
         let role = if self.controller() {
             "control"
         } else {
             "observe"
         };
-        let mut x = row.label(0..end, &format!("bagua {} {role}", self.caption()), style);
-        if let Some(prefix) = &self.leader
-            && status.components.contains(&Component::Prefix)
+        x = row.label(x..end, &format!("bagua {} {role}", self.caption()), style);
+        if !self.urgent && !self.notice.is_empty() && status.components.contains(&Component::Notice)
         {
-            x = row.label(x..end, &format!(" | {prefix}: prefix pending"), active);
-        }
-        if status.components.contains(&Component::Notice) {
             x = row.label(x..end, &format!(" | {}", self.notice), style);
         }
         for component in &status.components {

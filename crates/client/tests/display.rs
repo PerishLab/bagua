@@ -129,7 +129,7 @@ fn clock() {
     let text = picture(&app).contents();
     assert!(text.contains("00:08"));
     assert!(!text.contains("prefix pending"));
-    assert!(text.contains("Configuration unchanged"));
+    assert!(!text.contains("Configuration unchanged"));
 }
 
 #[test]
@@ -213,4 +213,27 @@ fn heading() {
     world.disconnect(app.actor()).unwrap();
     app.catalog(world.snapshot()).unwrap();
     assert!(app.mouse(event).unwrap().is_empty());
+}
+
+#[test]
+fn feedback() {
+    let (mut app, mut world) = setup();
+    let now = Instant::now();
+    let wall = UNIX_EPOCH;
+    app.tick(now, wall);
+    app.resize(Extent::new(24, 6).unwrap());
+    app.error("No window 9; available 1–2");
+    assert!(picture(&app).contents().contains("No window 9"));
+    app.tick(now + Duration::from_millis(1999), wall);
+    assert!(picture(&app).contents().contains("No window 9"));
+    app.tick(now + Duration::from_secs(2), wall);
+    assert!(!picture(&app).contents().contains("No window 9"));
+    app.recovering(true);
+    app.tick(now + Duration::from_secs(20), wall);
+    assert!(picture(&app).contents().contains("Recovering"));
+    app.recovering(false);
+    world.disconnect(app.actor()).unwrap();
+    app.catalog(world.snapshot()).unwrap();
+    app.tick(now + Duration::from_secs(30), wall);
+    assert!(picture(&app).contents().contains("Observe"));
 }

@@ -1,5 +1,6 @@
 mod context;
 mod controls;
+mod feedback;
 mod history;
 mod install;
 pub(super) mod preferences;
@@ -25,6 +26,8 @@ pub struct App {
     pub(super) clipboard: String,
     pub(super) notice: String,
     pub(super) urgent: bool,
+    pub(super) expires: Option<std::time::Instant>,
+    pub(super) recovering: bool,
     pub(super) done: bool,
     pub(super) dirty: bool,
     past: history::Past,
@@ -53,6 +56,8 @@ impl App {
             clipboard: String::new(),
             notice: "Ready".into(),
             urgent: false,
+            expires: Some(std::time::Instant::now() + std::time::Duration::from_secs(2)),
+            recovering: false,
             done: false,
             dirty: true,
             past: history::Past::default(),
@@ -83,20 +88,6 @@ impl App {
     }
     pub fn clean(&mut self) {
         self.dirty = false;
-    }
-    pub fn status(&mut self, value: impl Into<String>) {
-        self.notice = value
-            .into()
-            .chars()
-            .map(|c| if c.is_control() { '?' } else { c })
-            .take(512)
-            .collect();
-        self.dirty = true;
-        self.urgent = false;
-    }
-    pub fn error(&mut self, value: impl Into<String>) {
-        self.status(value);
-        self.urgent = true;
     }
     pub fn screen(&self, pane: Id) -> Option<&Screen> {
         if let Some(selection) = &self.selection

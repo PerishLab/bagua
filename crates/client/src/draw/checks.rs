@@ -21,7 +21,18 @@ fn minutes() {
     let now = Instant::now();
     let wall = UNIX_EPOCH + Duration::from_secs(23 * 3600 + 59 * 60);
     app.tick(now, wall);
+    let notice = app.paint().unwrap();
+    app.tick(now + Duration::from_secs(2), wall + Duration::from_secs(2));
     let first = app.paint().unwrap();
+    let expired = first.render(Some(&notice));
+    assert_eq!(
+        expired
+            .windows(4)
+            .filter(|bytes| *bytes == b"\x1b[2K")
+            .count(),
+        1
+    );
+    assert!(!expired.windows(4).any(|bytes| bytes == b"\x1b[2J"));
     app.tick(
         now + Duration::from_secs(15),
         wall + Duration::from_secs(15),
