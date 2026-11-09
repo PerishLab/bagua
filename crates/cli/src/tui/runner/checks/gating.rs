@@ -85,7 +85,6 @@ fn snapshot() {
 
 #[test]
 fn failure() {
-    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     let (mut runner, mut wire, _) = setup();
     runner
         .stage(Gesture::Split(workspace::Axis::Columns))
@@ -103,23 +102,21 @@ fn failure() {
             result: Err(Failure::Native.into()),
         })
         .unwrap();
-    assert!(runner.paused);
+    assert!(runner.recovery.is_none());
     assert!(runner.intents.is_empty());
     assert_eq!(runner.staged, 0);
     runner
-        .stage(Gesture::Input(protocol::Input::Text("blocked".into())))
+        .stage(Gesture::Input(protocol::Input::Text("fresh".into())))
         .unwrap();
     runner.drain().unwrap();
     runner.pending().unwrap();
     runner.channel.flush().unwrap();
-    while let Some(request) = wire.take() {
-        assert!(!matches!(request.command, Command::Send { .. }));
-    }
-    runner
-        .key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE))
-        .unwrap();
-    assert!(!runner.paused);
-    assert!(runner.intents.is_empty());
+    let request = wire.take().unwrap();
+    assert!(
+        matches!(request.command, Command::Send { pane, input: protocol::Input::Text(text) }
+        if pane.value() == 3 && text == "fresh")
+    );
+    assert!(wire.take().is_none());
 }
 
 #[test]
@@ -197,7 +194,7 @@ fn transfer() {
 #[test]
 fn unknown() {
     let (mut runner, mut wire, _) = setup();
-    runner.stage(Gesture::Index(1)).unwrap();
+    runner.stage(Gesture::Acquire).unwrap();
     runner
         .stage(Gesture::Input(protocol::Input::Text(
             "unknown-must-not-write".into(),
@@ -215,7 +212,7 @@ fn unknown() {
         .unwrap();
     runner.release();
     runner.drain().unwrap();
-    assert!(runner.paused);
+    assert!(runner.recovery.is_some());
     assert!(runner.fence.is_some());
     assert!(runner.intents.is_empty());
     assert!(wire.take().is_none());

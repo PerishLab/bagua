@@ -148,3 +148,22 @@ fn modifiers() {
         matches!(keyboard.next(now), Some(Ok(Event::Key(key))) if key.code == KeyCode::Char('z'))
     );
 }
+
+#[test]
+fn cancellation() {
+    let now = Instant::now();
+    for bytes in ["中".as_bytes(), b"\x1b[A", b"\x1b[200~never\x1b[201~"] {
+        for split in 1..bytes.len() {
+            let mut keyboard = Keyboard::default();
+            keyboard.push(&bytes[..split]).unwrap();
+            keyboard.cancel(now);
+            keyboard.push(&bytes[split..]).unwrap();
+            while let Some(event) = keyboard.next(now) {
+                assert!(event.is_err());
+            }
+            keyboard.push(b"z").unwrap();
+            assert!(matches!(keyboard.next(now), Some(Ok(Event::Key(key)))
+                if key.code == KeyCode::Char('z')));
+        }
+    }
+}

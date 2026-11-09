@@ -225,9 +225,13 @@ Layout/focus intentions bind subsequent input only after reliable completion,
 the applied revision in a validated catalog, and any created pane's start result.
 Deferred client gestures are bounded FIFO data, not a second World or replay
 log. Retire carries an applied model change before native cleanup completes.
-Failures explicitly pause/refuse following unsent gestures; Escape acknowledges
-without replay and never bypasses an unknown model outcome. Already admitted
-commands keep their exact targets and byte custody. Viewport reports preserve
+Known refusals discard the affected deferred intent chain and incomplete input
+framing, then accept fresh intentions without an Escape acknowledgement. Invalid
+local navigation and no-op focus changes create no layout dependency. Unknown
+outcomes block routing until a fresh explicit catalog read completes after
+outstanding native work; recovery has a bounded client-only exit. Escape never
+confirms an unknown result. Already admitted commands keep their exact targets
+and byte custody. Viewport reports preserve
 focus. Pointer coordinates never overtake earlier keyboard intentions or get
 silently rebound to a changed layout.
 

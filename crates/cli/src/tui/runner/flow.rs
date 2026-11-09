@@ -2,16 +2,17 @@ use super::*;
 
 impl Runner {
     pub(super) fn stage(&mut self, gesture: Gesture) -> Result<(), Failure> {
-        if self.paused {
-            self.app
-                .error("Input paused after a failed intent; Escape resumes without replay");
+        if self.recovery.is_some() {
+            self.app.error("Recovering; input was not admitted");
             return Ok(());
         }
         let bytes = size(&gesture);
         if self.staged + bytes > 65_536 {
             return Err(Failure::Capacity);
         }
-        if let Some(Gesture::Input(protocol::Input::Text(text))) = self.intents.back_mut()
+        if let Some(pending) = self.intents.back_mut()
+            && self.routing.adjacent(pending)
+            && let Gesture::Input(protocol::Input::Text(text)) = &mut pending.gesture
             && let Gesture::Input(protocol::Input::Text(extra)) = &gesture
             && text.len() + extra.len() <= terminal::CHUNK
         {
@@ -23,32 +24,39 @@ impl Runner {
             return Err(Failure::Capacity);
         }
         self.staged += bytes;
-        self.intents.push_back(gesture);
+        self.intents.push_back(self.routing.bind(gesture)?);
         Ok(())
     }
 
     pub(super) fn drain(&mut self) -> Result<(), Error> {
         for _ in 0..16 {
-            if self.paused || self.suspended || self.fenced() {
+            if self.recovery.is_some() || self.suspended || self.fenced() {
                 break;
             }
-            let Some(gesture) = self.intents.pop_front() else {
+            let Some(deferred) = self.intents.pop_front() else {
                 break;
             };
+            self.routing.begin(&deferred);
+            let gesture = deferred.gesture;
             self.staged -= size(&gesture);
             if gesture == Gesture::Reload {
                 self.reload();
                 continue;
             }
             if self.app.done() {
-                self.pause("workspace closed; pending input was not sent");
+                self.intents.clear();
+                self.staged = 0;
+                self.refuse("Workspace closed; pending input was not sent");
                 break;
             }
             let changing = intent::changing(&gesture);
             let commands = self.app.handle(gesture);
             if changing && let Err(failure) = &commands {
-                self.pause(failure.message());
+                self.refuse(failure.message());
                 break;
+            }
+            if commands.as_ref().is_ok_and(Vec::is_empty) {
+                self.routing.settle(&mut self.intents);
             }
             self.commands(commands)?;
         }
@@ -73,10 +81,10 @@ impl Runner {
                 .map(|()| Vec::new()),
             Event::Mouse(mouse) => {
                 self.drain()?;
-                if self.fenced() || self.paused || !self.intents.is_empty() {
+                if self.fenced() || self.recovery.is_some() || !self.intents.is_empty() {
                     self.app.cancel();
                     self.app
-                        .error("Layout pending or input paused; mouse gesture was not admitted");
+                        .error("Layout pending or recovering; mouse gesture was not admitted");
                     return Ok(());
                 }
                 self.app.mouse(mouse)
@@ -112,24 +120,27 @@ impl Runner {
             }
         };
         for command in commands {
+            let changing = intent::mutation(&command);
+            if changing {
+                self.routing.command()?;
+            }
             if matches!(
                 command,
                 Command::Workspace(Operation::Split { .. } | Operation::Window(_))
             ) && self.program.is_none()
             {
-                self.pause("provide --executable and --cwd before creating panes");
+                self.refuse("provide --executable and --cwd before creating panes");
                 continue;
             }
-            let changing = intent::mutation(&command);
             if !self.enqueue(command) && changing {
-                self.pause("the layout intent exceeded its admission budget");
+                self.refuse("the layout intent exceeded its admission budget");
             }
         }
         Ok(())
     }
 }
 
-fn size(gesture: &Gesture) -> usize {
+pub(super) fn size(gesture: &Gesture) -> usize {
     match gesture {
         Gesture::Input(protocol::Input::Text(text) | protocol::Input::Paste(text)) => text.len(),
         _ => 64,

@@ -1,5 +1,6 @@
 mod decor;
 mod gating;
+mod recovery;
 use super::*;
 use bagua::ipc::Connection;
 use protocol::wire::{Context, Decoder, REQUEST};

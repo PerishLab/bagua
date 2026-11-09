@@ -2,9 +2,11 @@ use super::*;
 
 pub(super) struct Fence {
     request: u64,
+    started: Instant,
     revision: Option<u64>,
     finished: bool,
     focus: Option<Id>,
+    action: &'static str,
 }
 
 impl Fence {
@@ -15,9 +17,11 @@ impl Fence {
         };
         Self {
             request: request.id,
+            started: Instant::now(),
             revision: None,
             finished: false,
             focus,
+            action: action(&request.command),
         }
     }
 }
@@ -74,17 +78,6 @@ impl Runner {
         self.gate() != Gate::Open
     }
 
-    pub(super) fn pause(&mut self, reason: &str) {
-        self.paused = true;
-        self.intents.clear();
-        self.staged = 0;
-        self.leader = false;
-        self.app.prefix(None);
-        self.app.error(format!(
-            "Input paused: {reason}; Escape resumes without replaying buffered gestures"
-        ));
-    }
-
     pub(super) fn release(&mut self) {
         let Some(fence) = &self.fence else { return };
         if !fence.finished
@@ -101,10 +94,22 @@ impl Runner {
         }
         if fence.focus.is_some() && fence.focus != self.app.focus() {
             self.fence = None;
-            self.pause("the intended focus disappeared or changed");
+            self.refuse("Focus changed; dependent input was discarded");
             return;
         }
         self.fence = None;
+        self.routing.settle(&mut self.intents);
+    }
+
+    fn action(&self, request: u64) -> &'static str {
+        if self.owns(request) {
+            return self.fence.as_ref().unwrap().action;
+        }
+        match self.jobs.get(&request) {
+            Some(Job::Resolve { .. }) => "Read current directory",
+            Some(Job::Start) => "Start pane",
+            _ => "Workspace operation",
+        }
     }
 
     fn owns(&self, request: u64) -> bool {
@@ -113,7 +118,7 @@ impl Runner {
             .is_some_and(|fence| fence.request == request)
     }
 
-    pub(super) fn settlement(&mut self, message: &Message) -> Option<String> {
+    pub(super) fn settlement(&mut self, message: &Message) -> Option<super::recovery::Resolution> {
         let request = match message {
             Message::Reply(reply) => reply.request,
             Message::Finished { request, .. } => *request,
@@ -134,18 +139,29 @@ impl Runner {
                 } else {
                     None
                 };
-                unknown.or_else(|| result.as_ref().err().map(|fault| fault.message.clone()))
+                if unknown.is_some() {
+                    return unknown;
+                }
+                match result {
+                    Err(fault) => Some(super::recovery::Resolution::Refused(format!(
+                        "{}: {}",
+                        self.action(request),
+                        fault.message
+                    ))),
+                    Ok(()) => None,
+                }
             }
             _ => None,
         }
     }
 
-    fn acknowledge(&mut self, reply: &protocol::Reply) -> Option<String> {
+    fn acknowledge(&mut self, reply: &protocol::Reply) -> Option<super::recovery::Resolution> {
         if let Err(failure) = &reply.result {
+            let reason = format!("{}: {}", self.action(reply.request), failure.message());
             if self.owns(reply.request) {
                 self.fence = None;
             }
-            return Some(failure.message().into());
+            return Some(super::recovery::Resolution::Refused(reason));
         }
         if !self.owns(reply.request) {
             return None;
@@ -156,9 +172,9 @@ impl Runner {
             )))
             | Ok(protocol::Status::Accepted(protocol::Intent::Retire(change))) => change,
             _ => {
-                return Some(
-                    "layout response lacks its applied revision; inspect host state".into(),
-                );
+                return Some(super::recovery::Resolution::Unknown(
+                    "Layout response lacks its applied revision".into(),
+                ));
             }
         };
         self.fence.as_mut().unwrap().apply(change);
@@ -167,11 +183,16 @@ impl Runner {
 }
 
 impl Fence {
-    fn finish(&mut self) -> Option<String> {
+    pub(super) fn overdue(&self) -> bool {
+        self.started.elapsed() >= Duration::from_secs(5)
+    }
+
+    fn finish(&mut self) -> Option<super::recovery::Resolution> {
         self.finished = true;
         self.revision.is_none().then(|| {
-            "layout outcome unknown: completion lacks its applied revision; inspect host state"
-                .into()
+            super::recovery::Resolution::Unknown(
+                "Layout completion lacks its applied revision".into(),
+            )
         })
     }
 
@@ -183,5 +204,20 @@ impl Fence {
         }) {
             self.focus = Some(pane);
         }
+    }
+}
+
+fn action(command: &Command) -> &'static str {
+    match command {
+        Command::Workspace(Operation::Split { split, .. }) => match split.axis {
+            workspace::Axis::Columns => "Split left/right",
+            workspace::Axis::Rows => "Split top/bottom",
+        },
+        Command::Workspace(Operation::Window(_)) => "Create window",
+        Command::Workspace(Operation::Focus(_)) => "Select pane",
+        Command::Workspace(Operation::Acquire { .. }) => "Acquire control",
+        Command::Workspace(Operation::Transfer { .. }) => "Transfer control",
+        Command::Workspace(Operation::Close(_)) => "Close target",
+        _ => "Workspace operation",
     }
 }

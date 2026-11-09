@@ -18,16 +18,6 @@ impl Runner {
             self.app.status("Pointer gesture cancelled");
             return Ok(Vec::new());
         }
-        if self.paused && key.code == crossterm::event::KeyCode::Esc && key.modifiers.is_empty() {
-            self.paused = false;
-            self.leader = false;
-            self.app.status(if self.fenced() {
-                "Acknowledged; waiting for the layout outcome"
-            } else {
-                "Input resumed; buffered gestures were not replayed"
-            });
-            return Ok(Vec::new());
-        }
         let gesture = self.config.keys().translate(key, self.leader);
         self.leader = false;
         let gesture = gesture?;
@@ -36,7 +26,7 @@ impl Runner {
             return Ok(Vec::new());
         }
         if gesture == Gesture::Reload {
-            if self.paused || (!self.fenced() && self.intents.is_empty()) {
+            if self.recovery.is_some() || (!self.fenced() && self.intents.is_empty()) {
                 self.reload();
             } else {
                 self.stage(gesture)?;

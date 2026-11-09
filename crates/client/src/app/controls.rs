@@ -72,16 +72,18 @@ impl App {
             },
             Gesture::Window => Operation::Window(self.session),
             Gesture::Index(index) => {
-                if index == 0 {
-                    return Err(Failure::Target);
-                }
-                let pane = self
-                    .session()
-                    .ok_or(Failure::Target)?
-                    .windows()
-                    .nth(usize::from(index - 1))
-                    .ok_or(Failure::Target)?
-                    .focus();
+                let session = self.session().ok_or(Failure::Target)?;
+                let count = session.windows().count();
+                let pane = index.checked_sub(1).and_then(|index| {
+                    session
+                        .windows()
+                        .nth(usize::from(index))
+                        .map(|window| window.focus())
+                });
+                let Some(pane) = pane else {
+                    self.error(format!("No window {index}; available: 1–{count}"));
+                    return Ok(Vec::new());
+                };
                 Operation::Focus(pane)
             }
             Gesture::Pane => Operation::Focus(self.cycle(false)?),
@@ -110,6 +112,9 @@ impl App {
             Gesture::Close => Operation::Close(Target::Pane(self.focus().ok_or(Failure::Target)?)),
             Gesture::Destroy => Operation::Close(Target::Session(self.session)),
         };
+        if matches!(operation, Operation::Focus(pane) if self.focus() == Some(pane)) {
+            return Ok(Vec::new());
+        }
         if !self.controller() {
             return Err(Failure::Workspace(workspace::Failure::Observer));
         }
