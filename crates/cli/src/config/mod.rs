@@ -36,6 +36,16 @@ pub(crate) fn launch(
 }
 
 pub(crate) fn validate(args: &Args) -> Result<(), Error> {
+    if (args.take || args.observe)
+        && !matches!(
+            args.selected(),
+            crate::args::Action::Enter { .. } | crate::args::Action::Connect { .. }
+        )
+    {
+        return Err(Error::config(
+            "--take and --observe require interactive enter or connect",
+        ));
+    }
     match args.selected() {
         crate::args::Action::Enter {
             name, launch: data, ..

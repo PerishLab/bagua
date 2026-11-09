@@ -11,6 +11,7 @@ pub enum Failure {
     Exhausted,
     Name,
     Conflict,
+    Stale,
 }
 
 impl Failure {
@@ -25,6 +26,7 @@ impl Failure {
             Self::Exhausted => "exhausted",
             Self::Name => "name",
             Self::Conflict => "conflict",
+            Self::Stale => "stale",
         }
     }
 
@@ -41,6 +43,7 @@ impl Failure {
                 "name must contain 1..=64 UTF-8 bytes without controls or surrounding whitespace"
             }
             Self::Conflict => "the exact name already exists in this scope",
+            Self::Stale => "controller changed; review the current owner before taking control",
         }
     }
 }
@@ -74,6 +77,14 @@ impl Control {
     pub fn transfer(&mut self, actor: Id, next: Id) -> Result<(), Failure> {
         self.require(actor)?;
         self.owner = Some(next);
+        Ok(())
+    }
+
+    pub fn take(&mut self, client: Id, expected: Option<Id>) -> Result<(), Failure> {
+        if self.owner != expected {
+            return Err(Failure::Stale);
+        }
+        self.owner = Some(client);
         Ok(())
     }
 

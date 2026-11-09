@@ -216,6 +216,9 @@ impl App {
             self.catalog = Some(snapshot);
             return Ok(());
         };
+        if session.viewport(self.actor).is_none() {
+            self.done = true;
+        }
         let mut extents = BTreeMap::new();
         for window in session.windows() {
             for placement in window.placements(session.canvas())? {

@@ -20,8 +20,22 @@ pub(crate) fn run(path: &Path, args: &Args, config: crate::config::Loaded) -> Re
         crate::session::Session::connect(path, args)
     };
     let result = connection
-        .and_then(|rpc| setup::prepare(rpc, args, &terminal, &config))
-        .and_then(|runner| runner.configure(config).run(&mut terminal, &stop));
+        .and_then(|rpc| {
+            setup::prepare(
+                rpc,
+                args,
+                &mut setup::Display {
+                    terminal: &mut terminal,
+                    stop: &stop,
+                    separator: config.decor().status.separator,
+                },
+                &config,
+            )
+        })
+        .and_then(|runner| match runner {
+            Some(runner) => runner.configure(config).run(&mut terminal, &stop),
+            None => Ok(()),
+        });
     let restored = terminal.finish();
     match (result, restored) {
         (Err(error), Err(cleanup)) => {

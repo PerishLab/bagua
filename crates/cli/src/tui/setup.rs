@@ -1,4 +1,5 @@
 use super::runner::Runner;
+mod choice;
 mod entry;
 use crate::{
     args::{Action, Args},
@@ -8,13 +9,19 @@ use crate::{
 use protocol::{Command, Failure};
 use workspace::{Geometry, Operation, Target};
 
+pub(super) struct Display<'a> {
+    pub terminal: &'a mut client::Terminal,
+    pub stop: &'a std::sync::atomic::AtomicBool,
+    pub separator: bool,
+}
+
 pub(super) fn prepare(
     mut rpc: Session,
     args: &Args,
-    terminal: &client::Terminal,
+    display: &mut Display<'_>,
     config: &crate::config::Loaded,
-) -> Result<Runner, Error> {
-    let (columns, rows) = terminal.size()?;
+) -> Result<Option<Runner>, Error> {
+    let (columns, rows) = display.terminal.size()?;
     let viewport =
         super::extent(columns, rows, config.decor().status.separator).ok_or(Failure::Payload)?;
     let geometry = Geometry::new(
@@ -24,7 +31,17 @@ pub(super) fn prepare(
     .unwrap();
     let (session, launch) = match args.selected() {
         Action::Enter { .. } => {
-            entry::prepare(&mut rpc, args.selected(), geometry, config.workspace())?
+            let Some(entered) = (entry::Entry {
+                rpc: &mut rpc,
+                args,
+                display,
+                config,
+            })
+            .prepare(geometry)?
+            else {
+                return Ok(None);
+            };
+            entered
         }
         Action::Open { launch } => {
             let program = crate::config::launch(launch)?.ok_or(Failure::Payload)?;
@@ -64,13 +81,12 @@ pub(super) fn prepare(
         }
         Action::Connect {
             session,
-            take,
             fixed,
             launch,
         } => {
             let session = Command::identity(*session)?;
             join(&mut rpc, session, geometry)?;
-            if *take {
+            if args.take {
                 acquire(&mut rpc, session, *fixed)?;
             }
             (session, crate::config::launch(launch)?)
@@ -90,7 +106,7 @@ pub(super) fn prepare(
         false,
     )?;
     let next = rpc.next;
-    Ok(Runner::new(rpc.channel()?, app, next, launch))
+    Ok(Some(Runner::new(rpc.channel()?, app, next, launch)))
 }
 
 fn join(rpc: &mut Session, session: workspace::Id, viewport: Geometry) -> Result<(), Error> {
@@ -102,23 +118,21 @@ fn join(rpc: &mut Session, session: workspace::Id, viewport: Geometry) -> Result
 }
 
 fn acquire(rpc: &mut Session, session: workspace::Id, fixed: bool) -> Result<(), Error> {
-    let fixed = if fixed {
-        let snapshot = rpc
-            .call(Command::Workspace(Operation::Read), false)?
-            .ok_or(Failure::Payload)?;
-        Some(
-            snapshot
-                .sessions()
-                .find(|s| s.id() == session)
-                .ok_or(Failure::Target)?
-                .geometry(),
-        )
-    } else {
-        None
-    };
+    let snapshot = rpc
+        .call(Command::Workspace(Operation::Read), false)?
+        .ok_or(Failure::Payload)?;
+    let current = snapshot
+        .sessions()
+        .find(|current| current.id() == session)
+        .ok_or(Failure::Target)?;
     rpc.call(
-        Command::Workspace(Operation::Acquire { session, fixed }),
+        Command::Workspace(Operation::Take {
+            session,
+            expected: current.controller(),
+            fixed: fixed.then_some(current.geometry()),
+        }),
         false,
-    )?;
+    )
+    .map_err(Error::taking)?;
     Ok(())
 }

@@ -60,7 +60,7 @@ Use an independent outer terminal for initial human verification: another
 multiplexer using Ctrl-Q may intercept the example prefix. Detach preserves
 applications; closing panes or explicitly shutting down a known owned host is
 a different operation. This profile does not migrate or stop tmux sessions.
-The earlier v0.1.0 cannot read the current configuration or connect to a wire7
+Earlier v0.1.0 and v0.2.0 cannot connect to the current wire8
 host. Rollback uses its own matching executable, documented old CLI and separate
 endpoint; it never replaces an unknown live host or promises history recovery
 after host restart.
@@ -208,7 +208,7 @@ Unknown sections/components refuse instead of executing shell formats.
 Issue #26 adds this source workflow; #31/#32 own containing release and installed
 qualification. A bare `bagua` requests control of the exact workspace named by
 `workspace.name` (default `workspace`), creating the host and workspace if absent.
-An existing controller causes refusal; it is never displaced implicitly.
+An existing controller opens an explicit Take / Observe / Cancel choice; it is never displaced implicitly.
 
 ```sh
 bagua
@@ -216,13 +216,26 @@ bagua enter work
 bagua enter work --existing
 bagua enter work --observe
 bagua enter work --existing --fixed
+bagua --take
+bagua enter work --take
+bagua connect 1 --take
+bagua --observe
 ```
 
 `--existing` forbids creation. `--observe` requires an existing workspace and
 neither starts a host nor acquires control. Explicit `--fixed` keeps the current
-canvas while acquiring, allowing recovery from a small viewport. Named entry
-commits joining and acquisition atomically; refusal preserves model identities,
-revision, membership and geometry. An empty workspace gets its first window;
+canvas while acquiring, allowing recovery from a small viewport. Ordinary named entry commits joining and acquisition atomically; refusal
+preserves model identities, revision, membership and geometry. When occupied,
+the chooser identifies the observed controller and viewport. Take is explicit,
+validates the new client/viewport, and compares that expected owner before
+transferring control atomically. A changed owner or invalid viewport refuses
+without displacing the current controller. The old interactive client detaches
+normally and restores its TTY; the host and application processes continue.
+`--take` works consistently before/after `enter` and with `connect`; `--observe`
+never requests control. Cancellation returns normally without joining.
+An occupied-entry observer joins only after the explicit choice; a refused
+explicit takeover may temporarily have joined as an observer, which its
+connection cleanup removes. It grants no write authority before transfer. An empty workspace gets its first window;
 an exited or failed pane remains inspectable and is never automatically restarted.
 
 Names are exact, case-sensitive UTF-8, 1–64 bytes, without controls or surrounding
@@ -607,6 +620,13 @@ artifact, shell/Codex, pressure or OS clipboard qualification.
 
 ## Workspace and control
 
+The machine `Take` operation names a session, `expected` owner and optional
+fixed geometry. `expected: null` means the session must currently be unowned,
+never an unconditional override. Take removes the displaced client's membership;
+ordinary owner-initiated Transfer retains its existing observer membership.
+No age, idle-time or PID heuristic authorizes takeover. Admitted input keeps its
+original targets; future writes from a displaced client refuse.
+
 `workspace::World` owns one session/window/pane tree. IDs are nonzero and never
 reused within that world's lifetime. Clients join as observers. Acquiring or
 transferring control is explicit and checks the connected client and layout
@@ -656,7 +676,7 @@ duplicate subscription idempotently. Observers must be joined to the target's
 session. Cancelling a retired target remains possible. A resume revision is a
 hint, not permission to invent a delta without its baseline. The host sends
 complete live snapshots and retains no incremental screen deltas. Scrollback is
-read separately in bounded pages. Wire version 7 includes session header reservation, validated divider adjustments, named entry, native foreground-context reads, executable
+read separately in bounded pages. Wire version 8 adds expected-owner takeover to session header reservation, validated divider adjustments, named entry, native foreground-context reads, executable
 file identity in Hello, keyboard mode flags and typed modified input. It uses a
 four-byte big-endian JSON length followed by that many UTF-8 JSON bytes.
 Request numbers strictly increase within a connection; reused or older numbers
@@ -817,7 +837,7 @@ color, alternate screen, cursor positioning, line-wrap control, bracketed paste
 and SGR mouse reports. This is an explicit terminal profile, not automatic
 capability negotiation or qualification of every terminal emulator.
 Hello binds the host canvas and executable file identity; subscriptions bind
-target-scoped revisions. Use a matching host/client build and wire version 7.
+target-scoped revisions. Use a matching host/client build and wire version 8.
 Installed v0.1.0 speaks wire 2 and cannot consume these source changes.
 
 For explicit machine workflows, run the host described above. Open a new session with a complete

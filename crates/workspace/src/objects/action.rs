@@ -55,6 +55,11 @@ pub enum Operation {
         session: Id,
         next: Id,
     },
+    Take {
+        session: Id,
+        expected: Option<Id>,
+        fixed: Option<Geometry>,
+    },
     Detach(Id),
     Window(Id),
     Split {

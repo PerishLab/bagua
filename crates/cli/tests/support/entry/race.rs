@@ -10,15 +10,22 @@ fn startup() {
     let winner = loop {
         first.pump();
         second.pump();
-        if first.text().contains("bagua w1 control") && second.text().contains("RESTORED:2") {
+        if first.text().contains("bagua w1 control") && second.text().contains("[t] Take") {
             break true;
         }
-        if second.text().contains("bagua w1 control") && first.text().contains("RESTORED:2") {
+        if second.text().contains("bagua w1 control") && first.text().contains("[t] Take") {
             break false;
         }
         assert!(Instant::now() < deadline, "concurrent entry did not settle");
         std::thread::sleep(Duration::from_millis(5));
     };
+    if winner {
+        second.send(b"q");
+        second.until("RESTORED:0");
+    } else {
+        first.send(b"q");
+        first.until("RESTORED:0");
+    }
     let snapshot = fixture.catalog();
     assert_eq!(snapshot.sessions().count(), 1);
     let session = snapshot.sessions().next().unwrap();

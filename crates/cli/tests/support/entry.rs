@@ -2,6 +2,8 @@
 mod race;
 #[path = "entry/refuse.rs"]
 mod refuse;
+#[path = "entry/take.rs"]
+mod take;
 use crate::interactive::{Fixture, Peer};
 use pty::Size;
 use std::{
