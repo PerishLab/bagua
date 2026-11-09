@@ -24,7 +24,7 @@ impl Runner {
             }
             return Ok(());
         }
-        if self.leaving.is_some() {
+        if self.leaving.is_some() || self.recovery.is_some() {
             return Ok(());
         }
         if self.decorate()? {

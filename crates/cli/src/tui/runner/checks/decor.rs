@@ -18,7 +18,7 @@ fn background() {
             result: Err(Failure::Unavailable.into()),
         })
         .unwrap();
-    assert!(!runner.paused);
+    assert!(runner.recovery.is_none());
     assert!(runner.jobs.is_empty());
     assert!(
         runner
@@ -57,7 +57,7 @@ fn rejection() {
             result: Err(Failure::Workspace(workspace::Failure::Geometry).into()),
         })
         .unwrap();
-    assert!(!runner.paused);
+    assert!(runner.recovery.is_none());
     assert_eq!(runner.intents.len(), 1);
     assert!(
         runner

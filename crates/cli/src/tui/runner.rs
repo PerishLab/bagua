@@ -6,7 +6,9 @@ mod dispatch;
 mod flow;
 mod input;
 mod intent;
+mod recovery;
 mod reload;
+mod routing;
 use super::queue::{Queued, weight};
 use crate::error::Error;
 use bagua::ipc::Channel;
@@ -51,10 +53,11 @@ pub(super) struct Runner {
     jobs: BTreeMap<u64, Job>,
     launches: VecDeque<(Id, Program)>,
     leader: bool,
-    intents: VecDeque<Gesture>,
+    intents: VecDeque<routing::Deferred>,
+    routing: routing::Routing,
     staged: usize,
     fence: Option<intent::Fence>,
-    paused: bool,
+    recovery: Option<recovery::Recovery>,
     header: Option<(u64, bool)>,
     suspended: bool,
     keyboard: client::Keyboard,
@@ -76,9 +79,10 @@ impl Runner {
             launches: VecDeque::new(),
             leader: false,
             intents: VecDeque::new(),
+            routing: routing::Routing::default(),
             staged: 0,
             fence: None,
-            paused: false,
+            recovery: None,
             header: None,
             suspended: false,
             keyboard: client::Keyboard::default(),
@@ -93,6 +97,7 @@ impl Runner {
     pub fn run(&mut self, terminal: &mut Terminal, stop: &AtomicBool) -> Result<(), Error> {
         let mut painted = Instant::now() - Duration::from_secs(1);
         while !stop.load(Ordering::Relaxed) {
+            self.recover()?;
             self.app.tick(Instant::now(), std::time::SystemTime::now());
             self.copies(terminal);
             if self.app.done() && self.leaving.is_none() {
@@ -161,6 +166,9 @@ impl Runner {
         if self.metadata(&message)? {
             return Ok(());
         }
+        if self.synchronizing(&message)? {
+            return Ok(());
+        }
         let rejected = self.rejected(&message);
         let refusal = self.settlement(&message);
         if let Message::Context {
@@ -188,7 +196,7 @@ impl Runner {
             self.app
                 .status("Header reservation refused; application layout unchanged");
         } else if let Some(reason) = refusal {
-            self.pause(&reason);
+            self.resolve(reason);
         }
         Ok(())
     }

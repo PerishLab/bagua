@@ -15,6 +15,7 @@ pub struct Keyboard {
     paste: Option<paste::Paste>,
     discard: bool,
     delay: Duration,
+    cancelled: bool,
 }
 
 impl Default for Keyboard {
@@ -31,6 +32,7 @@ impl Keyboard {
             paste: None,
             discard: false,
             delay,
+            cancelled: false,
         }
     }
 
@@ -48,7 +50,20 @@ impl Keyboard {
         self.bytes.extend(bytes);
         Ok(())
     }
+    pub fn cancel(&mut self, now: Instant) {
+        while self.next(now).is_some() {}
+        self.cancelled = !self.bytes.is_empty() || self.paste.is_some();
+    }
+
     pub fn next(&mut self, now: Instant) -> Option<Result<Event, Failure>> {
+        let event = self.parse(now)?;
+        if std::mem::take(&mut self.cancelled) {
+            return Some(Err(Failure::Unavailable));
+        }
+        Some(event)
+    }
+
+    fn parse(&mut self, now: Instant) -> Option<Result<Event, Failure>> {
         if self.discard {
             while let Some(byte) = self.bytes.pop_front() {
                 if (0x40..=0x7e).contains(&byte) {
@@ -108,7 +123,7 @@ impl Keyboard {
             self.bytes.drain(..6);
             self.escape = None;
             self.paste = Some(paste::Paste::default());
-            return self.next(now);
+            return self.parse(now);
         }
         if let Some((length, event)) = sequence::parse(&data) {
             self.bytes.drain(..length);

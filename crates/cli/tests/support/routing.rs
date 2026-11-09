@@ -58,9 +58,9 @@ fn refusal() {
     let mut peer = Peer::new(&fixture, SHELL, Size::new(100, 3).unwrap());
     peer.until("control");
     peer.send(b"\x07-printf '\\102\\101\\104_ROUTE_OK\\n'\r");
-    peer.until("Input paused");
+    peer.until("Split top/bottom:");
     assert!(!text(&fixture, 3).contains("BAD_ROUTE_OK"));
-    peer.send(b"\x1b[27uprintf '\\107\\117\\117\\104_ROUTE_OK'\r");
+    peer.send(b"printf '\\107\\117\\117\\104_ROUTE_OK'\r");
     peer.until("GOOD_ROUTE_OK");
     assert!(!text(&fixture, 3).contains("BAD_ROUTE_OK"));
     assert!(text(&fixture, 3).contains("GOOD_ROUTE_OK"));
@@ -77,6 +77,29 @@ fn close() {
     peer.send(b"\x07xprintf '\\106\\101\\114\\114\\102\\101\\103\\113_ROUTE_OK\\n'\r");
     peer.until("FALLBACK_ROUTE_OK");
     assert!(text(&fixture, 3).contains("FALLBACK_ROUTE_OK"));
+    assert_eq!(
+        fixture
+            .catalog()
+            .sessions()
+            .next()
+            .unwrap()
+            .windows()
+            .count(),
+        1
+    );
+    peer.detach();
+}
+
+#[test]
+fn navigation() {
+    let fixture = Fixture::new();
+    let mut peer = Peer::new(&fixture, SHELL, Size::new(100, 24).unwrap());
+    peer.until("control");
+    peer.send(b"\x1b9");
+    peer.until("No window 9");
+    peer.send(b"\x1b9\x1b1\x07\t\x07wprintf '\\116\\101\\126_OK\\n'\r");
+    peer.until("NAV_OK");
+    assert!(text(&fixture, 3).contains("NAV_OK"));
     assert_eq!(
         fixture
             .catalog()

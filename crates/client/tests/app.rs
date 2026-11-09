@@ -266,12 +266,10 @@ fn numbering() {
         .apply(actor, Operation::Close(Target::Window(Id::new(2).unwrap())))
         .unwrap();
     app.catalog(world.snapshot()).unwrap();
-    assert_eq!(
-        app.handle(Gesture::Index(1)).unwrap(),
-        vec![Command::Workspace(Operation::Focus(Id::new(5).unwrap()))]
-    );
-    assert!(app.handle(Gesture::Index(0)).is_err());
-    assert!(app.handle(Gesture::Index(2)).is_err());
+    assert!(app.handle(Gesture::Index(1)).unwrap().is_empty());
+    assert!(app.handle(Gesture::Index(0)).unwrap().is_empty());
+    assert!(app.handle(Gesture::Index(2)).unwrap().is_empty());
+    app.status("Configuration unchanged");
     let mut screen = Engine::new(Extent::new(8, 4).unwrap(), 0).unwrap();
     for bytes in app.draw().unwrap().chunks(terminal::CHUNK) {
         screen.feed(bytes).unwrap();

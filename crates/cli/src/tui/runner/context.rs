@@ -24,7 +24,7 @@ impl Runner {
             && !matches!(queued.command, Command::Workspace(Operation::Window(_)))
             && queued.source.is_none()
         {
-            self.pause("no current pane directory; operation refused");
+            self.refuse("no current pane directory; operation refused");
             return Ok(true);
         }
         if resolve
@@ -54,7 +54,7 @@ impl Runner {
                 .session()
                 .is_none_or(|session| session.windows().next().is_some())
             {
-                self.pause("no current pane directory; operation refused");
+                self.refuse("no current pane directory; operation refused");
                 return Ok(true);
             }
             self.app
@@ -91,7 +91,7 @@ impl Runner {
         if let Err(error) = crate::config::verify(&program) {
             self.refused(request);
             self.jobs.insert(request, Job::Ordinary);
-            self.pause(error.message());
+            self.refuse(error.message());
             return Ok(());
         }
         let queued = self.queue.front_mut().ok_or(Failure::Identity)?;
