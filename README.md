@@ -87,6 +87,13 @@ extracting into a private directory; its `bagua` is the executable entry point.
 `bagua -V` reports the bound marker, while an ordinary development build reports
 its source build identity. Use the same artifact for the host and its clients.
 
+Installing an upgrade does not migrate a live host or its applications. A host
+keeps its original executable identity and wire contract. Preserve that matching
+binary/profile to return to an existing workspace, and use a fresh private
+endpoint for the new build while it remains active. Takeover transfers control
+within one compatible host; it does not convert old sessions or restart their
+programs. Keep the previous version and profile available for rollback.
+
 The selected ABI requires the Linux ELF loader, glibc and the executable's
 declared native shared libraries. Wharf builds the GNU target on its declared
 Linux runner; this is not a static or arbitrary-old-glibc portability promise.
@@ -111,11 +118,15 @@ homes/data for its hosted programs. No production session is a test fixture.
 
 ## Published-artifact qualification
 
-`plumb.toml` requires all nine Linux cases below. The official Seatrial runner
+`plumb.toml` requires all ten Linux cases below. The official Seatrial runner
 and complete Depot Scene generation follow stable; the Images runtime follows
 stable. Exact source, marker, publication attempt, archive, effective inputs,
 runner, Scene generation and image identities belong to each qualification.
 A declaration, source check or complete distribution does not imply a pass.
+The v0.2.0 stable delivered wire7 with its historical nine-case qualification.
+Current source expresses wire8 and the additional interaction contract; it needs
+its own complete ten-case non-stable pass and content association before stable
+promotion. Historical v0.2.0 evidence does not qualify this changed boundary.
 
 | Required case | Public behavior to qualify |
 | --- | --- |
@@ -125,9 +136,10 @@ A declaration, source check or complete distribution does not imply a pass.
 | `bagua-config` | Strict discovery/validation, redacted diagnostics, failed whole reload and successful client preference reload |
 | `bagua-entry` | Named/default entry and host races, identity/unknown-endpoint refusal, foreground cwd inheritance, immediate input routing and deleted-cwd refusal |
 | `bagua-history` | Full 50000-row reads at 80/160 columns, retention/byte budgets/fair share, scope/epoch/eviction refusal, frozen pages, keyboard/wheel navigation and reconnect |
-| `bagua-input` | Actual application bytes for keyboard flags 1/5/7, stack/reset boundaries, prefix/release/paste, ordered layout input, 32-window/index coverage and failure acknowledgement without replay |
+| `bagua-input` | Actual application bytes for keyboard flags 1/5/7, stack/reset boundaries, prefix/release/paste, ordered layout input, 32-window/index coverage and known refusal without Escape or replay |
 | `bagua-mouse` | Actual divider widths/focus, observer refusal, local/manual/release copy, Unicode/base64/ST, limit refusal and blocked application OSC |
 | `bagua-display` | Authoritative header/content height, observed cwd, decor reload, small-view feedback, complete paint output and bounded refresh traffic |
+| `bagua-interaction` | Invalid-index/no-op continuity, layout/native failure isolation, cross-fragment paste, Copy/Live/Esc, explicit takeover and owner races, unknown-outcome synchronization/exit without replay, TTY and application survival |
 
 Seatrial owns the independently published black-box programs. They drive the
 public CLI and declared wire version through case-owned PTYs, programs, sockets
@@ -135,7 +147,9 @@ and files. There is no product source checkout, private crate link, runtime
 Cargo build or product testing switch. Required cases cannot be dropped to
 manufacture qualification. Preparation dependencies are not automatically
 verified subjects. Seatrial #83/#88 record the daily-use material lineage;
-Bagua #31 and Seatrial #84 retain candidate publication and actual execution.
+Bagua #31 and Seatrial #84 retain v0.2.0 candidate publication and execution.
+Seatrial #101 owns the new interaction material; Bagua #53 owns its containing
+candidate/stable qualification, complete distribution and installed consumption.
 
 Inspect the immutable attempt under
 `v1/releases/<channel>/<marker>/windtun/` and use `plumb windtun check` to verify
