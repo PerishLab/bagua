@@ -110,6 +110,10 @@ impl Runner {
             return Ok(false);
         };
         match message {
+            Message::Reply(reply) if reply.result.is_err() => {
+                self.app.context(*pane, None, *at)?;
+                self.jobs.remove(&request);
+            }
             Message::Context {
                 pane: target,
                 state,
