@@ -40,3 +40,16 @@ fn profile() {
             .all(|c| c.state != protocol::State::Unverified)
     );
 }
+
+#[test]
+fn observation() {
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("bagua.toml");
+    let load = || bagua::config::Config::resolve(Some(&path), "BAGUA", &|_| None);
+    std::fs::write(&path, "[locus]\nenabled = 'invalid'\nendpoint = 42\n").unwrap();
+    let config = load().unwrap();
+    assert_eq!(config.locus.unwrap()["enabled"], "invalid");
+    assert!(bagua::config::Config::default().locus.is_none());
+    std::fs::write(&path, "[future]\nenabled = true\n").unwrap();
+    assert!(load().is_err());
+}

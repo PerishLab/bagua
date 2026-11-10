@@ -5,6 +5,7 @@ mod setup;
 use crate::{args::Args, error::Error};
 use std::path::Path;
 
+#[locus::trace(with = crate::observation::view())]
 pub(crate) fn run(path: &Path, args: &Args, config: crate::config::Loaded) -> Result<(), Error> {
     if args.request == 0 {
         return Err(protocol::Failure::Identity.into());
@@ -13,6 +14,8 @@ pub(crate) fn run(path: &Path, args: &Args, config: crate::config::Loaded) -> Re
         return Err(protocol::Failure::Payload.into());
     }
     let (_signals, stop) = crate::serve::listen()?;
+    let notes = config.notes.clone();
+    notes.safe(false);
     let mut terminal = client::Terminal::enter()?;
     let connection = if matches!(args.selected(), crate::args::Action::Enter { .. }) {
         crate::startup::connect(path, args, &config)
@@ -37,6 +40,8 @@ pub(crate) fn run(path: &Path, args: &Args, config: crate::config::Loaded) -> Re
             None => Ok(()),
         });
     let restored = terminal.finish();
+    notes.safe(restored.is_ok());
+    crate::observation::event::terminal(restored.is_ok());
     match (result, restored) {
         (Err(error), Err(cleanup)) => {
             eprintln!("bagua terminal restoration failed: {cleanup}");

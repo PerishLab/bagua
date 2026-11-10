@@ -45,6 +45,7 @@ impl Host {
         let ids: Vec<_> = self.panes.keys().copied().collect();
         for id in ids {
             let pane = self.panes.get_mut(&id).unwrap();
+            let before = self.observer.as_ref().map(|_| pane.facts());
             let completions = pane.pump();
             if let Some(exit) = pane.exit
                 && self
@@ -55,6 +56,12 @@ impl Host {
                 self.world.observe(id, State::Exited(exit.code))?;
             }
             let message = pane.notice(id);
+            let events = before.map(|before| pane.changes(id, before));
+            if let Some(events) = events {
+                for event in events.into_iter().flatten() {
+                    self.emit(event);
+                }
+            }
             for (actor, request, result) in completions {
                 self.complete(actor, request, result)?;
             }

@@ -1060,3 +1060,43 @@ See [AGENTS.md](AGENTS.md) for the product's working constraints and the
 for contribution and acceptance policy.
 
 Licensed under the [MIT License](LICENSE).
+
+### Optional Locus observation
+
+Observation is off by default. To enable it for a new invocation, add this data
+section to the selected `bagua.toml`:
+
+```toml
+[locus]
+enabled = true
+```
+
+The endpoint uses `locus.endpoint`, then `LOCUS_API`, then the shared local default
+`http://127.0.0.1:43308`. `--no-config` disables observation. Changing `[locus]`
+requires a new invocation; reloading does not reconfigure a running host. Existing
+hosts retain their original settings and sessions.
+
+The shared Locus reporter keeps its bounded spool under
+`$XDG_STATE_HOME/bagua/locus`, or `$HOME/.local/state/bagua/locus`. The final directory
+must be canonical, owned by the current user and private (0700). A pre-existing
+unsafe directory is refused for observation without changing its permissions.
+This persistent state is independent of the host socket and session cleanup.
+No Bagua-specific file logger, rotation or retention settings are added.
+
+Events cover connection-scoped structural request results, actual host process
+exit/reaping, EOF, native resource release, pane retirement, client pending work
+at return and confirmed terminal restoration. They contain stable codes and numeric
+facts. Input, PTY output, clipboard data, launch arguments/environment/cwd, names
+and raw error messages are excluded. Verified bound release identity accompanies
+the invocation context; source builds keep unknown release identity.
+
+An observation failure preserves business stdout and exit status. Diagnostics use
+bounded stable codes on stderr, as JSON lines with `--json`, after confirmed TTY
+restoration. Unknown restoration suppresses these diagnostics. A background host
+with discarded stderr has no persistent engine-diagnostic channel. Missing events
+prove neither successful cleanup nor the cause of an error; an unavailable service,
+queued spool, process death and service retention can leave different gaps.
+
+These are source behavior boundaries. Formal Bagua/Locus combined qualification
+and the containing stable/install evidence are tracked in #70 and Seatrial #111;
+this description does not establish their completion or replace human validation.

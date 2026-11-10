@@ -19,6 +19,19 @@ pub const CELLS: usize = 262_144;
 pub const COLUMNS: u16 = 256;
 pub const ROWS: u16 = 64;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Event {
+    Connect(Id),
+    Disconnect(Id),
+    Start(Id),
+    Eof(Id),
+    Exit(Id, pty::Exit),
+    Release(Id),
+    Retire(Id),
+    Fault(Id),
+    Cleanup(Id),
+}
+
 #[derive(Default)]
 pub struct Host {
     world: World,
@@ -32,6 +45,7 @@ pub struct Host {
     scope: [u8; 16],
     history: crate::config::History,
     identity: Option<protocol::wire::Image>,
+    observer: Option<Box<dyn FnMut(Event) + Send>>,
 }
 
 impl Host {
@@ -61,6 +75,16 @@ impl Host {
         Ok(host)
     }
 
+    pub fn events(&mut self, observer: impl FnMut(Event) + Send + 'static) {
+        self.observer = Some(Box::new(observer));
+    }
+
+    fn emit(&mut self, event: Event) {
+        if let Some(observer) = &mut self.observer {
+            observer(event);
+        }
+    }
+
     pub fn world(&self) -> &World {
         &self.world
     }
@@ -76,11 +100,14 @@ impl Host {
             .ok_or(Failure::Capacity)?;
         let id = Id::new(self.next).ok_or(Failure::Identity)?;
         self.clients.insert(id, Client::new(id, self.identity)?);
+        self.emit(Event::Connect(id));
         Ok(id)
     }
 
     pub fn disconnect(&mut self, id: Id) -> Result<(), Failure> {
-        self.clients.remove(&id);
+        if self.clients.remove(&id).is_some() {
+            self.emit(Event::Disconnect(id));
+        }
         self.world.disconnect(id)?;
         Ok(())
     }

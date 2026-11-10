@@ -51,6 +51,10 @@ impl Service {
         })
     }
 
+    pub fn events(&mut self, observer: impl FnMut(crate::Event) + Send + 'static) {
+        self.host.events(observer);
+    }
+
     pub fn run(&mut self, stop: &AtomicBool) -> io::Result<()> {
         while self.step(stop)? {
             std::thread::sleep(Duration::from_millis(2));

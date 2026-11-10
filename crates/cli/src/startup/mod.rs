@@ -21,6 +21,7 @@ pub(crate) struct Invocation {
     pub environment: Environment,
 }
 
+#[locus::trace(with = crate::observation::view())]
 pub(crate) fn connect(path: &Path, args: &Args, config: &Loaded) -> Result<Session, Error> {
     let invocation = config
         .invocation
@@ -74,6 +75,7 @@ fn adopt(connection: Connection, args: &Args, invocation: &Invocation) -> Result
     Ok(session)
 }
 
+#[locus::trace(with = crate::observation::view(), frame = context)]
 fn start(path: &Path, config: &Loaded, invocation: &Invocation) -> Result<(), Error> {
     let mut command = Command::new("/proc/self/exe");
     invocation.environment.apply(&mut command);
@@ -91,6 +93,7 @@ fn start(path: &Path, config: &Loaded, invocation: &Invocation) -> Result<(), Er
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
+    crate::observation::parent(&mut command, context.as_ref());
     let mut child = command.spawn()?;
     drop(
         std::thread::Builder::new()

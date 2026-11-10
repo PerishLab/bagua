@@ -26,15 +26,25 @@ pub(super) fn namespace(path: &Path) -> io::Result<()> {
         return Err(io::Error::other("socket parent must be canonical"));
     }
     let metadata = fs::symlink_metadata(parent)?;
-    if !metadata.is_dir()
-        || metadata.uid() != rustix::process::geteuid().as_raw()
-        || metadata.mode() & 0o077 != 0
-    {
+    if !owned(&metadata) {
         return Err(io::Error::other(
             "socket parent must be a private directory owned by this user",
         ));
     }
     Ok(())
+}
+
+pub fn private(directory: &Path) -> io::Result<bool> {
+    if fs::canonicalize(directory)? != directory {
+        return Ok(false);
+    }
+    Ok(owned(&fs::symlink_metadata(directory)?))
+}
+
+fn owned(metadata: &fs::Metadata) -> bool {
+    metadata.is_dir()
+        && metadata.uid() == rustix::process::geteuid().as_raw()
+        && metadata.mode() & 0o077 == 0
 }
 
 pub(super) fn peer(stream: &UnixStream) -> io::Result<()> {

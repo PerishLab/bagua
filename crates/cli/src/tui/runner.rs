@@ -47,6 +47,7 @@ enum Job {
 
 pub(super) struct Runner {
     channel: Channel,
+    scope: Option<locus::Context>,
     pub(super) app: App,
     next: u64,
     program: Option<Program>,
@@ -72,6 +73,7 @@ impl Runner {
     pub fn new(channel: Channel, app: App, next: u64, program: Option<Program>) -> Self {
         Self {
             channel,
+            scope: None,
             app,
             next,
             program,
@@ -94,7 +96,26 @@ impl Runner {
         }
     }
 
+    pub fn scoped(mut self, scope: Option<locus::Context>) -> Self {
+        self.scope = scope;
+        self
+    }
+
     pub fn run(&mut self, terminal: &mut Terminal, stop: &AtomicBool) -> Result<(), Error> {
+        let result = self.drive(terminal, stop);
+        crate::observation::event::Scope(self.scope.as_ref()).closing(
+            [
+                self.jobs.len(),
+                self.intents.len(),
+                self.queue.len(),
+                self.launches.len(),
+            ],
+            result.is_ok(),
+        );
+        result
+    }
+
+    fn drive(&mut self, terminal: &mut Terminal, stop: &AtomicBool) -> Result<(), Error> {
         let mut painted = Instant::now() - Duration::from_secs(1);
         while !stop.load(Ordering::Relaxed) {
             self.recover()?;
@@ -163,6 +184,7 @@ impl Runner {
     }
 
     fn receive(&mut self, message: Message) -> Result<(), Error> {
+        self.observed(&message);
         if self.metadata(&message)? {
             return Ok(());
         }

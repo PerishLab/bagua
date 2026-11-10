@@ -8,7 +8,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 skill = false
 
 [windtun]
-cases = ["bagua-workspace", "bagua-lifecycle", "bagua-flow", "bagua-config", "bagua-entry", "bagua-history", "bagua-input", "bagua-mouse", "bagua-display", "bagua-interaction", "bagua-exit"]
+cases = ["bagua-workspace", "bagua-lifecycle", "bagua-flow", "bagua-config", "bagua-entry", "bagua-history", "bagua-input", "bagua-mouse", "bagua-display", "bagua-interaction", "bagua-exit", "bagua-observation"]
 image = "ghcr.io/perishlab/images:stable"
 
 [windtun.scenes]
@@ -36,3 +36,14 @@ note = "Public product introduction and contribution entry."
 [[layout.file]]
 name = ["bagua.toml"]
 note = "An explicit runnable user configuration example, never an implicit working-directory input."
+
+[windtun.services.locus]
+authority = "https://releases.locus.perish.uk"
+channel = "stable"
+
+[windtun.services.locus.placement]
+artifact = "linux-x64-deb"
+entry = "locus-api"
+
+[windtun.services.locus.placement.paths]
+locus-api = "usr/bin/locus-api"

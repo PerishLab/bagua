@@ -28,6 +28,7 @@ pub struct Config {
     #[cascade(section)]
     pub status: Status,
     pub program: Option<Program>,
+    pub locus: Option<serde_json::Value>,
 }
 
 impl Default for Config {
@@ -44,6 +45,7 @@ impl Default for Config {
             header: Header::default(),
             status: Status::default(),
             program: None,
+            locus: None,
         }
     }
 }

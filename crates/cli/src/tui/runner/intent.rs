@@ -118,6 +118,26 @@ impl Runner {
             .is_some_and(|fence| fence.request == request)
     }
 
+    pub(super) fn observed(&self, message: &Message) {
+        use crate::observation::event::{self, Kind};
+        let (request, stage) = match message {
+            Message::Reply(reply) => (reply.request, event::reply(&reply.result)),
+            Message::Finished { request, result } => (*request, event::finish(result.is_ok())),
+            _ => return,
+        };
+        let kind = if self.owns(request) {
+            Some(Kind::Workspace)
+        } else {
+            match self.jobs.get(&request) {
+                Some(Job::Start(_)) => Some(Kind::Start),
+                Some(Job::Resolve { .. } | Job::Metadata { .. }) => Some(Kind::Describe),
+                Some(Job::Header { .. }) => Some(Kind::Workspace),
+                _ => None,
+            }
+        };
+        event::Scope(self.scope.as_ref()).receipt(kind, (request, stage));
+    }
+
     pub(super) fn settlement(&mut self, message: &Message) -> Option<super::recovery::Resolution> {
         let request = match message {
             Message::Reply(reply) => reply.request,
