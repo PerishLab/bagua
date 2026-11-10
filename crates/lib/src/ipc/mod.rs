@@ -15,6 +15,8 @@ mod socket;
 pub use connection::Connection;
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 pub use service::Service;
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+pub use socket::private;
 
 pub fn error(error: protocol::Failure) -> std::io::Error {
     std::io::Error::other(format!("{}: {}", error.code(), error.message()))

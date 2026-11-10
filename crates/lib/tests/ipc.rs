@@ -121,3 +121,16 @@ fn malformed() {
     good.read_exact(&mut header).unwrap();
     assert!(u32::from_be_bytes(header) > 0);
 }
+
+#[test]
+fn private() {
+    let directory = directory();
+    let root = fs::canonicalize(directory.path()).unwrap();
+    assert!(bagua::ipc::private(&root).unwrap());
+    fs::set_permissions(&root, fs::Permissions::from_mode(0o755)).unwrap();
+    assert!(!bagua::ipc::private(&root).unwrap());
+    fs::set_permissions(&root, fs::Permissions::from_mode(0o700)).unwrap();
+    let alias = root.join("alias");
+    std::os::unix::fs::symlink(&root, &alias).unwrap();
+    assert!(!bagua::ipc::private(&alias).unwrap());
+}

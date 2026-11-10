@@ -3,7 +3,7 @@ mod host;
 pub mod ipc;
 mod profile;
 
-pub use host::{COLUMNS, Host, ROWS};
+pub use host::{COLUMNS, Event, Host, ROWS};
 pub use profile::{EXCLUDED, profile};
 use protocol::{Command, Failure, Profile, Request};
 

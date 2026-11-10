@@ -61,6 +61,10 @@ impl Runner {
             }
             Err(error) => return Err(error.into()),
         }
+        crate::observation::event::Scope(self.scope.as_ref()).receipt(
+            crate::observation::event::kind(&request.command),
+            (request.id, crate::observation::event::Stage::Sent),
+        );
         if let Command::History { pane, read } = &request.command {
             self.app.bind(self.next, *pane, read);
         }

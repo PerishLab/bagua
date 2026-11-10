@@ -23,7 +23,8 @@ impl Loaded {
             "header": {"enabled": self.config.header.enabled, "components": self.config.header.components, "color": self.config.header.color, "active": self.config.header.active, "inactive": self.config.header.inactive},
             "status": {"components": self.config.status.components, "color": self.config.status.color, "active": self.config.status.active, "inactive": self.config.status.inactive, "separator": self.config.status.separator, "timezone": self.config.status.timezone, "refresh_seconds": self.config.status.refresh},
             "reload": ["client.prefix", "client.escape_ms", "bindings", "mouse", "clipboard", "header", "status"],
-            "restart": ["host.socket", "program", "history", "workspace"],
+            "restart": ["host.socket", "program", "history", "workspace", "locus"],
+            "locus": {"configured": self.locus().is_some(), "default": "off", "buffer": "private persistent state/bagua/locus", "failure": "diagnostic only; business result is preserved"},
             "unsupported": [],
         })
     }

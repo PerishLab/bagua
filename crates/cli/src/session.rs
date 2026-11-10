@@ -16,6 +16,7 @@ pub(crate) struct Session {
     pub identity: Option<protocol::wire::Image>,
     pub next: u64,
     json: bool,
+    pub scope: Option<locus::Context>,
 }
 
 impl Session {
@@ -31,6 +32,7 @@ impl Session {
         Self::adopt(connection, args)
     }
 
+    #[locus::trace(with = crate::observation::view(), frame = context)]
     pub fn adopt(mut connection: Connection, args: &Args) -> Result<Self, Error> {
         if args.request == 0 {
             return Err(Failure::Identity.into());
@@ -44,8 +46,10 @@ impl Session {
             } => (client, canvas, identity),
             _ => return Err(Failure::Version.into()),
         };
+        crate::observation::event::Scope(context.as_ref()).connection(actor);
         Ok(Self {
             connection,
+            scope: context,
             actor,
             canvas,
             created: Vec::new(),
@@ -96,20 +100,34 @@ impl Session {
     }
 
     fn exchange(&mut self, request: Request, visible: bool) -> Result<Option<Snapshot>, Error> {
-        self.connection
-            .send(&request)
-            .map_err(|error| Error::from(error).at(request.id))?;
+        let kind = crate::observation::event::kind(&request.command);
+        self.connection.send(&request).map_err(|error| {
+            crate::observation::event::Scope(self.scope.as_ref()).receipt(
+                kind,
+                (request.id, crate::observation::event::Stage::Unknown),
+            );
+            Error::from(error).at(request.id)
+        })?;
+        crate::observation::event::Scope(self.scope.as_ref())
+            .receipt(kind, (request.id, crate::observation::event::Stage::Sent));
         let mut snapshot = None;
         loop {
-            let message = self
-                .connection
-                .receive()
-                .map_err(|error| Error::from(error).at(request.id))?;
+            let message = self.connection.receive().map_err(|error| {
+                crate::observation::event::Scope(self.scope.as_ref()).receipt(
+                    kind,
+                    (request.id, crate::observation::event::Stage::Unknown),
+                );
+                Error::from(error).at(request.id)
+            })?;
             if visible {
                 self.print(&message)?;
             }
             match message {
                 Message::Reply(reply) if reply.request == request.id => {
+                    crate::observation::event::Scope(self.scope.as_ref()).receipt(
+                        kind,
+                        (request.id, crate::observation::event::reply(&reply.result)),
+                    );
                     let status = reply
                         .result
                         .map_err(|error| Error::from(error).at(request.id))?;
@@ -120,6 +138,13 @@ impl Session {
                     request: id,
                     result,
                 } if id == request.id => {
+                    crate::observation::event::Scope(self.scope.as_ref()).receipt(
+                        kind,
+                        (
+                            request.id,
+                            crate::observation::event::finish(result.is_ok()),
+                        ),
+                    );
                     result.map_err(|error| Error::from(error).at(request.id))?;
                     return Ok(snapshot);
                 }

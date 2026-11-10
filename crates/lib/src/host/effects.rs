@@ -127,7 +127,7 @@ impl Host {
             .collect();
         for id in &ids {
             self.world.finish(*id)?;
-            self.panes.remove(id);
+            self.remove(*id);
             let mut pending = Vec::new();
             for (actor, client) in &mut self.clients {
                 if let Some(request) = client.wanted.remove(id) {
@@ -151,6 +151,12 @@ impl Host {
         Ok(())
     }
 
+    fn remove(&mut self, id: Id) -> Option<Pane> {
+        let pane = self.panes.remove(&id)?;
+        self.emit(super::Event::Retire(id));
+        Some(pane)
+    }
+
     pub(super) fn settle(&mut self) -> Result<(), Failure> {
         let mut remaining = Vec::new();
         for item in std::mem::take(&mut self.closing) {
@@ -165,7 +171,7 @@ impl Host {
             let error = item
                 .panes
                 .iter()
-                .filter_map(|id| self.panes.remove(id))
+                .filter_map(|id| self.remove(*id))
                 .find_map(|p| p.cleanup);
             self.complete(item.actor, item.request, error.map_or(Ok(()), Err))?;
         }

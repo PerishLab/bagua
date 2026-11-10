@@ -26,6 +26,10 @@ fn transaction() {
     assert!(config.reload().is_err());
     assert_eq!(config.workspace().cwd, "foreground");
     assert_eq!(config.prefix(), "C-q");
+    fs::write(&path, "[locus]\nenabled=true\n[client]\nprefix='C-a'\n").unwrap();
+    assert!(config.reload().is_err());
+    assert_eq!(config.prefix(), "C-q");
+    assert!(config.locus().is_none());
     fs::write(&path, "[client]\nprefix='C-a'\nescape_ms=0\n").unwrap();
     config.reload().unwrap();
     assert_eq!(config.prefix(), "C-a");

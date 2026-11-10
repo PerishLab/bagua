@@ -70,12 +70,14 @@ impl Host {
             Ok(process) => {
                 self.panes.get_mut(&id).unwrap().process = Some(process);
                 self.world.observe(id, State::Running)?;
+                self.emit(super::Event::Start(id));
                 self.complete(actor, request, Ok(()))
             }
             Err(error) => {
                 let fault = super::effects::fault(error);
                 self.panes.get_mut(&id).unwrap().fault = Some(fault.clone());
                 self.world.observe(id, State::Failed)?;
+                self.emit(super::Event::Fault(id));
                 self.complete(actor, request, Err(fault))
             }
         }

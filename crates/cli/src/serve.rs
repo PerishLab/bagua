@@ -29,6 +29,7 @@ pub(crate) fn listen() -> Result<(Signals, Arc<AtomicBool>), Error> {
     Ok((signals, stop))
 }
 
+#[locus::trace(with = crate::observation::view(), frame = context)]
 pub(crate) fn run(
     path: &Path,
     history: bagua::config::History,
@@ -40,6 +41,12 @@ pub(crate) fn run(
     }
     let (_signals, stop) = listen()?;
     let mut service = bagua::ipc::Service::identified(path, history, Some(identity))?;
-    service.run(&stop)?;
+    crate::observation::host(&mut service, context.as_ref());
+    crate::observation::event::Scope(context.as_ref())
+        .service(crate::observation::event::Service::Listen);
+    let result = service.run(&stop);
+    crate::observation::event::Scope(context.as_ref())
+        .service(crate::observation::event::Service::Stop(result.is_ok()));
+    result?;
     Ok(())
 }

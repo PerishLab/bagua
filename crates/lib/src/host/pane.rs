@@ -46,6 +46,32 @@ impl Pane {
         })
     }
 
+    pub fn facts(&self) -> [bool; 5] {
+        [
+            self.eof,
+            self.exit.is_some(),
+            self.process.is_none(),
+            self.fault.is_some(),
+            self.cleanup.is_some(),
+        ]
+    }
+
+    pub fn changes(&self, id: Id, before: [bool; 5]) -> [Option<super::Event>; 5] {
+        let after = self.facts();
+        std::array::from_fn(|index| {
+            if before[index] || !after[index] {
+                return None;
+            }
+            Some(match index {
+                0 => super::Event::Eof(id),
+                1 => super::Event::Exit(id, self.exit.unwrap()),
+                2 => super::Event::Release(id),
+                3 => super::Event::Fault(id),
+                _ => super::Event::Cleanup(id),
+            })
+        })
+    }
+
     pub fn finished(&self) -> bool {
         match self {
             Self {

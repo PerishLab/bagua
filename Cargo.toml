@@ -17,7 +17,8 @@ protocol = { package = "bagua-protocol", path = "crates/protocol" }
 client = { package = "bagua-client", path = "crates/client" }
 bagua = { path = "crates/lib" }
 clap = { version = "4", features = ["derive"] }
-plumb = { version = "0", registry = "perish", default-features = false }
+plumb = { version = "0", registry = "perish", default-features = false, features = ["observation"] }
+locus = { version = "0", registry = "perish" }
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
 vt100 = { version = "0.18", default-features = false }

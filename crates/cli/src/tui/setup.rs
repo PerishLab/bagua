@@ -106,7 +106,10 @@ pub(super) fn prepare(
         false,
     )?;
     let next = rpc.next;
-    Ok(Some(Runner::new(rpc.channel()?, app, next, launch)))
+    let scope = rpc.scope.clone();
+    Ok(Some(
+        Runner::new(rpc.channel()?, app, next, launch).scoped(scope),
+    ))
 }
 
 fn join(rpc: &mut Session, session: workspace::Id, viewport: Geometry) -> Result<(), Error> {

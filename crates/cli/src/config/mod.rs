@@ -27,6 +27,8 @@ pub(crate) struct Loaded {
     runtime: Option<PathBuf>,
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     pub(crate) invocation: Option<crate::startup::Invocation>,
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    pub(crate) notes: std::sync::Arc<crate::observation::Notes>,
 }
 
 pub(crate) fn launch(
@@ -137,12 +139,18 @@ impl Loaded {
             runtime: None,
             #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
             invocation: None,
+            #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+            notes: std::sync::Arc::default(),
         })
     }
 
     pub fn apply(&self, args: &mut Args) {
         self.socket(args);
         launch::apply(args, &self.config.program);
+    }
+
+    pub fn locus(&self) -> Option<&serde_json::Value> {
+        self.config.locus.as_ref()
     }
 
     pub fn keys(&self) -> &client::Keys {
@@ -193,6 +201,7 @@ impl Loaded {
         #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
         {
             next.invocation = self.invocation.clone();
+            next.notes = self.notes.clone();
         }
         next.explicit = self.explicit;
         let mut startup = next.config.clone();
@@ -204,7 +213,7 @@ impl Loaded {
         startup.status = self.config.status.clone();
         if startup != self.config {
             return Err(Error::config(
-                "host/program/history/workspace changes require a new invocation; running host and programs were not changed",
+                "host/program/history/workspace/locus changes require a new invocation; running host and programs were not changed",
             ));
         }
         *self = next;

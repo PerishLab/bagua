@@ -135,6 +135,26 @@ host authority. Client prefix, Escape delay and typed binding tables can reload 
 validation. Startup socket, program and history sections require a new invocation;
 reload never restarts a host or changes existing programs. Unknown fields and
 future capability sections refuse instead of implying implemented behavior.
+The optional `[locus]` section is an opaque observation input in the core schema;
+CLI composition validates its complete snapshot through formal Plumb Settings.
+Observation type/unknown-field, parent, state and setup failures are diagnostics,
+with business output and exit preserved. Other unknown business sections still refuse.
+Only main captures the explicit endpoint, parent and persistent-state inputs.
+The observer uses shared Run/Hook/reporter/spool. A bounded immutable invocation
+Context adds verified bound release identity; absent identity stays unknown.
+Client request IDs belong to the actual connection Context carried into the TUI.
+Host native IDs remain under its own run; attaching an existing host invents no
+cross-process identity or cause. Self-start passes only its actual parent control;
+user programs keep their explicit launch environment.
+Events admit enum codes and numeric facts only; user text, argv/environment/cwd,
+terminal input/output/clipboard and raw error messages never enter them.
+Source tracing stays at function declarations, outside per-key/frame/poll paths.
+TTY Hook diagnostics retain bounded counts until confirmed restoration; an unknown
+restoration suppresses them. Orphan stderr is not a persistent diagnostic channel.
+Persistent private observation state is independent of socket/session cleanup.
+The `[locus]` section requires a new invocation; reload preserves the active Hook.
+Formal combined qualification, release/install and human acceptance remain separate.
+
 Public configuration diagnostics name fields and sources without printing
 program argument or environment values. User directories and explicit config
 paths are inputs; a working-directory file is never implicitly discovered.
@@ -146,7 +166,7 @@ Wharf owns its archive, manager, identity binding and complete distribution unde
 `releases.bagua.perish.uk`; internal crates remain unpublished. Source builds keep
 version 0.0.0. Product source carries no generated installer or release workflow.
 The required Windtun case names in `plumb.toml` are the consumer contract for
-Seatrial #66 and #83. Declaration validity does not prove those scenes are published,
+Seatrial #66, #83 and #111. Declaration validity does not prove those scenes are published,
 executed or qualified, or that stable promotion enforcement is active. Issue #12
 retains the actual non-stable distribution obligation after its source merge.
 
