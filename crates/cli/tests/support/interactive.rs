@@ -29,6 +29,7 @@ impl Fixture {
     pub fn new() -> Self {
         let directory = tempfile::tempdir().unwrap();
         fs::set_permissions(directory.path(), fs::Permissions::from_mode(0o700)).unwrap();
+        profile(directory.path());
         let mut service = Service::bind(&directory.path().join("host.sock")).unwrap();
         let stop = Arc::new(AtomicBool::new(false));
         let flag = Arc::clone(&stop);
@@ -202,3 +203,15 @@ pub const SHELL: &[&str] = &[
     "--env",
     "TERM=xterm-256color",
 ];
+
+pub fn legacy(text: &str) -> String {
+    format!(
+        "{text}\n[header]\nenabled=false\ncomponents=['pane','command','cwd']\n[status]\ncomponents=['session','windows','prefix','notice','clock']\n"
+    )
+}
+
+fn profile(home: &std::path::Path) {
+    let path = home.join(".config/bagua");
+    fs::create_dir_all(&path).unwrap();
+    fs::write(path.join("bagua.toml"), legacy("")).unwrap();
+}

@@ -12,7 +12,7 @@ use workspace::{Geometry, Operation, Target};
 pub(super) struct Display<'a> {
     pub terminal: &'a mut client::Terminal,
     pub stop: &'a std::sync::atomic::AtomicBool,
-    pub separator: bool,
+    pub rows: u16,
 }
 
 pub(super) fn prepare(
@@ -23,7 +23,7 @@ pub(super) fn prepare(
 ) -> Result<Option<Runner>, Error> {
     let (columns, rows) = display.terminal.size()?;
     let viewport =
-        super::extent(columns, rows, config.decor().status.separator).ok_or(Failure::Payload)?;
+        super::extent(columns, rows, config.decor().status.rows()).ok_or(Failure::Payload)?;
     let geometry = Geometry::new(
         viewport.width().min(rpc.canvas.columns()),
         viewport.height().min(rpc.canvas.rows()),

@@ -12,6 +12,11 @@ impl App {
             self.cancel();
             return Ok(Vec::new());
         }
+        let Some(row) = event.row.checked_sub(self.decor.status.inset()) else {
+            self.cancel();
+            return Ok(Vec::new());
+        };
+        let event = MouseEvent { row, ..event };
         if event.column >= self.viewport.width() || event.row >= self.viewport.height() {
             self.cancel();
             return Ok(Vec::new());
@@ -82,7 +87,12 @@ impl App {
             return Ok(None);
         }
         let place = self.placements()?.into_iter().find(|place| {
-            point.y == place.frame.y
+            point.y
+                == if place.rect.y > place.frame.y {
+                    place.frame.y
+                } else {
+                    place.frame.y + place.frame.geometry.rows() - 1
+                }
                 && (place.frame.x..place.frame.x + place.frame.geometry.columns())
                     .contains(&point.x)
         });

@@ -1,3 +1,5 @@
+mod format;
+pub use format::{Layout, Line};
 use protocol::Failure;
 use std::time::Duration;
 
@@ -21,6 +23,11 @@ pub struct Decor {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Header {
+    pub edge: workspace::Edge,
+    pub border: bool,
+    pub foreground: Option<u8>,
+    pub highlight: Option<u8>,
+    pub template: Option<crate::template::Template>,
     pub enabled: bool,
     pub color: bool,
     pub active: u8,
@@ -31,6 +38,11 @@ pub struct Header {
 impl Header {
     pub fn new(values: &[String]) -> Result<Self, Failure> {
         Ok(Self {
+            edge: workspace::Edge::Top,
+            border: false,
+            foreground: None,
+            highlight: None,
+            template: None,
             components: components(
                 values,
                 &[Component::Pane, Component::Command, Component::Cwd],
@@ -51,6 +63,10 @@ impl Default for Header {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Status {
+    pub edge: workspace::Edge,
+    pub foreground: Option<u8>,
+    pub highlight: Option<u8>,
+    pub layout: Option<Layout>,
     pub color: bool,
     pub active: u8,
     pub inactive: u8,
@@ -81,6 +97,10 @@ impl Status {
             ],
         )?;
         Ok(Self {
+            edge: workspace::Edge::Bottom,
+            foreground: None,
+            highlight: None,
+            layout: None,
             color: true,
             active: 4,
             inactive: 8,

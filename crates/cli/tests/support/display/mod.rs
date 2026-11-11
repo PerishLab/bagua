@@ -1,3 +1,4 @@
+mod bars;
 use super::interactive::{Fixture, Peer};
 use pty::Size;
 use std::{
@@ -6,7 +7,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-const CONFIG: &str = "[client]\nprefix = 'C-g'\n[header]\nenabled = true\n[status]\nseparator = true\ntimezone = 'Asia/Shanghai'\nrefresh_seconds = 1\n[program]\nexecutable='/bin/sh'\nargs=['-i']\ncwd='/'\nenvironment={PATH='/usr/bin:/bin',TERM='xterm-256color'}\n";
+const CONFIG: &str = "[client]\nprefix = 'C-g'\n[header]\nenabled = true\ncomponents=['pane','command','cwd']\n[status]\ncomponents=['session','windows','prefix','notice','clock']\nseparator = true\ntimezone = 'Asia/Shanghai'\nrefresh_seconds = 1\n[program]\nexecutable='/bin/sh'\nargs=['-i']\ncwd='/'\nenvironment={PATH='/usr/bin:/bin',TERM='xterm-256color'}\n";
 
 fn configured(fixture: &Fixture, path: &Path, size: Size) -> Peer {
     fs::write(path, CONFIG).unwrap();

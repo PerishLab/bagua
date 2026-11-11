@@ -63,6 +63,11 @@ impl World {
             Operation::Header { session, enabled } => {
                 self.edit(session)?.reserve(actor, enabled)?
             }
+            Operation::Decorate {
+                session,
+                enabled,
+                edge,
+            } => self.edit(session)?.decorate(actor, enabled, edge)?,
             Operation::Adjust {
                 window,
                 divider,

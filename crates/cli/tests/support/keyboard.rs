@@ -1,4 +1,4 @@
-use super::interactive::{Fixture, Peer};
+use super::interactive::{Fixture, Peer, legacy};
 use pty::Size;
 use std::fs;
 
@@ -48,7 +48,7 @@ fn bindings() {
     let fixture = Fixture::new();
     let root = tempfile::tempdir().unwrap();
     let path = root.path().join("bagua.toml");
-    fs::write(&path, "[client]\nprefix='C-q'\n[bindings.prefix]\n's'='split-rows'\n[bindings.direct]\n'Alt-q'='detach'\n[program]\nexecutable='/bin/sh'\nargs=['-i']\ncwd='/'\nenvironment={PATH='/usr/bin:/bin',TERM='xterm-256color'}\n").unwrap();
+    fs::write(&path, legacy("[client]\nprefix='C-q'\n[bindings.prefix]\n's'='split-rows'\n[bindings.direct]\n'Alt-q'='detach'\n[program]\nexecutable='/bin/sh'\nargs=['-i']\ncwd='/'\nenvironment={PATH='/usr/bin:/bin',TERM='xterm-256color'}\n")).unwrap();
     let mut peer = Peer::new(
         &fixture,
         &["--config", path.to_str().unwrap(), "open"],

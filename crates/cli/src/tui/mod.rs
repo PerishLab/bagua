@@ -30,7 +30,7 @@ pub(crate) fn run(path: &Path, args: &Args, config: crate::config::Loaded) -> Re
                 &mut setup::Display {
                     terminal: &mut terminal,
                     stop: &stop,
-                    separator: config.decor().status.separator,
+                    rows: config.decor().status.rows(),
                 },
                 &config,
             )
@@ -53,8 +53,7 @@ pub(crate) fn run(path: &Path, args: &Args, config: crate::config::Loaded) -> Re
     }
 }
 
-pub(super) fn extent(columns: u16, rows: u16, separator: bool) -> Option<terminal::Extent> {
-    let reserved = 1 + u16::from(separator);
+pub(super) fn extent(columns: u16, rows: u16, reserved: u16) -> Option<terminal::Extent> {
     if columns < 2 || rows <= reserved {
         return None;
     }

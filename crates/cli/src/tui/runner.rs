@@ -59,7 +59,7 @@ pub(super) struct Runner {
     staged: usize,
     fence: Option<intent::Fence>,
     recovery: Option<recovery::Recovery>,
-    header: Option<(u64, bool)>,
+    header: Option<(u64, bool, workspace::Edge)>,
     suspended: bool,
     keyboard: client::Keyboard,
     size: (u16, u16),

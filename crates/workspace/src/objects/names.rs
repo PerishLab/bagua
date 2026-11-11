@@ -28,7 +28,9 @@ impl World {
                 {
                     return Err(Failure::Conflict);
                 }
-                session.windows.get_mut(&window.unwrap()).unwrap().name = name;
+                let window = session.windows.get_mut(&window.unwrap()).unwrap();
+                window.name = name;
+                window.automatic = false;
             }
             Target::Pane(_) => return Err(Failure::State),
         }

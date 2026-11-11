@@ -1,4 +1,5 @@
 mod check;
+mod decor;
 mod launch;
 mod report;
 mod runtime;

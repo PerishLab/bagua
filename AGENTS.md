@@ -116,7 +116,7 @@ behavior determines necessary escape sequences, Unicode widths, modes, mouse,
 paste and history; an old sequence is not obsolete merely because it is old.
 
 The following compatibility obligations are excluded: tmux command syntax,
-abbreviations and target expressions; scriptable `.tmux.conf`; format
+abbreviations and target expressions; scriptable `.tmux.conf`; tmux format
 expressions and shell-evaluated status; plugin and hook compatibility;
 non-UTF-8 and ancient terminal specialization; broad historical Unix
 portability; the complete implicit options inheritance system; and
@@ -306,3 +306,30 @@ with the last completely written paint; an offered or coalesced paint is never
 the baseline. Copy effects stay between complete frames and preserve that
 baseline. Geometry changes refresh the full display; unchanged pictures emit no
 bytes, and time/metadata refresh follows the declared bounded interval.
+
+
+Presentation has two layers: bounded bar placement and pure compiled templates.
+World owns pane-header edges and application rectangles; atomic Decorate validates
+all windows before changing either reservation or edge. Client status lines may
+precede or follow its body viewport; drawing, cursor and mouse coordinates share
+the same reserved-row count. Observer preferences grant no geometry authority.
+The template engine belongs to client, consumes installed immutable state, and
+performs no IO, environment lookup, shell execution or dynamic data reparsing.
+It admits named fields, bounded conditions/window lists and typed style roles;
+unknown syntax and exhausted source budgets refuse complete configuration.
+Explicit legacy components retain their formatter; mixing them with new templates
+refuses. Product defaults compile to templates; the bare App fallback remains
+minimal until preferences are installed. Reload compiles and validates the whole
+replacement before applying it. Native layout adoption remains independently
+fallible and cannot draw a desired header over actual application content.
+The first status line is the system feedback region while mode, observation role,
+prefix or notices need it, even if user templates are empty. Other lines retain
+navigation. Template output has independent byte and display-column budgets;
+window iteration keeps the selected item in its visible range. Display metadata
+remains bounded visible-pane sampling, with missing/expired values empty and no
+render-time IO. Automatic window titles use available focused-program metadata;
+explicitly renamed windows retain their names. Unknown background metadata falls
+back to actual window names rather than inventing a current process. Source wire9
+carries explicit header edges and the automatic-name flag; matching executable
+identity still guards host/client attachment. Formal qualification and installed
+consumption belong to the release parent and independent Seatrial Scene.
