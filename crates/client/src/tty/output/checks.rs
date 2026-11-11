@@ -80,6 +80,7 @@ fn failure() {
 }
 fn paint(text: &str, bar: &str) -> Paint {
     Paint {
+        tracking: terminal::Tracking::Drag,
         rows: vec![
             format!("\x1b[0m\x1b[1;1H\x1b[2K{text:12}\x1b[0m"),
             format!("\x1b[0m\x1b[2;1H\x1b[2K{bar:12}\x1b[0m"),
@@ -144,4 +145,34 @@ fn baseline() {
         1
     );
     assert!(!bytes.windows(4).any(|bytes| bytes == b"\x1b[2J"));
+}
+
+#[test]
+fn modes() {
+    let mut output = Output::default();
+    let mut first = paint("A", "X");
+    first.tracking = terminal::Tracking::Motion;
+    let mut writer = Slow::default();
+    output.present(first).unwrap();
+    output.flush(&mut writer).unwrap();
+    output.flush(&mut writer).unwrap();
+    let mut skipped = paint("A", "X");
+    skipped.tracking = terminal::Tracking::Off;
+    output.present(skipped).unwrap();
+    output.present(paint("A", "X")).unwrap();
+    for _ in 0..2000 {
+        output.flush(&mut writer).unwrap();
+    }
+    let mut engine = terminal::Engine::new(terminal::Extent::new(12, 2).unwrap(), 0).unwrap();
+    engine.feed(&writer.bytes).unwrap();
+    assert_eq!(engine.modes().tracking, terminal::Tracking::Drag);
+    assert!(writer.bytes.windows(8).any(|bytes| bytes == b"\x1b[?1003h"));
+    let mut disabled = paint("A", "X");
+    disabled.tracking = terminal::Tracking::Off;
+    output.present(disabled).unwrap();
+    let mut bytes = Vec::new();
+    output.flush(&mut bytes).unwrap();
+    assert!(!bytes.windows(4).any(|bytes| bytes == b"\x1b[2K"));
+    engine.feed(&bytes).unwrap();
+    assert_eq!(engine.modes().tracking, terminal::Tracking::Off);
 }

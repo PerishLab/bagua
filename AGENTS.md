@@ -265,6 +265,14 @@ and byte custody. Viewport reports preserve
 focus. Pointer coordinates never overtake earlier keyboard intentions or get
 silently rebound to a changed layout.
 
+Outer mouse reporting follows client handling needs: button-held motion is the
+default; full motion requires a visible live application that can receive it.
+Disabled handling disables reporting. The sole presentation writer sequences
+mode transitions against committed frame baselines, even without cell changes.
+Local capture, frozen panes, hidden windows, observers and recovery do not
+independently request idle motion. Incoming application events remain ordered
+input, never a coalescing presentation stream.
+
 Mouse captures bind a pane rectangle or an exact model divider, and cancel on
 invalidated geometry, retirement or local admission refusal. Local drag selection
 does not grant control. Divider adjustment validates its prior split and geometry

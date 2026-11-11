@@ -58,6 +58,7 @@ impl App {
             point.y += self.decor.status.inset();
         }
         let paint = Paint {
+            tracking: self.tracking(),
             rows: rows
                 .iter()
                 .enumerate()
