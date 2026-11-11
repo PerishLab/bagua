@@ -951,6 +951,16 @@ input is refused. The client uses a bounded decoder instead of an unbounded
 event-reader paste accumulator.
 
 Mouse presses focus panes for the controller. Without application tracking,
+the outer terminal reports clicks and button-held motion (1002), not idle
+pointer movement. Full motion (1003) is requested only while a visible live
+application can receive it. Hidden windows, observers, recovery and local drag
+captures do not require full motion. Disabling mouse handling also disables
+outer reporting. Mode changes share the ordered presentation writer, including
+changes without visible cell updates; exit disables all mouse reporting.
+This avoids unnecessary idle motion traffic; it does not establish that the
+reported remote ET click delay has been resolved.
+
+Without application tracking,
 left-drag selects locally; Shift-left-drag selects locally even when the
 application tracks mouse input. Observers can select without acquiring control.
 Wheel events follow application tracking, or request host history when tracking

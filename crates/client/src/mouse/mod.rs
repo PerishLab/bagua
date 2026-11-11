@@ -1,4 +1,5 @@
 mod pointer;
+mod tracking;
 use crate::App;
 use crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 pub(crate) use pointer::Pointer;
