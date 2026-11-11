@@ -11,6 +11,8 @@ pub struct Session {
     pub(crate) windows: BTreeMap<Id, Window>,
     pub(crate) selected: Option<Id>,
     header: bool,
+    #[serde(default)]
+    edge: crate::Edge,
 }
 
 impl Session {
@@ -24,6 +26,7 @@ impl Session {
             windows: BTreeMap::new(),
             selected: None,
             header: false,
+            edge: crate::Edge::Top,
         }
     }
 
@@ -45,23 +48,38 @@ impl Session {
     pub fn header(&self) -> bool {
         self.header
     }
+    pub fn edge(&self) -> crate::Edge {
+        self.edge
+    }
     pub fn canvas(&self) -> crate::Canvas {
         crate::Canvas {
             geometry: self.geometry(),
             header: self.header,
+            edge: self.edge,
         }
     }
 
     pub(crate) fn reserve(&mut self, actor: Id, header: bool) -> Result<(), Failure> {
+        self.decorate(actor, header, self.edge)
+    }
+
+    pub(crate) fn decorate(
+        &mut self,
+        actor: Id,
+        header: bool,
+        edge: crate::Edge,
+    ) -> Result<(), Failure> {
         self.require(actor)?;
         let canvas = crate::Canvas {
             header,
+            edge,
             ..self.canvas()
         };
         for window in self.windows.values() {
             window.placements(canvas)?;
         }
         self.header = header;
+        self.edge = edge;
         Ok(())
     }
     pub fn selected(&self) -> Option<Id> {
@@ -200,6 +218,7 @@ impl Session {
             window.placements(crate::Canvas {
                 geometry,
                 header: self.header,
+                edge: self.edge,
             })?;
         }
         Ok(())

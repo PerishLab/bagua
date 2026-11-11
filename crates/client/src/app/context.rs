@@ -28,15 +28,25 @@ impl App {
     }
 
     pub fn needing(&self) -> Vec<Id> {
-        if !self.decor.header.components.iter().any(|c| {
-            matches!(
-                c,
-                super::preferences::Component::Command | super::preferences::Component::Cwd
-            )
-        }) {
-            return Vec::new();
-        }
-        if !self.session().is_some_and(|session| session.header()) {
+        let header = self
+            .decor
+            .header
+            .template
+            .as_ref()
+            .is_some_and(|t| t.metadata())
+            || self.decor.header.components.iter().any(|c| {
+                matches!(
+                    c,
+                    super::preferences::Component::Command | super::preferences::Component::Cwd
+                )
+            });
+        let status = self
+            .decor
+            .status
+            .layout
+            .as_ref()
+            .is_some_and(|layout| layout.lines.iter().any(|line| line.metadata()));
+        if !(status || header && self.session().is_some_and(|s| s.header())) {
             return Vec::new();
         }
         self.placements()

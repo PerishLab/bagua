@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 pub struct Window {
     id: Id,
     pub(crate) name: String,
+    pub(crate) automatic: bool,
     focus: Id,
     tree: Tree,
     pub(crate) panes: BTreeMap<Id, Pane>,
@@ -15,6 +16,7 @@ impl Window {
         Self {
             id,
             name,
+            automatic: true,
             focus: pane,
             tree: Tree::Pane(pane),
             panes: [(pane, Pane::new(pane))].into(),
@@ -26,6 +28,10 @@ impl Window {
     }
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn automatic(&self) -> bool {
+        self.automatic
     }
 
     pub fn focus(&self) -> Id {

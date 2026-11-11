@@ -7,7 +7,7 @@ mod objects;
 mod session;
 
 pub use control::{Control, Failure};
-pub use geometry::{Canvas, Geometry, Sizing};
+pub use geometry::{Canvas, Edge, Geometry, Sizing};
 pub use identity::{Id, Target};
 pub use names::valid;
 pub use session::Session;

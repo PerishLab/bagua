@@ -15,37 +15,40 @@ impl Runner {
             return Ok(false);
         };
         let enabled = self.config.decor().header.enabled;
-        if session.header() == enabled {
+        let edge = self.config.decor().header.edge;
+        if session.header() == enabled && session.edge() == edge {
             return Ok(false);
         }
         let Some(revision) = self.app.revision() else {
             return Ok(false);
         };
-        if self.header == Some((revision, enabled)) {
+        if self.header == Some((revision, enabled, edge)) {
             return Ok(false);
         }
         let canvas = workspace::Canvas {
             header: enabled,
+            edge,
             ..session.canvas()
         };
         if session
             .windows()
             .any(|window| window.placements(canvas).is_err())
         {
-            self.header = Some((revision, enabled));
+            self.header = Some((revision, enabled, edge));
             self.app.error(
                 "Header reservation unavailable at this geometry; application layout unchanged",
             );
             return Ok(false);
         }
         if self.submit(
-            Command::Workspace(Operation::Header {
+            Command::Workspace(Operation::Decorate {
                 session: self.app.target(),
                 enabled,
+                edge,
             }),
             Job::Header { refused: false },
         )? {
-            self.header = Some((revision, enabled));
+            self.header = Some((revision, enabled, edge));
             return Ok(true);
         }
         Ok(false)

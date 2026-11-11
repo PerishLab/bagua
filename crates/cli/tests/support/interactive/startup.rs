@@ -10,6 +10,7 @@ impl Fixture {
     pub fn cold() -> Self {
         let directory = tempfile::tempdir().unwrap();
         fs::set_permissions(directory.path(), fs::Permissions::from_mode(0o700)).unwrap();
+        super::profile(directory.path());
         Self {
             directory: Some(directory),
             normal: true,

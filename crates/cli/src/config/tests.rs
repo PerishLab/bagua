@@ -158,3 +158,37 @@ fn decor() {
     assert!(config.decor().status.separator);
     assert_eq!(config.decor().status.refresh(), Duration::from_secs(1));
 }
+
+#[test]
+fn templates() {
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("bagua.toml");
+    fs::write(&path,"[header]\nformat='W{{window.index}} P{{pane.index}}'\nposition='bottom'\n[status]\nposition='top'\n[[status.lines]]\nleft='{{session.name}}'\nright='{{clock.time}}'\n").unwrap();
+    let mut config = Loaded::read(Some(path.clone()), true).unwrap();
+    assert!(config.decor().header.template.is_some());
+    assert_eq!(config.decor().header.edge, workspace::Edge::Bottom);
+    assert_eq!(config.decor().status.edge, workspace::Edge::Top);
+    assert_eq!(config.decor().status.rows(), 1);
+    let before = config.decor().clone();
+    for text in [
+        "[header]\nformat='{{unknown}}'\n",
+        "[header]\ncomponents=['pane']\nformat='text'\n",
+        "[status]\ncomponents=['clock']\nlines=[]\n",
+        "[status]\nlines=[]\n",
+        "[status]\nposition='left'\n",
+        "[[status.lines]]\nleft='{{#if pane.active}}unterminated'\n",
+    ] {
+        fs::write(&path, text).unwrap();
+        assert!(config.reload().is_err());
+        assert_eq!(config.decor(), &before);
+    }
+    fs::write(
+        &path,
+        "[header]\ncomponents=['pane']\n[status]\ncomponents=['clock']\nseparator=true\n",
+    )
+    .unwrap();
+    config.reload().unwrap();
+    assert!(config.decor().header.template.is_none());
+    assert!(config.decor().status.layout.is_none());
+    assert_eq!(config.decor().status.rows(), 2);
+}

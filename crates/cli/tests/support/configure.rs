@@ -1,11 +1,11 @@
-use super::interactive::{Fixture, Peer};
+use super::interactive::{Fixture, Peer, legacy};
 use pty::Size;
 use std::fs;
 
 fn contents(prefix: &str) -> String {
-    format!(
+    legacy(&format!(
         "version=1\n[client]\nprefix='{prefix}'\nescape_ms=20\n[program]\nexecutable='/bin/sh'\nargs=['-i']\ncwd='/'\n[program.environment]\nPATH='/usr/bin:/bin'\nTERM='xterm-256color'\n"
-    )
+    ))
 }
 
 #[test]

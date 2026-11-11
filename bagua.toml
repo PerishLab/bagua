@@ -24,19 +24,32 @@ limit = 262144
 
 [header]
 enabled = true
-components = ["pane", "command", "cwd"]
+position = "top"
+format = ' W{{window.index}}:{{window.title:24}} · P{{pane.index}}{{#if pane.command}} {{pane.command}}{{/if}}{{#if pane.cwd_name}} · {{pane.cwd_name}}{{/if}} '
+border = true
 color = true
-active = 4
-inactive = 8
+active = 25
+inactive = 237
+foreground = 248
+highlight = 231
 
 [status]
-components = ["session", "windows", "prefix", "notice", "clock"]
+position = "bottom"
 color = true
-active = 4
-inactive = 8
-separator = true
+active = 39
+inactive = 234
+foreground = 245
+highlight = 16
+separator = false
 timezone = "Asia/Shanghai"
 refresh_seconds = 15
+
+[[status.lines]]
+fill = false
+
+[[status.lines]]
+left = '{{#if client.columns >= 64}} {{session.name:18}} {{/if}}{{#windows}}{{#if window.active}}{{style active}}{{else}}{{style inactive}}{{/if}} {{window.index}}:{{window.title:24}} {{style base}}{{/windows}}'
+right = '{{#if client.columns >= 64}}{{clock.time}}  {{clock.date}} {{/if}}'
 
 [history]
 lines = 50000

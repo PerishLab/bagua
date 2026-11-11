@@ -1,9 +1,18 @@
 use std::num::NonZeroU16;
 
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum Edge {
+    #[default]
+    Top,
+    Bottom,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Canvas {
     pub geometry: Geometry,
     pub header: bool,
+    pub edge: Edge,
 }
 
 impl From<Geometry> for Canvas {
@@ -11,6 +20,7 @@ impl From<Geometry> for Canvas {
         Self {
             geometry,
             header: false,
+            edge: Edge::Top,
         }
     }
 }

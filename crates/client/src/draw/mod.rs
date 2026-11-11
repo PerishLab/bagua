@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod checks;
+mod context;
+mod format;
 mod paint;
 mod row;
 mod status;
@@ -16,7 +18,7 @@ impl App {
     }
 
     pub fn paint(&self) -> Result<Paint, Failure> {
-        let mut rows = Vec::new();
+        let mut body = Vec::new();
         let places = self.placements()?;
         for y in 0..self.viewport.height() {
             let mut row = Row::new(self.viewport.width());
@@ -26,8 +28,9 @@ impl App {
                 self.content(&mut row, *place, world);
                 self.header(&mut row, *place, world);
             }
-            rows.push(row.encode(y));
+            body.push(row);
         }
+        let mut bars = self.bars();
         if self.decor.status.separator {
             let mut row = Row::new(self.viewport.width());
             row.label(
@@ -35,14 +38,32 @@ impl App {
                 &"─".repeat(usize::from(self.viewport.width())),
                 tone(false, 0, false),
             );
-            rows.push(row.encode(self.viewport.height()));
+            if self.decor.status.inset() > 0 {
+                bars.push(row);
+            } else {
+                bars.insert(0, row);
+            }
         }
-        rows.push(self.bar().encode(rows.len() as u16));
+        let rows = if self.decor.status.inset() > 0 {
+            bars.extend(body);
+            bars
+        } else {
+            body.extend(bars);
+            body
+        };
         let extent =
             Extent::new(self.viewport.width(), rows.len() as u16).ok_or(Failure::Capacity)?;
+        let mut cursor = self.cursor()?;
+        if let Some(point) = &mut cursor {
+            point.y += self.decor.status.inset();
+        }
         let paint = Paint {
-            rows,
-            cursor: self.cursor()?,
+            rows: rows
+                .iter()
+                .enumerate()
+                .map(|(y, row)| row.encode(y as u16))
+                .collect(),
+            cursor,
             extent,
         };
         paint.check()?;
@@ -108,16 +129,15 @@ impl App {
     }
 
     fn header(&self, row: &mut Row, place: Placement, world: u16) {
-        if !self.session().is_some_and(|session| session.header()) || world != place.frame.y {
+        if !self.session().is_some_and(|session| session.header()) || world != heading(place) {
+            return;
+        }
+        if self.label(row, place) {
             return;
         }
         let active = self.focus() == Some(place.pane);
         let decor = &self.decor.header;
-        let style = tone(
-            decor.color,
-            if active { decor.active } else { decor.inactive },
-            active,
-        );
+        let style = format::Theme::header(decor, active).base;
         let text: Vec<_> = decor
             .components
             .iter()
@@ -136,11 +156,19 @@ impl App {
             place.frame.x,
             place.frame.x + place.frame.geometry.columns(),
         );
-        row.fill(span.clone(), style);
+        if decor.border {
+            row.label(
+                span.clone(),
+                &"─".repeat(usize::from(span.end - span.start)),
+                tone(false, 0, false),
+            );
+        } else {
+            row.fill(span.clone(), style);
+        }
         row.label(span, &text.join(" | "), style);
     }
 
-    fn activity(&self, pane: workspace::Id) -> &'static str {
+    pub(super) fn activity(&self, pane: workspace::Id) -> &'static str {
         let state = self
             .session()
             .into_iter()
@@ -178,5 +206,13 @@ impl App {
             return Ok(None);
         };
         Ok((x < self.viewport.width() && y < self.viewport.height()).then_some(Point { x, y }))
+    }
+}
+
+fn heading(place: Placement) -> u16 {
+    if place.rect.y > place.frame.y {
+        place.frame.y
+    } else {
+        place.frame.y + place.frame.geometry.rows() - 1
     }
 }

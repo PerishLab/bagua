@@ -91,7 +91,7 @@ impl Runner {
             }
             Event::Resize(columns, rows) => {
                 let Some(extent) =
-                    crate::tui::extent(columns, rows, self.config.decor().status.separator)
+                    crate::tui::extent(columns, rows, self.config.decor().status.rows())
                 else {
                     self.suspended = true;
                     return Ok(());

@@ -3,7 +3,7 @@ use protocol::wire::Program;
 use radicula_config::Cascade;
 use serde::Deserialize;
 use std::path::PathBuf;
-pub use view::{Header, Status};
+pub use view::{Header, Line, Status};
 
 #[derive(Clone, Debug, PartialEq, Cascade)]
 #[cascade(strict)]

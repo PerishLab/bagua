@@ -71,6 +71,11 @@ pub enum Operation {
         session: Id,
         enabled: bool,
     },
+    Decorate {
+        session: Id,
+        enabled: bool,
+        edge: crate::Edge,
+    },
     Adjust {
         window: Id,
         divider: crate::Divider,

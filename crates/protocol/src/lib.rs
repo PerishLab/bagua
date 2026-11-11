@@ -15,7 +15,7 @@ pub use stamp::Stamped;
 pub use sync::{Cursor, Update};
 pub use watch::{SUBSCRIPTIONS, Subscriptions};
 
-pub const VERSION: u16 = 8;
+pub const VERSION: u16 = 9;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]

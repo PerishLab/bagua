@@ -110,7 +110,7 @@ impl Entry<'_, '_> {
         };
         let (columns, rows) = self.display.terminal.size()?;
         let viewport =
-            super::super::extent(columns, rows, self.display.separator).ok_or(Failure::Payload)?;
+            super::super::extent(columns, rows, self.display.rows).ok_or(Failure::Payload)?;
         let viewport = Geometry::new(
             viewport.width().min(self.rpc.canvas.columns()),
             viewport.height().min(self.rpc.canvas.rows()),

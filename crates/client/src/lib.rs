@@ -4,9 +4,10 @@ mod draw;
 mod keyboard;
 mod keys;
 mod mouse;
-pub use app::preferences::{Clipboard, Decor, Header, Mouse, Status};
+pub use app::preferences::{Clipboard, Decor, Header, Layout, Line, Mouse, Status};
 pub use keyboard::Keyboard;
 mod select;
+pub mod template;
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 mod tty;
 

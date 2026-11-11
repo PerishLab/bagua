@@ -1,3 +1,4 @@
+use super::interactive::legacy;
 use super::interactive::{Fixture, Peer, SHELL};
 use pty::Size;
 use std::{
@@ -17,7 +18,7 @@ fn copying(target: &str) {
     let path = root.path().join("bagua.toml");
     let script =
         r"stty raw -echo; printf '\033]52;c;dW50cnVzdGVk\033\134hello'; exec /bin/sleep 60";
-    fs::write(&path, format!("[clipboard]\ntarget='{target}'\n[program]\nexecutable='/bin/sh'\nargs=['-c', '''{script}''']\ncwd='/'\nenvironment={{PATH='/usr/bin:/bin',TERM='xterm-256color'}}\n")).unwrap();
+    fs::write(&path, legacy(&format!("[clipboard]\ntarget='{target}'\n[program]\nexecutable='/bin/sh'\nargs=['-c', '''{script}''']\ncwd='/'\nenvironment={{PATH='/usr/bin:/bin',TERM='xterm-256color'}}\n"))).unwrap();
     let mut peer = Peer::new(
         &fixture,
         &["--config", path.to_str().unwrap(), "open"],

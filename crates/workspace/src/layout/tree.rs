@@ -73,7 +73,7 @@ impl Tree {
                 geometry,
             },
             &mut placements,
-            canvas.header,
+            canvas,
         )?;
         Ok(placements)
     }
@@ -82,15 +82,20 @@ impl Tree {
         &self,
         rect: Rect,
         output: &mut Vec<Placement>,
-        header: bool,
+        canvas: Canvas,
     ) -> Result<(), Failure> {
         match self {
             Self::Pane(pane) => {
-                let top = u16::from(header);
+                let inset = u16::from(canvas.header);
+                let top = if canvas.edge == crate::Edge::Top {
+                    inset
+                } else {
+                    0
+                };
                 let height = rect
                     .geometry
                     .rows()
-                    .checked_sub(top)
+                    .checked_sub(inset)
                     .ok_or(Failure::Geometry)?;
                 let geometry =
                     Geometry::new(rect.geometry.columns(), height).ok_or(Failure::Geometry)?;
@@ -110,8 +115,8 @@ impl Tree {
                 second,
             } => {
                 let (left, right) = rect.split(*split)?;
-                first.collect(left, output, header)?;
-                second.collect(right, output, header)?;
+                first.collect(left, output, canvas)?;
+                second.collect(right, output, canvas)?;
             }
         }
         Ok(())

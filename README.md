@@ -460,88 +460,127 @@ pure protocol checks retain text until fresh model/start evidence and refuse
 writes after transfer. These source checks do not replace Seatrial #83's
 independent distributed-artifact workflow qualification.
 
-## Header, status and low traffic display
+## Bars and bounded templates
 
-Issue #30 adds this source profile; formal release/installed qualification is
-separate. The example `bagua.toml` selects pane headers, a status separator,
-indexed blue/dark activity colors and a fifteen-second Asia/Shanghai clock.
-Headers are off by default; their one-row reservation becomes session layout
-state only through a controller's explicit `Workspace.Header { session, enabled }`
-operation. `bagua config` reports desired preferences, not proof of adoption.
+Issue #30 established the first header/status profile. Issue #75 separates bar
+layout from pure custom templates; complete release and installed qualification
+are tracked by #74. The product defaults and example select a light pane-border
+title, a blank feedback row and a session/window navigation row. Legacy explicit
+`components` selections keep their previous formatter.
+
+A bar owns placement, reserved rows, alignment, clipping and refresh. Its templates
+choose content and typed style roles from an installed state snapshot. Templates
+perform no IO, environment lookup, shell execution or interpretation of dynamic
+field text. This is Bagua syntax, without tmux format-language compatibility.
 
 ```toml
 [header]
 enabled = true
-components = ["pane", "command", "cwd"]
-color = true
-active = 4
-inactive = 8
+position = "top"
+format = ' W{{window.index}}:{{window.title:24}} · P{{pane.index}} {{pane.command}} · {{pane.cwd_name}} '
+border = true
 
 [status]
-components = ["session", "windows", "prefix", "notice", "clock"]
-color = true
-active = 4
-inactive = 8
-separator = true
+position = "bottom"
 timezone = "Asia/Shanghai"
 refresh_seconds = 15
+
+[[status.lines]]
+fill = false
+
+[[status.lines]]
+left = '{{#if client.columns >= 64}} {{session.name:18}} {{/if}}{{#windows}}{{#if window.active}}{{style active}}{{else}}{{style inactive}}{{/if}} {{window.index}}:{{window.title:24}} {{style base}}{{/windows}}'
+right = '{{#if client.columns >= 64}}{{clock.time}}  {{clock.date}} {{/if}}'
 ```
 
-Header components are unique `pane`, `command` and `cwd` selections. Status
-components are unique `session`, `windows`, `prefix`, `notice` and `clock`
-selections; each list has at most eight entries and may be empty. There is no
-format language, shell evaluation or arbitrary escape-string component.
-Ordinary notices expire after two seconds without consuming a key. Live/Copy,
-Observe and Recovering are independent client states; observation and recovery
-remain visible. Narrow status rows prioritize mode, prefix and actionable
-errors before window details, clocks and decoration. Colors
-are indexed values 0..=255. Header/background activity uses `active`/`inactive`;
-body cells retain application styles and the terminal's default background.
-`color=false` uses default colors and an inverse/bold active indication. Indexed
-palette appearance belongs to the outer terminal; this does not promise pixel
-identity across ET/emulators or infer a queried foreground/background color.
+`header.position` and `status.position` accept `top` or `bottom`. A header reserves
+one frame row, while each pane retains at least one content row. Status accepts
+one to four lines, each with `left`, `center`, `right` and `fill` (default true).
+An empty line with `fill=false` provides terminal-background spacing. Right text
+has its width reserved first, center text stays between left and right, and all
+text clips by Unicode display columns. Window lists select a range around the
+active window and mark omitted neighbours. `separator=true` adds one line before
+bottom status or after top status, preserving the old separator contract.
 
-World placements expose an outer frame and an application content rectangle.
-An enabled header consumes one row per pane while retaining a minimum content
-row; split/resize/transfer/new-window admission uses that same budget. Native
-PTY sizing and terminal grids use content rectangles. A header never obscures a
-row while pretending that the application has more space. Insufficient geometry
-refuses a reservation; automatic adoption reports this and leaves the actual
-layout unchanged. Existing geometry that cannot shrink further is cropped/panned
-under the existing viewport rules. Observers follow the actual session inset,
-without changing it through their own preference file. Clicking a header focuses
-its pane only for the controller. Divider rectangles remain outer-frame geometry.
+### Template grammar and context
 
-The optional status separator and status row are removed from the client's
-reported viewport before layout, including startup/reload. Header/style/status
-preferences validate atomically with keys, mouse and clipboard. Native header
-adoption is a separate operation and can refuse after preferences are accepted;
-a failed or unverified operation is never presented as adopted geometry. A later
-layout change can make a previously unavailable reservation possible.
+- `{{field}}` inserts one named field. `{{field:18}}` clips it to 18 display
+  columns (0..=512), without consuming the budget of subsequent text. `{{{{`
+  inserts a literal `{{`.
+- `{{#if field}}yes{{else}}no{{/if}}` selects by nonempty value; `else` is optional.
+- Numeric fields also admit `{{#if client.columns >= 64}}...{{/if}}`: one
+  lower-bound comparison to an unsigned literal. Other operators, expressions
+  and comparisons against text fields refuse. The defaults limit session labels
+  and hide them and the clock below 64 columns to retain window navigation.
+- `{{#windows}}...{{/windows}}` repeats over a bounded window view; nested window
+  lists refuse. Window and pane fields inside the list refer to that window and
+  its focused pane. Lists retain the selected window when clipping is necessary.
+- `{{style base}}`, `{{style active}}` and `{{style inactive}}` change the style
+  of following text. Dynamic fields never become template instructions.
 
-Headers show stable pane IDs and process state. Commands/directories come only
-from the existing owned-PTY foreground-context read; no argv/environment or
-unrelated process inspection is added. Only visible running panes are polled,
-with at most two metadata jobs inside the existing sixteen-job client bound,
-after queued input/start work. `cmd~`/`cwd~` mean point-in-time observations,
-not a real-time claim; `cmd?`/`cwd?` mean missing, refused or expired data.
-Records expire after two refresh intervals, and retired/exited panes discard them.
-Display caching never supplies the fresh cwd lookup used for splits/windows.
-Metadata refusal updates its unavailable state without pausing user input or
-erasing feedback. Text controls are replaced, wide fields are clipped, and
-unsupported shaping retains the declared terminal-profile limits.
+Fields are `session.name`; `window.index`, `window.name`, `window.title`,
+`window.active`; `pane.index`, `pane.id`, `pane.command`, `pane.cwd`,
+`pane.cwd_name`, `pane.active`, `pane.state`; `client.role`, `client.mode`, `client.columns`, `client.copy`, `client.recovering`, `client.observe`;
+`prefix.key`, `prefix.active`; `notice.text`; and `clock.time`, `clock.date`.
+Boolean fields are nonempty when true. Unknown fields refuse. Window/pane indices
+are one-based presentation values; `pane.id` explicitly requests the stable ID.
+Automatic window titles use available focused-program metadata and otherwise the
+window name. An explicit window rename keeps its name regardless of that sample.
 
-The base status identifies current window and role. Selected window labels use
-continuous one-based display indices from current order, matching direct-window
-bindings; these never replace stable IDs. Long lists keep the current window in
-the visible segment with overflow marks. Prefix waiting is a separate state,
-shown first when selected, followed by the last feedback before window/session
-fields, so background notices cannot leave a stale waiting cue. Narrow displays
-hide the clock during errors or prefix waiting to retain the reason/action. The clock sits at the right; very narrow viewports
-prioritize the base context. Only `UTC` and current `Asia/Shanghai` (UTC+08:00)
-are supported; this is not a historical IANA/DST database. Refresh is 1..=3600
-seconds, default 15. The clock is sampled on that schedule; scheduling or
-output backpressure can delay display further, without claiming a wall-clock SLO. Header metadata uses the same interval. No shell timer runs.
+Each template is at most 4096 UTF-8 bytes and 128 syntax nodes, with nesting at
+most eight. Literal controls/newlines, malformed blocks and unsupported styles
+refuse. Use separate status lines for line breaks. Rendering sanitizes controls
+from dynamic values, admits at most 32 windows and bounds output to 8192 bytes
+and the available display columns. It neither executes nor reparses inserted
+program names, directories, user labels or strings that resemble template tags.
+
+Native command/cwd data is sampled only for visible running panes through owned
+PTY context reads. At most two metadata jobs share the existing sixteen-job
+client bound, after queued input/start work. Metadata expires after two refresh
+intervals; missing or expired command/cwd fields become empty. Inactive windows
+without a valid sample use their actual window name. Template evaluation never
+triggers a read. This display cache never supplies the fresh cwd lookup for a
+new split/window. Use a conditional for unavailable fields; the default header
+does so. Legacy `cmd~`/`cwd~` retain their sampled meaning and `cmd?`/`cwd?` retain
+their unavailable meaning.
+
+### Configuration, feedback and geometry
+
+Within each section choose explicit legacy `components` or new `format`/`lines`;
+mixing them refuses. Legacy header components remain `pane`, `command`, `cwd`;
+legacy status components remain `session`, `windows`, `prefix`, `notice`, `clock`.
+Lists remain unique and contain at most eight values. Missing new format/lines
+select the product default templates. `bagua config` reports the selected mode,
+actual compiled templates, row count and desired theme, without claiming that a
+host adopted the preferences.
+
+Colors use indexed values 0..=255. `active`/`inactive` select background slots;
+`highlight`/`foreground` select their foreground slots. Header `border=true`
+places the colored label within a light line; false fills its whole frame row.
+`color=false` uses terminal defaults and the existing active indication. Palette
+appearance belongs to the outer terminal, without a pixel-identity claim.
+
+The first status line is the system feedback region while needed: mode, observer
+role, recovery, prefix waiting and notices take priority over its user template.
+Empty templates cannot hide these facts. With multiple lines, navigation remains
+on the other lines. Notices expire after two seconds without consuming input.
+
+World owns header reservation and edge through atomic `Workspace.Decorate`.
+Its placements expose frame and content rectangles used by native PTYs and grids.
+Insufficient geometry refuses without changing actual layout. Observers follow
+the actual inset and cannot apply their desired header edge. Status rows are
+removed from the client viewport before layout; painting, cursor and mouse input
+share the same top offset. Header clicks focus only for the controller; divider
+geometry remains the outer frame. Cropping and panning retain their existing
+bounds. Configuration reload compiles and validates the complete replacement
+before changing keys, mouse, clipboard or decor; invalid input leaves the last
+valid configuration. Native layout adoption is a separate fallible operation,
+never permission to obscure application cells or claim an unconfirmed resize.
+
+Clock fields use `UTC` or current `Asia/Shanghai` (UTC+08:00); this is not a
+historical IANA/DST database. Refresh is 1..=3600 seconds, default 15. Date and
+clock share that sample; scheduling/backpressure may delay presentation. No shell
+timer runs. Header metadata uses the same refresh interval.
 
 A paint contains complete validated rows and cursor state. The TTY writer
 computes its difference against the last **fully written** paint, and commits
@@ -696,7 +735,7 @@ duplicate subscription idempotently. Observers must be joined to the target's
 session. Cancelling a retired target remains possible. A resume revision is a
 hint, not permission to invent a delta without its baseline. The host sends
 complete live snapshots and retains no incremental screen deltas. Scrollback is
-read separately in bounded pages. Wire version 8 adds expected-owner takeover to session header reservation, validated divider adjustments, named entry, native foreground-context reads, executable
+read separately in bounded pages. Wire version 9 adds explicit header edges and automatic window-name state to expected-owner takeover to session header reservation, validated divider adjustments, named entry, native foreground-context reads, executable
 file identity in Hello, keyboard mode flags and typed modified input. It uses a
 four-byte big-endian JSON length followed by that many UTF-8 JSON bytes.
 Request numbers strictly increase within a connection; reused or older numbers
@@ -857,7 +896,7 @@ color, alternate screen, cursor positioning, line-wrap control, bracketed paste
 and SGR mouse reports. This is an explicit terminal profile, not automatic
 capability negotiation or qualification of every terminal emulator.
 Hello binds the host canvas and executable file identity; subscriptions bind
-target-scoped revisions. Use a matching host/client build and wire version 8.
+target-scoped revisions. Use a matching host/client build and wire version 9.
 Installed v0.1.0 speaks wire 2 and cannot consume these source changes.
 
 For explicit machine workflows, run the host described above. Open a new session with a complete
@@ -977,10 +1016,10 @@ Use an independent terminal for the trial, explicitly enable the appropriate
 outer-terminal policy, and verify actual copy/paste manually in #33. Formal
 candidate/ET qualification remains separate from the source-native PTY checks.
 
-One terminal row is reserved for status, plus the optional separator row.
+One to four template rows are reserved for status (one with legacy components), plus the optional separator row.
 The local drawable viewport is bounded to 512 columns and 256 minus those reserved rows, with the host's narrower 256×64 canvas limits applied separately.
 Observers crop and pan independently. A physical terminal smaller than two
-columns/two rows suspends drawing and application input until resized; detach
+columns or without room for the configured status and content rows suspends drawing and application input until resized; detach
 remains available. Fixed canvas reporting never adopts observer geometry.
 Cell contents are validated before installation; malformed control text and
 foreign/retired panes cannot create a display authority. Wide cells crossing a

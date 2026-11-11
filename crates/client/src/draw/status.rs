@@ -1,12 +1,12 @@
-use super::{App, Component, Row, tone};
+use super::{App, Component, Row};
 use terminal::Style;
 
 impl App {
     pub(super) fn bar(&self) -> Row {
         let width = self.viewport.width();
         let status = &self.decor.status;
-        let style = tone(status.color, status.inactive, false);
-        let active = tone(status.color, status.active, true);
+        let style = super::format::Theme::status(status).base;
+        let active = super::format::Theme::status(status).active;
         let mut row = Row::new(width);
         row.fill(0..width, style);
         let mode = self.mode();

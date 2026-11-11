@@ -24,7 +24,7 @@ pub(super) fn choose(
         let current = display.terminal.size()?;
         if current != size {
             size = current;
-            if let Some(viewport) = super::super::extent(size.0, size.1, display.separator) {
+            if let Some(viewport) = super::super::extent(size.0, size.1, display.rows) {
                 app.resize(viewport);
                 app.error(caption);
                 display.terminal.present(app.paint()?)?;
