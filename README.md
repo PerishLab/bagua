@@ -1,6 +1,6 @@
 # Bagua
 
-A persistent terminal workspace, built in the PerishLab domain.
+A persistent terminal workspace, built in the [PerishLab domain](https://github.com/PerishLab#perishlab).
 
 Bagua is a wholehearted tribute to [tmux](https://github.com/tmux/tmux), with a few
 engineering preferences of my own. Its mature design and practical lessons are
