@@ -14,10 +14,10 @@ geometry, process lifecycle and revision synchronization. The terminal model
 also interprets a declared UTF-8/VT subset and encodes mode-dependent input.
 The CLI provides capability inspection and explicit refusal of unavailable
 operations without a host connection. Linux x86_64 and Windows x86_64
-(`x86_64-pc-windows-msvc`) have source-level persistent local hosts,
-machine-control CLIs and interactive clients. Formal Wharf artifact
-qualification and installation remain separate delivery work (currently
-declaring Linux x86_64 GNU only).
+(`x86_64-pc-windows-msvc`) have persistent local hosts, machine-control CLIs
+and interactive clients, and both are declared release targets in `plumb.toml`.
+Complete Wharf distribution, qualification and installed verification remain
+separate evidence for each release.
 
 ## Daily-use entry
 
@@ -69,14 +69,15 @@ after host restart.
 
 ## Distribution and runtime
 
-The first distribution target is Linux x86_64 GNU, delivered as a `tar.gz`
-containing one executable named `bagua` at its root. No resource directory,
+Declared distribution targets are Linux x86_64 GNU (`x86_64-unknown-linux-gnu`,
+`tar.gz` containing `bagua`) and Windows x86_64 MSVC (`x86_64-pc-windows-msvc`,
+`zip` containing `bagua.exe` with Wharf `manage.ps1`). No resource directory,
 runtime Cargo invocation, development checkout or internal Rust SDK is needed.
-macOS, Windows, musl and package-manager media are not declared distribution
-targets. Automatic host startup belongs to the daily-use interface below. The earlier
-v0.1.0 requires explicit startup and cannot consume this configuration or wire
-version. Use a matching release artifact for each host and its clients. MIT licensing covers Bagua's source; dependencies
-retain their own licenses.
+macOS, musl and third-party package-manager media are not declared distribution
+targets. Automatic host startup belongs to the daily-use interface below. The
+earlier v0.1.0 requires explicit startup and cannot consume this configuration
+or wire version. Use a matching release artifact for each host and its clients.
+MIT licensing covers Bagua's source; dependencies retain their own licenses.
 
 The release authority is `https://releases.bagua.perish.uk`. Plumb defines the
 immutable marker, and Wharf builds, binds and publishes the executable. A
@@ -118,11 +119,12 @@ directory as described below; the socket is its only runtime file. No session
 persistence or runtime log is created there. Use a fresh directory for each isolated scene, and explicit
 homes/data for its hosted programs. No production session is a test fixture.
 
-## Windows x86_64 (source-level)
+## Windows x86_64
 
-Issue #14 qualifies native Windows x86_64 (`x86_64-pc-windows-msvc`) at source
-level (`acceptance:source`). Formal Wharf Windows release media and installers
-are not yet declared and remain separate release work.
+Issue #14 qualified native Windows x86_64 (`x86_64-pc-windows-msvc`) at source
+level; Issue #86 adds `x86_64-pc-windows-msvc` to `plumb.toml` for formal Wharf
+distribution and `manage.ps1` installation. A target declaration alone does not
+establish complete distribution or installed verification for a release.
 
 - **Platform envelope**: Windows 10 1809+ or Windows 11 with a modern VT
   console host (such as Windows Terminal) supporting
@@ -1145,10 +1147,9 @@ unimplemented bits remain counted as unsupported and are never reported as enabl
 metadata, clipboard, images, hyperlinks,
 window resize requests and other DCS extensions have no external effect.
 
-The initial release target is Linux x86_64 GNU. Windows x86_64 has source-level
-native qualification (see `Windows x86_64 (source-level)` above); macOS remains
-independently unverified, and a portable model does not establish native
-platform support.
+Declared release targets are Linux x86_64 GNU and Windows x86_64 MSVC (see
+`Windows x86_64` above); macOS remains independently unverified, and a portable
+model does not establish native platform support.
 
 See [AGENTS.md](AGENTS.md) for the product's working constraints and the
 [PerishLab delivery governance](https://github.com/PerishLab/.github/blob/main/GOVERNANCE.md)

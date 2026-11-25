@@ -15,14 +15,15 @@ Keep supported subsets, deliberate exclusions and unverified behavior distinct.
 
 Share mechanisms through their existing domain owners; terminal semantics and
 workspace policy belong to Bagua. Linux x86_64 and Windows x86_64
-(`x86_64-pc-windows-msvc`) have source-level persistent local hosts,
-machine-control CLIs and interactive clients; release and installed
-qualification remain separate work (Wharf release media currently declares
-Linux x86_64 GNU only). Executable capability output distinguishes models from
-available behavior; neither a compiling interface nor an unavailable-operation
-refusal proves terminal execution. Issue #6 establishes the Linux source
-boundary, Issue #5 tracks the first Linux product closure, and Issue #14
-establishes the native Windows x86_64 source boundary.
+(`x86_64-pc-windows-msvc`) have persistent local hosts, machine-control CLIs
+and interactive clients, and both are declared release targets in `plumb.toml`;
+complete distribution, Windtun qualification and installed verification remain
+separate evidence per release. Executable capability output distinguishes models
+from available behavior; neither a compiling interface nor an
+unavailable-operation refusal proves terminal execution. Issue #6 establishes the
+Linux source boundary, Issue #5 tracks the first Linux product closure, Issue
+#14 establishes the native Windows x86_64 source boundary, and Issue #86 tracks
+the first declared Windows x86_64 release and installation.
 
 ## Ownership
 
@@ -167,14 +168,15 @@ paths are inputs; a working-directory file is never implicitly discovered.
 
 ## Verification
 
-The first declared release contains only the Linux x86_64 GNU `bagua` executable.
-Wharf owns its archive, manager, identity binding and complete distribution under
-`releases.bagua.perish.uk`; internal crates remain unpublished. Source builds keep
-version 0.0.0. Product source carries no generated installer or release workflow.
-The required Windtun case names in `plumb.toml` are the consumer contract for
-Seatrial #66, #83 and #111. Declaration validity does not prove those scenes are published,
-executed or qualified, or that stable promotion enforcement is active. Issue #12
-retains the actual non-stable distribution obligation after its source merge.
+Declared release targets are Linux x86_64 GNU (`x86_64-unknown-linux-gnu`) and
+Windows x86_64 MSVC (`x86_64-pc-windows-msvc`) in `plumb.toml`, delivering one
+`bagua` executable (`bagua.exe` on Windows). Wharf owns archives, managers,
+identity binding and complete distribution under `releases.bagua.perish.uk`;
+internal crates remain unpublished. Source builds keep version 0.0.0. Product
+source carries no generated installer or release workflow. The required Windtun
+case names in `plumb.toml` are the consumer contract for Seatrial #66, #83 and
+#111. Declaration validity does not prove those scenes are published, executed
+or qualified, or that a release is distributed or installed.
 
 Use focused tests while developing and the complete applicable Guard at
 coherent delivery boundaries. Keep models and self-contained behavior here,
