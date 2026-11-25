@@ -10,6 +10,8 @@ mod link;
 mod service;
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 mod socket;
+#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+mod windows;
 
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 pub use connection::Connection;
@@ -17,6 +19,8 @@ pub use connection::Connection;
 pub use service::Service;
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 pub use socket::private;
+#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+pub use windows::{Channel, Connection, Service, private, secure};
 
 pub fn error(error: protocol::Failure) -> std::io::Error {
     std::io::Error::other(format!("{}: {}", error.code(), error.message()))

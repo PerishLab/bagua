@@ -26,7 +26,19 @@ vte = { version = "0", default-features = false }
 radicula-process = { version = "0", registry = "perish" }
 radicula-config = { version = "0", registry = "perish" }
 rustix = { version = "1", features = ["event", "fs", "net", "process", "pty", "termios", "rand"] }
+sha2 = "0.10"
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_Security_Cryptography",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Console",
+    "Win32_System_IO",
+    "Win32_System_Pipes",
+    "Win32_System_Threading",
+] }
 
-crossterm = { version = "0.29", default-features = false, features = ["events", "bracketed-paste", "use-dev-tty"] }
+crossterm = { version = "0.29", default-features = false, features = ["events", "bracketed-paste", "windows", "use-dev-tty"] }
 unicode-width = "0.2"
 base64 = "0"

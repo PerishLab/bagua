@@ -120,19 +120,41 @@ fn diagnosis() {
 fn private() {
     let home = tempfile::tempdir().unwrap();
     let path = home.path().join("chosen.toml");
-    fs::write(&path, "version=1\n[host]\nsocket='/file.sock'\n[program]\nexecutable='/bin/sh'\nargs=['-i']\ncwd='/'\n[program.environment]\nPRIVATE='not-for-diagnostics'\n").unwrap();
+    let file = if cfg!(windows) {
+        r"C:\file.sock"
+    } else {
+        "/file.sock"
+    };
+    let executable = if cfg!(windows) {
+        r"C:\bin\sh"
+    } else {
+        "/bin/sh"
+    };
+    let cwd = if cfg!(windows) { r"C:\" } else { "/" };
+    let cli = if cfg!(windows) {
+        r"C:\cli.sock"
+    } else {
+        "/cli.sock"
+    };
+    fs::write(
+        &path,
+        format!(
+            "version=1\n[host]\nsocket='{file}'\n[program]\nexecutable='{executable}'\nargs=['-i']\ncwd='{cwd}'\n[program.environment]\nPRIVATE='not-for-diagnostics'\n"
+        ),
+    )
+    .unwrap();
     let output = run(
         home.path(),
         &[
             "--config",
             path.to_str().unwrap(),
             "--socket",
-            "/cli.sock",
+            cli,
             "config",
         ],
     );
     let config = read(&output);
-    assert_eq!(config["host"]["socket"], "/cli.sock");
+    assert_eq!(config["host"]["socket"], cli);
     assert_eq!(
         config["program"]["environment"],
         serde_json::json!(["PRIVATE"])
