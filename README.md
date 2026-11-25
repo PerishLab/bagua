@@ -13,9 +13,11 @@ The seven-crate workspace implements model contracts for control ownership,
 geometry, process lifecycle and revision synchronization. The terminal model
 also interprets a declared UTF-8/VT subset and encodes mode-dependent input.
 The CLI provides capability inspection and explicit refusal of unavailable
-operations without a host connection. Linux x86_64 has a persistent local host
-and machine-control CLI, plus interactive clients. Formal artifact qualification
-and installation remain separate delivery work.
+operations without a host connection. Linux x86_64 and Windows x86_64
+(`x86_64-pc-windows-msvc`) have source-level persistent local hosts,
+machine-control CLIs and interactive clients. Formal Wharf artifact
+qualification and installation remain separate delivery work (currently
+declaring Linux x86_64 GNU only).
 
 ## Daily-use entry
 
@@ -115,6 +117,48 @@ directory. Ordinary named entry can select and create its private runtime
 directory as described below; the socket is its only runtime file. No session
 persistence or runtime log is created there. Use a fresh directory for each isolated scene, and explicit
 homes/data for its hosted programs. No production session is a test fixture.
+
+## Windows x86_64 (source-level)
+
+Issue #14 qualifies native Windows x86_64 (`x86_64-pc-windows-msvc`) at source
+level (`acceptance:source`). Formal Wharf Windows release media and installers
+are not yet declared and remain separate release work.
+
+- **Platform envelope**: Windows 10 1809+ or Windows 11 with a modern VT
+  console host (such as Windows Terminal) supporting
+  `ENABLE_VIRTUAL_TERMINAL_INPUT`, `ENABLE_VIRTUAL_TERMINAL_PROCESSING` and
+  UTF-8 code page 65001. Legacy non-VT consoles are not supported.
+- **Process hosting (`crates/pty`)**: Uses native ConPTY
+  (`CreatePseudoConsole`) over overlapped pipes with explicit launch arguments,
+  working directory and environment, bounded nonblocking IO and direct-child
+  termination. ConPTY does not reproduce Unix signals or process-group
+  semantics: `Process::context()` explicitly returns `Failure::Unsupported`,
+  and `workspace.cwd` defaults to `"launch"` on Windows (PEB-based foreground
+  CWD observation is not implemented).
+- **Local IPC (`crates/lib`)**: Uses deterministic per-user Named Pipes
+  (`FILE_FLAG_FIRST_PIPE_INSTANCE`, `PIPE_REJECT_REMOTE_CLIENTS`, creation-time
+  owner-only DACL, client and server process Token SID verification) paired
+  with an exclusive `CREATE_NEW | FILE_FLAG_DELETE_ON_CLOSE` marker file at the
+  endpoint path. Pre-existing unknown files and non-private directories are
+  refused without replacement or permission changes.
+- **Default paths, self-start and shell (`crates/cli`)**:
+  - Configuration: `%LOCALAPPDATA%\bagua\bagua.toml` (fallback
+    `%USERPROFILE%\AppData\Local\bagua\bagua.toml`).
+  - Default host endpoint: `%LOCALAPPDATA%\bagua\runtime\host.sock` (fallback
+    `%USERPROFILE%\AppData\Local\bagua\runtime\host.sock`) inside a private
+    owner-only ACL directory.
+  - Optional Locus spool: `%LOCALAPPDATA%\bagua\state\locus` (refuses
+    pre-existing unsafe directories without modifying their ACLs).
+  - Self-start launches the running executable (`current_exe()`) detached from
+    the console (`CREATE_NO_WINDOW | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP`)
+    and verifies native file identity via `GetFileInformationByHandle`.
+  - Without a `[program]` template or explicit CLI launch flags, `bagua enter`
+    selects `pwsh.exe` on `PATH` and falls back to
+    `%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe` with
+    `-NoLogo` and `TERM=xterm-256color`.
+  - Interactive client input/output uses `CONIN$`/`CONOUT$` with
+    `SetConsoleCtrlHandler` and restores console modes, code pages and display
+    modes on normal or error exit.
 
 ## Published-artifact qualification
 
@@ -1101,8 +1145,10 @@ unimplemented bits remain counted as unsupported and are never reported as enabl
 metadata, clipboard, images, hyperlinks,
 window resize requests and other DCS extensions have no external effect.
 
-The initial product targets Linux. macOS and Windows remain independently
-unverified; a portable model does not establish native platform support.
+The initial release target is Linux x86_64 GNU. Windows x86_64 has source-level
+native qualification (see `Windows x86_64 (source-level)` above); macOS remains
+independently unverified, and a portable model does not establish native
+platform support.
 
 See [AGENTS.md](AGENTS.md) for the product's working constraints and the
 [PerishLab delivery governance](https://github.com/PerishLab/.github/blob/main/GOVERNANCE.md)

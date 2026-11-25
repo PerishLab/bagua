@@ -1,6 +1,6 @@
 pub(crate) mod event;
 mod hook;
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux", target_arch = "x86_64"))]
 mod tests;
 
 use hook::Code;
@@ -102,6 +102,7 @@ impl Observer {
     }
 }
 
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn buffer(state: Option<PathBuf>) -> Result<PathBuf, Code> {
     use std::os::unix::fs::DirBuilderExt;
     let state = state.filter(|path| path.is_absolute()).ok_or(Code::State)?;
@@ -111,6 +112,20 @@ fn buffer(state: Option<PathBuf>) -> Result<PathBuf, Code> {
         .mode(0o700)
         .create(&buffer)
         .map_err(|_| Code::State)?;
+    if !bagua::ipc::private(&buffer).map_err(|_| Code::State)? {
+        return Err(Code::State);
+    }
+    Ok(buffer)
+}
+
+#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+fn buffer(state: Option<PathBuf>) -> Result<PathBuf, Code> {
+    let state = state.filter(|path| path.is_absolute()).ok_or(Code::State)?;
+    let buffer = state.join("bagua").join("state").join("locus");
+    if !buffer.exists() {
+        std::fs::create_dir_all(&buffer).map_err(|_| Code::State)?;
+        bagua::ipc::secure(&buffer).map_err(|_| Code::State)?;
+    }
     if !bagua::ipc::private(&buffer).map_err(|_| Code::State)? {
         return Err(Code::State);
     }

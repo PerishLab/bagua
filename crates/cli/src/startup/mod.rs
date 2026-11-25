@@ -10,13 +10,16 @@ use bagua::ipc::Connection;
 use radicula_process::Environment;
 use std::{
     io,
-    path::Path,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
     time::{Duration, Instant},
 };
 
+pub(crate) use directory::image;
+
 #[derive(Clone)]
 pub(crate) struct Invocation {
+    pub executable: PathBuf,
     pub image: protocol::wire::Image,
     pub environment: Environment,
 }
@@ -77,7 +80,7 @@ fn adopt(connection: Connection, args: &Args, invocation: &Invocation) -> Result
 
 #[locus::trace(with = crate::observation::view(), frame = context)]
 fn start(path: &Path, config: &Loaded, invocation: &Invocation) -> Result<(), Error> {
-    let mut command = Command::new("/proc/self/exe");
+    let mut command = Command::new(&invocation.executable);
     invocation.environment.apply(&mut command);
     if let Some(source) = config.source() {
         command.arg("--config").arg(source);
@@ -88,8 +91,8 @@ fn start(path: &Path, config: &Loaded, invocation: &Invocation) -> Result<(), Er
         .arg("--socket")
         .arg(path)
         .args(["serve", "--orphan"]);
+    configure(&mut command, path);
     command
-        .current_dir("/")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
@@ -104,6 +107,24 @@ fn start(path: &Path, config: &Loaded, invocation: &Invocation) -> Result<(), Er
     Ok(())
 }
 
-pub(crate) fn directory(path: &Path, managed: bool) -> Result<std::path::PathBuf, Error> {
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn configure(command: &mut Command, path: &Path) {
+    let _ = path.as_os_str();
+    command.current_dir("/");
+}
+
+#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+fn configure(command: &mut Command, path: &Path) {
+    use std::os::windows::process::CommandExt;
+    use windows_sys::Win32::System::Threading::{
+        CREATE_NEW_PROCESS_GROUP, CREATE_NO_WINDOW, DETACHED_PROCESS,
+    };
+    let cwd = path.parent().unwrap_or_else(|| Path::new("."));
+    command
+        .current_dir(cwd)
+        .creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
+}
+
+pub(crate) fn directory(path: &Path, managed: bool) -> Result<PathBuf, Error> {
     Ok(directory::location(path, managed, true)?)
 }

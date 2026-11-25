@@ -6,7 +6,10 @@ use protocol::Failure;
 
 pub(crate) fn execute(args: &Args, config: crate::config::Loaded) -> Result<(), Error> {
     let path = args.socket.as_deref().ok_or(Failure::Unavailable)?;
-    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    #[cfg(any(
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "windows", target_arch = "x86_64")
+    ))]
     {
         if matches!(
             args.selected(),
@@ -41,7 +44,10 @@ pub(crate) fn execute(args: &Args, config: crate::config::Loaded) -> Result<(), 
         }
         Ok(())
     }
-    #[cfg(not(all(target_os = "linux", target_arch = "x86_64")))]
+    #[cfg(not(any(
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "windows", target_arch = "x86_64")
+    )))]
     {
         let _ = path;
         Err(Failure::Unavailable.into())

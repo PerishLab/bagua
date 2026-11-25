@@ -16,7 +16,7 @@ impl Loaded {
                 "executable": program.executable, "cwd": program.cwd,
                 "args": program.args.len(), "environment": program.environment.keys().collect::<Vec<_>>()
             })),
-            "interactive_defaults": if self.config.program.is_none() { Some("enter uses invocation SHELL or /bin/sh, invocation cwd and an explicit snapshot of the invocation environment; TERM=xterm-256color") } else { None },
+            "interactive_defaults": if self.config.program.is_none() { Some(defaults()) } else { None },
             "bindings": {"prefix": self.config.bindings.prefix, "direct": self.config.bindings.direct},
             "mouse": {"enabled": self.config.mouse.enabled, "resize": self.config.mouse.resize, "copy_on_release": self.config.mouse.release},
             "clipboard": {"target": self.config.clipboard.target, "limit": self.config.clipboard.limit},
@@ -24,8 +24,24 @@ impl Loaded {
             "status": {"position":self.config.status.position, "mode":if self.decor.status.layout.is_some() {"template"} else {"components"}, "rows":self.decor.status.rows(), "lines":self.decor.status.layout.as_ref().map(|layout|layout.lines.iter().map(|line|serde_json::json!({"left":line.left.source(),"center":line.center.source(),"right":line.right.source(),"fill":line.fill})).collect::<Vec<_>>()), "components":self.config.status.components, "color":self.decor.status.color, "active":self.decor.status.active, "inactive":self.decor.status.inactive, "foreground":self.decor.status.foreground, "highlight":self.decor.status.highlight, "separator":self.decor.status.separator, "timezone":self.config.status.timezone, "refresh_seconds":self.config.status.refresh},
             "reload": ["client.prefix", "client.escape_ms", "bindings", "mouse", "clipboard", "header", "status"],
             "restart": ["host.socket", "program", "history", "workspace", "locus"],
-            "locus": {"configured": self.locus().is_some(), "default": "off", "buffer": "private persistent state/bagua/locus", "failure": "diagnostic only; business result is preserved"},
+            "locus": {"configured": self.locus().is_some(), "default": "off", "buffer": buffer(), "failure": "diagnostic only; business result is preserved"},
             "unsupported": [],
         })
+    }
+}
+
+fn defaults() -> &'static str {
+    if cfg!(windows) {
+        "enter uses pwsh.exe on PATH or Windows PowerShell, invocation cwd and an explicit snapshot of the invocation environment; TERM=xterm-256color"
+    } else {
+        "enter uses invocation SHELL or /bin/sh, invocation cwd and an explicit snapshot of the invocation environment; TERM=xterm-256color"
+    }
+}
+
+fn buffer() -> &'static str {
+    if cfg!(windows) {
+        "private persistent LOCALAPPDATA/bagua/state/locus"
+    } else {
+        "private persistent state/bagua/locus"
     }
 }

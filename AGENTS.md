@@ -14,12 +14,15 @@ Preserve declared consumer behavior rather than translating upstream files.
 Keep supported subsets, deliberate exclusions and unverified behavior distinct.
 
 Share mechanisms through their existing domain owners; terminal semantics and
-workspace policy belong to Bagua. Linux x86_64 has a source-level persistent
-local host, machine-control CLI and interactive clients; release and installed
-qualification remain separate work. Executable capability output distinguishes models from available
-behavior; neither a compiling interface nor an unavailable-operation refusal
-proves terminal execution. Issue #6 establishes this source boundary; the
-first Linux product closure is tracked by Issue #5.
+workspace policy belong to Bagua. Linux x86_64 and Windows x86_64
+(`x86_64-pc-windows-msvc`) have source-level persistent local hosts,
+machine-control CLIs and interactive clients; release and installed
+qualification remain separate work (Wharf release media currently declares
+Linux x86_64 GNU only). Executable capability output distinguishes models from
+available behavior; neither a compiling interface nor an unavailable-operation
+refusal proves terminal execution. Issue #6 establishes the Linux source
+boundary, Issue #5 tracks the first Linux product closure, and Issue #14
+establishes the native Windows x86_64 source boundary.
 
 ## Ownership
 
@@ -104,9 +107,12 @@ under explicit revisions; reliable control, process outcomes and presentation
 remain different facts. Clipping and bounded work cannot depend on unchecked
 unsigned subtraction or on a peer draining output promptly.
 
-Linux is the first actual product endpoint. macOS and Windows enter the same
-platform contracts, but each adapter needs its own native qualification.
-ConPTY is not assumed to reproduce Unix signals or process-group semantics.
+Linux is the first actual product endpoint. Windows x86_64 (Windows 10
+1809+/11) enters the same platform contracts at source level via ConPTY,
+same-user Named Pipe local IPC and a Windows Console VT client; macOS still
+needs its own native qualification. ConPTY is not assumed to reproduce Unix
+signals or process-group semantics: Windows `Process::context()` explicitly
+returns `Failure::Unsupported` and `workspace.cwd` defaults to `"launch"`.
 Codex is an ordinary consumer, with no agent loop or special core behavior.
 
 ## Selection
@@ -189,11 +195,13 @@ Full grapheme shaping, history reflow, DECAWM switching and keyboard enhancement
 beyond the declared flag-1 subset are outside the current profile. Actual application needs may
 challenge that selection before the first Linux closure. Preserve explicit
 unsupported reports and refusals rather than reporting full VT coverage.
-The terminal and PTY components are hosted on Linux x86_64, with explicit launch data, bounded
-nonblocking IO and direct-child retirement/reaping. EOF, exit and closure are
-independent facts. Retirement closes the master and signals the owned child;
-it does not promise arbitrary descendant reclamation. The host must drive
-observation after retirement and retain unwritten bytes across backpressure.
+The terminal and PTY components are hosted on Linux x86_64 (Unix PTY) and
+Windows x86_64 (ConPTY over overlapped pipes), with explicit launch data,
+bounded nonblocking IO and direct-child retirement/reaping. EOF, exit and
+closure are independent facts. Retirement closes the PTY handle and signals or
+terminates the owned direct child; it does not promise arbitrary descendant
+reclamation. The host must drive observation after retirement and retain
+unwritten bytes across backpressure.
 The host previews model mutations against its live and retiring resource budget.
 Accepted input retains its unwritten suffix after disconnect. Completion follows
 actual byte writes or native reclamation; model application is a separate fact.
@@ -208,7 +216,11 @@ page; live frames never include the entire history. Host context is freshly
 created at the native service boundary; pure model callers provide their own
 explicit contexts. Geometry/reset epochs invalidate old read cursors.
 The socket lives in an explicitly supplied canonical private user directory;
-peer UID comes from the kernel. Never replace an unknown existing endpoint.
+peer identity comes from the OS (kernel peer UID on Linux; creation-time
+owner-only DACL, `FILE_FLAG_FIRST_PIPE_INSTANCE`, `PIPE_REJECT_REMOTE_CLIENTS`
+and client/server process Token SID verification on Windows Named Pipes with an
+exclusive `CREATE_NEW | FILE_FLAG_DELETE_ON_CLOSE` marker file). Never replace
+an unknown existing endpoint.
 The interactive client consumes typed full snapshots over the same local protocol.
 Its replica validates target, dimensions, cells and revision before installing.
 Pane retirement never resurrects a display. Selection freezes a local copy;
@@ -230,9 +242,13 @@ Display indices are derived from current window order and never replace IDs.
 Normal entry alone may capture invocation shell/cwd/environment as an explicit
 complete Program; the background service receives a minimal startup environment.
 Default endpoint discovery belongs to CLI, with no unknown endpoint replacement.
-Self-start uses the running Linux executable and checks native file identity
-before workspace commands. A native PTY foreground context is an observation,
-not workspace authority or permission to inspect arbitrary processes. Cwd lookup
+Self-start uses the running executable (`/proc/self/exe` on Linux;
+`current_exe()` with detached console creation flags on Windows) and checks
+native file identity (`dev`/`ino` on Linux; `GetFileInformationByHandle`
+volume/file index on Windows) before workspace commands. A native PTY
+foreground context is an observation, not workspace authority or permission to
+inspect arbitrary processes; Windows `Process::context()` explicitly returns
+`Failure::Unsupported` and defaults `workspace.cwd` to `"launch"`. Cwd lookup
 retains queue order and refuses before layout mutation on missing native facts.
 A subsequent launch race remains an observable failed pane. Wire identity and
 context are protocol data; native PathBuf/process access stays in the PTY adapter.

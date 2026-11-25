@@ -5,15 +5,23 @@ use std::{
 };
 
 fn run(home: &Path, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_bagua"))
-        .env_clear()
-        .env("PATH", "/usr/bin:/bin")
-        .env("HOME", home)
-        .env("XDG_CONFIG_HOME", "")
-        .current_dir(home)
-        .args(args)
-        .output()
-        .unwrap()
+    let mut command = Command::new(env!("CARGO_BIN_EXE_bagua"));
+    command.env_clear();
+    if cfg!(windows) {
+        command
+            .env("USERPROFILE", home)
+            .env("LOCALAPPDATA", "")
+            .env(
+                "SYSTEMROOT",
+                std::env::var_os("SYSTEMROOT").unwrap_or_else(|| r"C:\Windows".into()),
+            );
+    } else {
+        command
+            .env("PATH", "/usr/bin:/bin")
+            .env("HOME", home)
+            .env("XDG_CONFIG_HOME", "");
+    }
+    command.current_dir(home).args(args).output().unwrap()
 }
 
 fn read(output: &Output) -> serde_json::Value {
@@ -32,7 +40,11 @@ fn discovery() {
     let config = read(&run(home.path(), &["config"]));
     assert_eq!(config["client"]["prefix"], "C-g");
     assert_eq!(config["loaded"], false);
-    let directory = home.path().join(".config/bagua");
+    let directory = if cfg!(windows) {
+        home.path().join("AppData").join("Local").join("bagua")
+    } else {
+        home.path().join(".config/bagua")
+    };
     fs::create_dir_all(&directory).unwrap();
     fs::write(directory.join("bagua.toml"), "[client]\nprefix='C-q'\n").unwrap();
     assert_eq!(
@@ -51,13 +63,22 @@ fn priority() {
     let directory = home.path().join("xdg/bagua");
     fs::create_dir_all(&directory).unwrap();
     fs::write(directory.join("bagua.toml"), "[client]\nprefix='C-q'\n").unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_bagua"))
-        .env_clear()
-        .env("HOME", home.path())
-        .env("XDG_CONFIG_HOME", directory.parent().unwrap())
-        .args(["config"])
-        .output()
-        .unwrap();
+    let mut command = Command::new(env!("CARGO_BIN_EXE_bagua"));
+    command.env_clear();
+    if cfg!(windows) {
+        command
+            .env("USERPROFILE", home.path())
+            .env("LOCALAPPDATA", directory.parent().unwrap())
+            .env(
+                "SYSTEMROOT",
+                std::env::var_os("SYSTEMROOT").unwrap_or_else(|| r"C:\Windows".into()),
+            );
+    } else {
+        command
+            .env("HOME", home.path())
+            .env("XDG_CONFIG_HOME", directory.parent().unwrap());
+    }
+    let output = command.args(["config"]).output().unwrap();
     assert_eq!(read(&output)["client"]["prefix"], "C-q");
     let path = home.path().join("chosen.toml");
     fs::write(&path, "[client]\nprefix='C-a'\n").unwrap();

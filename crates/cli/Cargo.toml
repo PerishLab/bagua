@@ -29,6 +29,9 @@ radicula-process.workspace = true
 signal-hook = "0.4"
 rustix.workspace = true
 
+[target.'cfg(all(target_os = "windows", target_arch = "x86_64"))'.dependencies]
+windows-sys.workspace = true
+
 [dev-dependencies]
 pty.workspace = true
 tempfile = "3"
