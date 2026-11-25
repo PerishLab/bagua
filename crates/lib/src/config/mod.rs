@@ -134,7 +134,12 @@ impl Default for Workspace {
     fn default() -> Self {
         Self {
             name: "workspace".into(),
-            cwd: "foreground".into(),
+            cwd: if cfg!(windows) {
+                "launch"
+            } else {
+                "foreground"
+            }
+            .into(),
         }
     }
 }

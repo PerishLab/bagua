@@ -54,6 +54,7 @@ fn disabled() {
     assert!(!home.path().join(".local/state/bagua/locus").exists());
 }
 
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 #[test]
 fn invalid() {
     let home = tempfile::tempdir().unwrap();
@@ -78,6 +79,7 @@ fn invalid() {
     }
 }
 
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 #[test]
 fn parent() {
     let home = tempfile::tempdir().unwrap();

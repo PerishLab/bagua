@@ -20,5 +20,9 @@ radicula-config.workspace = true
 [target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dependencies]
 rustix.workspace = true
 
+[target.'cfg(all(target_os = "windows", target_arch = "x86_64"))'.dependencies]
+sha2.workspace = true
+windows-sys.workspace = true
+
 [dev-dependencies]
 tempfile = "3"

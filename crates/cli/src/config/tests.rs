@@ -11,9 +11,14 @@ fn transaction() {
     assert!(config.reload().is_err());
     assert_eq!(config.prefix(), "C-q");
     assert_eq!(config.delay(), Duration::from_millis(20));
+    let socket = if cfg!(windows) {
+        r"C:\another.sock"
+    } else {
+        "/another.sock"
+    };
     fs::write(
         &path,
-        "[host]\nsocket='/another.sock'\n[client]\nprefix='C-a'\n",
+        format!("[host]\nsocket='{socket}'\n[client]\nprefix='C-a'\n"),
     )
     .unwrap();
     assert!(config.reload().is_err());
@@ -22,9 +27,18 @@ fn transaction() {
     assert!(config.reload().is_err());
     assert_eq!(config.history().lines, 50_000);
     assert_eq!(config.prefix(), "C-q");
-    fs::write(&path, "[workspace]\ncwd='launch'\n[client]\nprefix='C-a'\n").unwrap();
+    let (default, other) = if cfg!(windows) {
+        ("launch", "foreground")
+    } else {
+        ("foreground", "launch")
+    };
+    fs::write(
+        &path,
+        format!("[workspace]\ncwd='{other}'\n[client]\nprefix='C-a'\n"),
+    )
+    .unwrap();
     assert!(config.reload().is_err());
-    assert_eq!(config.workspace().cwd, "foreground");
+    assert_eq!(config.workspace().cwd, default);
     assert_eq!(config.prefix(), "C-q");
     fs::write(&path, "[locus]\nenabled=true\n[client]\nprefix='C-a'\n").unwrap();
     assert!(config.reload().is_err());
@@ -51,15 +65,21 @@ fn startup() {
     assert!(config.present);
     assert!(!config.explicit);
     assert_eq!(config.prefix(), "C-q");
+    let (executable, cwd) = if cfg!(windows) {
+        (r"C:\bin\sh", r"C:\")
+    } else {
+        ("/bin/sh", "/")
+    };
     fs::write(
         &path,
-        "[program]\nexecutable='/bin/sh'\nargs=[]\ncwd='/'\nenvironment={}\n",
+        format!("[program]\nexecutable='{executable}'\nargs=[]\ncwd='{cwd}'\nenvironment={{}}\n"),
     )
     .unwrap();
     assert!(config.reload().is_err());
     assert_eq!(config.prefix(), "C-q");
 }
 
+#[cfg(unix)]
 #[test]
 fn runtime() {
     let values = [
@@ -87,10 +107,15 @@ fn runtime() {
 
 #[test]
 fn encoding() {
+    let (executable, cwd) = if cfg!(windows) {
+        (r"C:\bin\sh", r"C:\")
+    } else {
+        ("/bin/sh", "/")
+    };
     let mut program = protocol::wire::Program {
-        executable: "/bin/sh".into(),
+        executable: executable.into(),
         args: vec!["\u{1}".repeat(30_000)],
-        cwd: "/".into(),
+        cwd: cwd.into(),
         environment: Default::default(),
     };
     assert!(super::launch::check(&program).is_err());
