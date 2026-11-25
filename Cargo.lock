@@ -96,6 +96,7 @@ dependencies = [
  "serde_json",
  "signal-hook 0.4.6",
  "tempfile",
+ "windows-sys",
 ]
 
 [[package]]
@@ -109,6 +110,7 @@ dependencies = [
  "crossterm",
  "rustix",
  "unicode-width",
+ "windows-sys",
 ]
 
 [[package]]

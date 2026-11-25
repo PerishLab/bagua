@@ -1,23 +1,33 @@
-#![cfg_attr(
-    not(all(target_os = "linux", target_arch = "x86_64")),
-    allow(dead_code, unused_imports, unused_mut, unused_variables)
-)]
-
 mod args;
 mod command;
 mod config;
 mod error;
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(any(
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "windows", target_arch = "x86_64")
+))]
 #[path = "startup/observation/mod.rs"]
 mod observation;
 mod remote;
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(any(
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "windows", target_arch = "x86_64")
+))]
 mod serve;
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(any(
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "windows", target_arch = "x86_64")
+))]
 mod session;
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(any(
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "windows", target_arch = "x86_64")
+))]
 mod startup;
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(any(
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "windows", target_arch = "x86_64")
+))]
 mod tui;
 
 use args::Args;
@@ -26,21 +36,60 @@ use error::Error;
 use protocol::Request;
 use std::process::ExitCode;
 
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+const KEYS: &[&str] = &[
+    "HOME",
+    "PATH",
+    "XDG_CONFIG_HOME",
+    "XDG_RUNTIME_DIR",
+    "XDG_STATE_HOME",
+    "LOCUS_API",
+    "LANG",
+    "LC_ALL",
+    "LC_CTYPE",
+    "TZ",
+];
+
+#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+const KEYS: &[&str] = &[
+    "SYSTEMROOT",
+    "WINDIR",
+    "COMSPEC",
+    "PATH",
+    "PATHEXT",
+    "LOCALAPPDATA",
+    "APPDATA",
+    "USERPROFILE",
+    "TEMP",
+    "TMP",
+    "LOCUS_API",
+    "TZ",
+];
+
 fn main() -> ExitCode {
     if let Err(error) = plumb::identity!("BAGUA") {
         eprintln!("{error}");
         return ExitCode::FAILURE;
     }
     let mut args = Args::parse();
-    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    #[cfg(any(
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "windows", target_arch = "x86_64")
+    ))]
     let mut observation = None;
     let result = config::load(&args, &|name| std::env::var_os(name)).and_then(|mut config| {
         config.apply(&mut args);
         defaults(&mut args, &config)?;
         config::validate(&args)?;
-        #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+        #[cfg(any(
+            all(target_os = "linux", target_arch = "x86_64"),
+            all(target_os = "windows", target_arch = "x86_64")
+        ))]
         initialize(&args, &mut config)?;
-        #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+        #[cfg(any(
+            all(target_os = "linux", target_arch = "x86_64"),
+            all(target_os = "windows", target_arch = "x86_64")
+        ))]
         {
             let active = observe(&args, &config);
             config.notes = active.notes.clone();
@@ -55,19 +104,33 @@ fn main() -> ExitCode {
             2
         }
     };
-    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    #[cfg(any(
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "windows", target_arch = "x86_64")
+    ))]
     if let Some(observation) = observation {
         observation.finish(code, args.json);
     }
     ExitCode::from(code as u8)
 }
 
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(any(
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "windows", target_arch = "x86_64")
+))]
 fn observe(args: &Args, config: &config::Loaded) -> observation::Observer {
-    let get = |name| std::env::var_os(name).filter(|value| !value.is_empty());
+    let get = |name: &str| std::env::var_os(name).filter(|value| !value.is_empty());
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     let state = get("XDG_STATE_HOME")
         .map(std::path::PathBuf::from)
         .or_else(|| get("HOME").map(|home| std::path::PathBuf::from(home).join(".local/state")));
+    #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+    let state = get("LOCALAPPDATA")
+        .map(std::path::PathBuf::from)
+        .or_else(|| {
+            get("USERPROFILE")
+                .map(|home| std::path::PathBuf::from(home).join("AppData").join("Local"))
+        });
     let command = match args.selected() {
         args::Action::Serve { .. } => "host",
         args::Action::Control => "control",
@@ -86,37 +149,32 @@ fn observe(args: &Args, config: &config::Loaded) -> observation::Observer {
     )
 }
 
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(any(
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "windows", target_arch = "x86_64")
+))]
 fn initialize(args: &Args, config: &mut config::Loaded) -> Result<(), Error> {
-    use std::os::unix::fs::MetadataExt;
     if !matches!(
         args.selected(),
         args::Action::Enter { .. } | args::Action::Serve { .. }
     ) {
         return Ok(());
     }
-    let running = std::fs::metadata("/proc/self/exe")?;
-    let image = protocol::wire::Image {
-        device: running.dev(),
-        inode: running.ino(),
-    };
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    let executable = std::path::PathBuf::from("/proc/self/exe");
+    #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+    let executable = std::env::current_exe()?;
+    let image = startup::image(&executable)?;
     let environment = radicula_process::Environment::new(
-        [
-            "HOME",
-            "PATH",
-            "XDG_CONFIG_HOME",
-            "XDG_RUNTIME_DIR",
-            "XDG_STATE_HOME",
-            "LOCUS_API",
-            "LANG",
-            "LC_ALL",
-            "LC_CTYPE",
-            "TZ",
-        ]
-        .into_iter()
-        .filter_map(|key| std::env::var_os(key).map(|value| (key.into(), value))),
+        KEYS.iter()
+            .copied()
+            .filter_map(|key| std::env::var_os(key).map(|value| (key.into(), value))),
     );
-    config.invocation = Some(startup::Invocation { image, environment });
+    config.invocation = Some(startup::Invocation {
+        executable,
+        image,
+        environment,
+    });
     Ok(())
 }
 
@@ -131,15 +189,18 @@ fn defaults(args: &mut Args, config: &config::Loaded) -> Result<(), Error> {
         let key = key
             .into_string()
             .map_err(|_| Error::config("interactive default environment key must be UTF-8"))?;
+        if cfg!(windows) && (key.is_empty() || key.contains('=')) {
+            continue;
+        }
         let value = value
             .into_string()
             .map_err(|_| Error::config("interactive default environment value must be UTF-8"))?;
         environment.insert(key, value);
     }
-    let executable = environment
-        .get("SHELL")
-        .cloned()
-        .unwrap_or_else(|| "/bin/sh".into());
+    let (executable, argv) = config::shell(&environment);
+    if cfg!(windows) {
+        environment.retain(|key, _| !key.eq_ignore_ascii_case("TERM"));
+    }
     environment.insert("TERM".into(), "xterm-256color".into());
     let cwd = std::env::current_dir()?
         .into_os_string()
@@ -149,14 +210,20 @@ fn defaults(args: &mut Args, config: &config::Loaded) -> Result<(), Error> {
         args,
         protocol::wire::Program {
             executable,
-            args: vec!["-i".into()],
+            args: argv,
             cwd,
             environment,
         },
     )
 }
 
-#[cfg_attr(all(target_os = "linux", target_arch = "x86_64"), locus::trace(with = observation::view()))]
+#[cfg_attr(
+    any(
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "windows", target_arch = "x86_64")
+    ),
+    locus::trace(with = observation::view())
+)]
 fn execute(args: &Args, config: config::Loaded) -> Result<(), Error> {
     if matches!(args.selected(), args::Action::Config) {
         println!("{}", config.report(args));

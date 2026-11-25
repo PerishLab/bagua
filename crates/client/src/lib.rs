@@ -8,13 +8,19 @@ pub use app::preferences::{Clipboard, Decor, Header, Layout, Line, Mouse, Status
 pub use keyboard::Keyboard;
 mod select;
 pub mod template;
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(any(
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "windows", target_arch = "x86_64")
+))]
 mod tty;
 
 pub use app::App;
 pub use draw::Paint;
 pub use keys::{Gesture, Keys, translate};
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(any(
+    all(target_os = "linux", target_arch = "x86_64"),
+    all(target_os = "windows", target_arch = "x86_64")
+))]
 pub use tty::Terminal;
 
 use protocol::{Failure, Frame, Packet, Replica};

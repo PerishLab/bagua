@@ -17,6 +17,16 @@ pub(crate) fn verify(program: &protocol::wire::Program) -> Result<(), Error> {
     launch::check(program)
 }
 
+pub(crate) fn shell(
+    environment: &std::collections::BTreeMap<String, String>,
+) -> (String, Vec<String>) {
+    runtime::shell(environment)
+}
+
+pub(crate) fn strip(path: PathBuf) -> PathBuf {
+    runtime::strip(path)
+}
+
 pub(crate) struct Loaded {
     path: Option<PathBuf>,
     explicit: bool,
@@ -26,9 +36,15 @@ pub(crate) struct Loaded {
     decor: client::Decor,
     delay: Duration,
     runtime: Option<PathBuf>,
-    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    #[cfg(any(
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "windows", target_arch = "x86_64")
+    ))]
     pub(crate) invocation: Option<crate::startup::Invocation>,
-    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    #[cfg(any(
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "windows", target_arch = "x86_64")
+    ))]
     pub(crate) notes: std::sync::Arc<crate::observation::Notes>,
 }
 
@@ -88,21 +104,39 @@ fn discover(args: &Args, get: &dyn Fn(&str) -> Option<OsString>) -> Result<Loade
     if let Some(path) = &args.config {
         return Loaded::read(Some(std::path::absolute(path)?), true);
     }
-    let home = get("XDG_CONFIG_HOME")
-        .filter(|value| !value.is_empty())
-        .map(PathBuf::from)
-        .or_else(|| {
-            get("HOME")
-                .filter(|value| !value.is_empty())
-                .map(|home| PathBuf::from(home).join(".config"))
-        });
-    let path = home.map(|home| home.join("bagua/bagua.toml"));
+    let path = home(get);
     if path.as_ref().is_some_and(|path| !path.is_absolute()) {
         return Err(Error::config(
             "configuration home must be an absolute directory",
         ));
     }
     Loaded::read(path, false)
+}
+
+#[cfg(not(windows))]
+fn home(get: &dyn Fn(&str) -> Option<OsString>) -> Option<PathBuf> {
+    get("XDG_CONFIG_HOME")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| {
+            get("HOME")
+                .filter(|value| !value.is_empty())
+                .map(|home| PathBuf::from(home).join(".config"))
+        })
+        .map(|home| home.join("bagua/bagua.toml"))
+}
+
+#[cfg(windows)]
+fn home(get: &dyn Fn(&str) -> Option<OsString>) -> Option<PathBuf> {
+    get("LOCALAPPDATA")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| {
+            get("USERPROFILE")
+                .filter(|value| !value.is_empty())
+                .map(|home| PathBuf::from(home).join("AppData").join("Local"))
+        })
+        .map(|home| home.join("bagua").join("bagua.toml"))
 }
 
 impl Loaded {
@@ -138,9 +172,15 @@ impl Loaded {
             decor,
             delay,
             runtime: None,
-            #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+            #[cfg(any(
+                all(target_os = "linux", target_arch = "x86_64"),
+                all(target_os = "windows", target_arch = "x86_64")
+            ))]
             invocation: None,
-            #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+            #[cfg(any(
+                all(target_os = "linux", target_arch = "x86_64"),
+                all(target_os = "windows", target_arch = "x86_64")
+            ))]
             notes: std::sync::Arc::default(),
         })
     }
@@ -199,7 +239,10 @@ impl Loaded {
         }
         let mut next = Self::read(self.path.clone(), true)?;
         next.runtime = self.runtime.clone();
-        #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+        #[cfg(any(
+            all(target_os = "linux", target_arch = "x86_64"),
+            all(target_os = "windows", target_arch = "x86_64")
+        ))]
         {
             next.invocation = self.invocation.clone();
             next.notes = self.notes.clone();

@@ -105,6 +105,30 @@ fn runtime() {
     assert!(super::runtime::path(&|_| Some("relative".into())).is_err());
 }
 
+#[cfg(windows)]
+#[test]
+fn runtime() {
+    let values = [
+        ("LOCALAPPDATA", r"C:\Users\example\AppData\Local"),
+        ("USERPROFILE", r"C:\Users\example"),
+    ];
+    for (start, expected) in [
+        (0, r"C:\Users\example\AppData\Local\bagua\runtime\host.sock"),
+        (1, r"C:\Users\example\AppData\Local\bagua\runtime\host.sock"),
+    ] {
+        let path = super::runtime::path(&|key| {
+            values[start..]
+                .iter()
+                .find(|(name, _)| *name == key)
+                .map(|(_, value)| (*value).into())
+        })
+        .unwrap()
+        .unwrap();
+        assert_eq!(path, std::path::Path::new(expected));
+    }
+    assert!(super::runtime::path(&|_| Some("relative".into())).is_err());
+}
+
 #[test]
 fn encoding() {
     let (executable, cwd) = if cfg!(windows) {

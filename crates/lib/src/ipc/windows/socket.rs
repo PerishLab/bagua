@@ -80,23 +80,12 @@ impl Socket {
         namespace(path)?;
         let mut security = Security::private()?;
         let name = pipename(path)?;
-        let target = wide(path.as_os_str());
-        let marker = Handle::new(unsafe {
-            CreateFileW(
-                target.as_ptr(),
-                GENERIC_READ | GENERIC_WRITE,
-                FILE_SHARE_READ,
-                security.attributes(),
-                CREATE_NEW,
-                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE,
-                ptr::null_mut(),
-            )
-        })?;
         let listener = listen(&name, &mut security, true)?;
+        let pending = Pending::new()?;
         let mut socket = Self {
-            _marker: marker,
+            _marker: marker(path, &mut security)?,
             listener,
-            pending: Pending::new()?,
+            pending,
             waiting: false,
             ready: false,
             name,
@@ -193,6 +182,21 @@ impl Drop for Socket {
             self.waiting = false;
         }
     }
+}
+
+fn marker(path: &Path, security: &mut Security) -> io::Result<Handle> {
+    let target = wide(path.as_os_str());
+    Handle::new(unsafe {
+        CreateFileW(
+            target.as_ptr(),
+            GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ,
+            security.attributes(),
+            CREATE_NEW,
+            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE,
+            ptr::null_mut(),
+        )
+    })
 }
 
 fn listen(name: &[u16], security: &mut Security, first: bool) -> io::Result<Handle> {
