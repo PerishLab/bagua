@@ -4,7 +4,10 @@ ns = "bagua"
 [release]
 authority = "https://releases.bagua.perish.uk"
 binaries = ["bagua"]
-targets = ["x86_64-unknown-linux-gnu"]
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "x86_64-pc-windows-msvc",
+]
 skill = false
 
 [windtun]
