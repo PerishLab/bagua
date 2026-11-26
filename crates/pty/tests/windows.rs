@@ -121,11 +121,73 @@ fn flood() {
     assert!(runner.output.len() >= 65_536);
 }
 
+fn comspec() -> PathBuf {
+    std::env::var_os("COMSPEC")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            let root = std::env::var_os("SystemRoot")
+                .or_else(|| std::env::var_os("WINDIR"))
+                .unwrap_or_else(|| OsString::from(r"C:\Windows"));
+            PathBuf::from(root).join("System32").join("cmd.exe")
+        })
+}
+
+fn canonical(path: &std::path::Path) -> String {
+    let raw = path.canonicalize().unwrap().to_string_lossy().into_owned();
+    let trimmed = raw.strip_prefix(r"\\?\").unwrap_or(&raw);
+    trimmed.trim_end_matches('\\').to_ascii_lowercase()
+}
+
 #[test]
 fn context() {
-    let mut process = Process::spawn(script("Start-Sleep -Seconds 30")).unwrap();
-    assert!(matches!(process.context(), Err(Failure::Unsupported)));
-    process.close().unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let nested = root.path().join("nested");
+    std::fs::create_dir(&nested).unwrap();
+    let mut launch = Launch::new(
+        comspec(),
+        root.path().into(),
+        environment(&[]),
+        Size::new(80, 24).unwrap(),
+    );
+    launch.args = vec!["/Q".into(), "/K".into(), "cd /D nested & echo READY".into()];
+    let mut runner = Runner::new(launch);
+    runner.until(b"READY");
+    let observed = runner.process.context().unwrap();
+    assert_eq!(observed.pid, runner.process.id());
+    assert_eq!(observed.session, runner.process.id());
+    assert!(observed.started > 0);
+    assert!(observed.command.eq_ignore_ascii_case("cmd"));
+    assert_eq!(canonical(&observed.cwd), canonical(&nested));
+
+    let shell = powershell();
+    let command = format!(
+        "\"{}\" -NoLogo -NoProfile -NonInteractive -Command \"[Console]::Write('CHILD'); Start-Sleep -Seconds 30\"\r\n",
+        shell.display()
+    );
+    runner.send(command.as_bytes());
+    runner.until(b"CHILD");
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let descendant = loop {
+        let state = runner.process.context().unwrap();
+        if state.pid != runner.process.id() {
+            break state;
+        }
+        assert!(Instant::now() < deadline, "descendant process not observed");
+        std::thread::sleep(Duration::from_millis(25));
+    };
+    assert_eq!(descendant.session, runner.process.id());
+    assert!(descendant.started >= observed.started);
+    assert!(descendant.command.eq_ignore_ascii_case("powershell"));
+    assert_eq!(canonical(&descendant.cwd), canonical(&nested));
+
+    runner.process.close().unwrap();
+    assert!(matches!(
+        runner.process.context(),
+        Err(Failure::Io {
+            stage: pty::Stage::Inspect,
+            ..
+        })
+    ));
 }
 
 #[test]

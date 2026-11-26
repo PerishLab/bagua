@@ -17,7 +17,7 @@ pub(crate) fn parse(action: &Action) -> Result<Command, Failure> {
             return Err(Failure::Unavailable);
         }
         Action::Shutdown => return Ok(Command::Shutdown),
-        Action::Inspect { pane } => return Ok(Command::Inspect(Command::identity(*pane)?)),
+        Action::Inspect { pane, .. } => return Ok(Command::Inspect(Command::identity(*pane)?)),
         Action::Start {
             pane,
             executable,

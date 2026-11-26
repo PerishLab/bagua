@@ -3,7 +3,7 @@ use clap::{Args as Group, Parser, Subcommand, ValueEnum};
 #[derive(Parser)]
 #[command(name = "bagua", version = plumb::version!("BAGUA"))]
 #[command(
-    about = "A persistent terminal workspace with Linux machine control and interactive clients."
+    about = "A persistent terminal workspace with native local machine control and interactive clients."
 )]
 pub(crate) struct Args {
     #[arg(long, global = true, help = "Read this explicit bagua.toml file")]
@@ -116,7 +116,15 @@ pub(crate) enum Action {
     #[command(about = "Gracefully stop this host and reclaim its owned processes")]
     Shutdown,
     #[command(about = "Read a complete terminal snapshot from a joined session")]
-    Inspect { pane: u64 },
+    Inspect {
+        pane: u64,
+        #[arg(
+            long,
+            conflicts_with = "json",
+            help = "Render a readable plain-text summary and screen snapshot"
+        )]
+        text: bool,
+    },
     #[command(about = "Start an explicit program in a pending pane")]
     Start {
         pane: u64,

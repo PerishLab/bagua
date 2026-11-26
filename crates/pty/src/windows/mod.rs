@@ -1,4 +1,5 @@
 mod close;
+mod context;
 mod env;
 mod handle;
 mod pipe;
@@ -37,7 +38,7 @@ pub struct Process {
 
 impl Process {
     pub fn context(&self) -> Result<crate::Context, Failure> {
-        Err(Failure::Unsupported)
+        context::read(self).map_err(|error| Failure::io(Stage::Inspect, error))
     }
 
     pub fn spawn(launch: Launch) -> Result<Self, Failure> {

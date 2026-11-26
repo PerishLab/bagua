@@ -111,9 +111,12 @@ unsigned subtraction or on a peer draining output promptly.
 Linux is the first actual product endpoint. Windows x86_64 (Windows 10
 1809+/11) enters the same platform contracts at source level via ConPTY,
 same-user Named Pipe local IPC and a Windows Console VT client; macOS still
-needs its own native qualification. ConPTY is not assumed to reproduce Unix
-signals or process-group semantics: Windows `Process::context()` explicitly
-returns `Failure::Unsupported` and `workspace.cwd` defaults to `"launch"`.
+needs its own native qualification. ConPTY is not assumed to reproduce Unix signals or process-group semantics:
+Windows `Process::context()` performs read-only same-user Toolhelp32 and 64-bit
+PEB inspection (active non-consolehost descendant or direct child command,
+start lifetime and PEB current directory with PID/start-time recheck), while
+`workspace.cwd` still defaults to `"launch"` because PowerShell `Set-Location`
+does not update the Win32 PEB current directory.
 Codex is an ordinary consumer, with no agent loop or special core behavior.
 
 ## Selection
@@ -209,8 +212,8 @@ Accepted input retains its unwritten suffix after disconnect. Completion follows
 actual byte writes or native reclamation; model application is a separate fact.
 Connections have increasing request IDs and explicit output admission. Only
 presentation coalesces, with bounded rotating serialization. Reconnect starts a
-fresh actor/cursor and does not authorize replay. Inspect returns a complete
-screen and process facts before finishing. Source runtime history has independent line/per-pane/aggregate byte budgets,
+fresh actor/cursor and does not authorize replay. Inspect returns a complete screen and process facts before finishing (`inspect --text`
+renders a readable plain-text summary and visible screen lines, conflicting with `--json`). Source runtime history has independent line/per-pane/aggregate byte budgets,
 primary-only physical rows and context-bound paged reads; v0.1.0 has zero
 scrollback, and newer runtime history needs a qualified containing release. History does
 not reflow or restore rows into the application grid. Clients retain one frozen
@@ -247,10 +250,13 @@ Default endpoint discovery belongs to CLI, with no unknown endpoint replacement.
 Self-start uses the running executable (`/proc/self/exe` on Linux;
 `current_exe()` with detached console creation flags on Windows) and checks
 native file identity (`dev`/`ino` on Linux; `GetFileInformationByHandle`
-volume/file index on Windows) before workspace commands. A native PTY
-foreground context is an observation, not workspace authority or permission to
-inspect arbitrary processes; Windows `Process::context()` explicitly returns
-`Failure::Unsupported` and defaults `workspace.cwd` to `"launch"`. Cwd lookup
+volume/file index on Windows) before workspace commands. A native PTY foreground context is an observation, not workspace authority or
+permission to inspect arbitrary processes; Windows `Process::context()` verifies
+same-user Token SID, reads the active non-consolehost descendant (or direct
+child) image name, start lifetime and 64-bit PEB current directory with
+PID/start-time recheck, and still defaults `workspace.cwd` to `"launch"`
+because PowerShell `Set-Location` does not mutate the Win32 PEB current
+directory. Cwd lookup
 retains queue order and refuses before layout mutation on missing native facts.
 A subsequent launch race remains an observable failed pane. Wire identity and
 context are protocol data; native PathBuf/process access stays in the PTY adapter.
