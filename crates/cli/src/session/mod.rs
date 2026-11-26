@@ -1,3 +1,5 @@
+mod inspect;
+
 use crate::{args::Args, error::Error};
 use bagua::ipc::Connection;
 use protocol::{Command, Failure, Outcome, Request, Status, wire::Message};
@@ -6,6 +8,12 @@ use std::{
     path::Path,
 };
 use workspace::{Operation, Snapshot};
+
+enum Output {
+    Silent,
+    Wire,
+    Text,
+}
 
 pub(crate) struct Session {
     connection: Connection,
@@ -96,10 +104,22 @@ impl Session {
     pub fn call(&mut self, command: Command, visible: bool) -> Result<Option<Snapshot>, Error> {
         let request = Request::identified(self.next, command)?;
         self.next = self.next.checked_add(1).ok_or(Failure::Identity)?;
-        self.exchange(request, visible)
+        let output = if visible {
+            Output::Wire
+        } else {
+            Output::Silent
+        };
+        self.exchange(request, output)
     }
 
-    fn exchange(&mut self, request: Request, visible: bool) -> Result<Option<Snapshot>, Error> {
+    pub fn plain(&mut self, command: Command) -> Result<(), Error> {
+        let request = Request::identified(self.next, command)?;
+        self.next = self.next.checked_add(1).ok_or(Failure::Identity)?;
+        self.exchange(request, Output::Text)?;
+        Ok(())
+    }
+
+    fn exchange(&mut self, request: Request, output: Output) -> Result<Option<Snapshot>, Error> {
         let kind = crate::observation::event::kind(&request.command);
         self.connection.send(&request).map_err(|error| {
             crate::observation::event::Scope(self.scope.as_ref()).receipt(
@@ -111,6 +131,8 @@ impl Session {
         crate::observation::event::Scope(self.scope.as_ref())
             .receipt(kind, (request.id, crate::observation::event::Stage::Sent));
         let mut snapshot = None;
+        let mut summary = None;
+        let mut screen = None;
         loop {
             let message = self.connection.receive().map_err(|error| {
                 crate::observation::event::Scope(self.scope.as_ref()).receipt(
@@ -119,8 +141,10 @@ impl Session {
                 );
                 Error::from(error).at(request.id)
             })?;
-            if visible {
-                self.print(&message)?;
+            match output {
+                Output::Wire => self.print(&message)?,
+                Output::Text => inspect::capture(&message, &mut summary, &mut screen),
+                Output::Silent => {}
             }
             match message {
                 Message::Reply(reply) if reply.request == request.id => {
@@ -146,11 +170,15 @@ impl Session {
                         ),
                     );
                     result.map_err(|error| Error::from(error).at(request.id))?;
-                    return Ok(snapshot);
+                    break;
                 }
                 _ => {}
             }
         }
+        if matches!(output, Output::Text) {
+            println!("{}", inspect::render(summary.as_ref(), screen.as_ref()));
+        }
+        Ok(snapshot)
     }
 
     pub fn control(&mut self) -> Result<(), Error> {
@@ -168,7 +196,7 @@ impl Session {
                 return Err(Failure::Payload.into());
             }
             let request = serde_json::from_slice(&bytes).map_err(|_| Failure::Payload)?;
-            self.exchange(request, true)?;
+            self.exchange(request, Output::Wire)?;
         }
     }
 

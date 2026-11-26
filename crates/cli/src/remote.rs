@@ -38,7 +38,11 @@ pub(crate) fn execute(args: &Args, config: crate::config::Loaded) -> Result<(), 
         }
         let command = crate::command::parse(args.selected())?;
         let watch = matches!(command, protocol::Command::Subscribe { .. });
-        remote.call(command, true)?;
+        if matches!(args.selected(), Action::Inspect { text: true, .. }) {
+            remote.plain(command)?;
+        } else {
+            remote.call(command, true)?;
+        }
         if watch {
             remote.watch()?;
         }

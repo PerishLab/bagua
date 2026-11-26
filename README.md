@@ -21,8 +21,10 @@ separate evidence for each release.
 
 ## Daily-use entry
 
-Use the checked-in `bagua.toml` as an explicit profile in a modern terminal
-connected to Linux. Review it and validate the selected file before entering:
+Use the checked-in `bagua.toml` as an explicit cross-platform profile in a modern
+terminal on Linux or Windows (`workspace.cwd` is omitted so each platform uses
+its safe default: `"foreground"` on Linux, `"launch"` on Windows). Review it and
+validate the selected file before entering:
 
 ```sh
 bagua --config /absolute/path/bagua.toml config
@@ -42,8 +44,8 @@ The example selects this profile; compiled defaults still use Ctrl-G:
 | --- | --- |
 | Ctrl-Q twice | Send literal Ctrl-Q to the application |
 | Alt-Q, or Ctrl-Q then d | Detach and restore the terminal |
-| Ctrl-Q then `\` / `-` | Split columns / rows using foreground cwd |
-| Ctrl-Q then `=` | New window using foreground cwd |
+| Ctrl-Q then `\` / `-` | Split columns / rows (`workspace.cwd` policy) |
+| Ctrl-Q then `=` | New window (`workspace.cwd` policy) |
 | Alt-1 through Alt-9 | Select the current 1-based window index |
 | Ctrl-Q then Tab / w | Next pane / next window |
 | Ctrl-Q then PageUp / End | Browse history / return live |
@@ -134,9 +136,18 @@ establish complete distribution or installed verification for a release.
   (`CreatePseudoConsole`) over overlapped pipes with explicit launch arguments,
   working directory and environment, bounded nonblocking IO and direct-child
   termination. ConPTY does not reproduce Unix signals or process-group
-  semantics: `Process::context()` explicitly returns `Failure::Unsupported`,
-  and `workspace.cwd` defaults to `"launch"` on Windows (PEB-based foreground
-  CWD observation is not implemented).
+  semantics: `Process::context()` observes the owned ConPTY process tree via
+  Toolhelp32, verifies same-user Token SID, selects the active non-consolehost
+  descendant (or direct child), and reads its image basename, creation time and
+  64-bit PEB current directory with a PID/start-time recheck. `workspace.cwd`
+  still defaults to `"launch"` on Windows because PowerShell `Set-Location`
+  does not update the Win32 PEB current directory (native child processes and
+  `cmd.exe` report their actual PEB current directory).
+- **Side-channel inspection (`bagua inspect --text`)**: Alongside default pretty
+  JSON and `--json` JSON-lines output, `bagua --socket <PATH> --session <ID>
+  inspect <PANE> --text` (conflicting with `--json`) emits a concise process
+  summary line and plain-text screen lines for human or automated side-channel
+  observation.
 - **Local IPC (`crates/lib`)**: Uses deterministic per-user Named Pipes
   (`FILE_FLAG_FIRST_PIPE_INSTANCE`, `PIPE_REJECT_REMOTE_CLIENTS`, creation-time
   owner-only DACL, client and server process Token SID verification) paired

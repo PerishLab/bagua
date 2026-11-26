@@ -93,3 +93,14 @@ fn help() {
     assert!(text.contains("machine control"));
     assert!(text.contains("interactive"));
 }
+
+#[test]
+fn conflict() {
+    let output = Command::new(env!("CARGO_BIN_EXE_bagua"))
+        .arg("--no-config")
+        .args(["inspect", "1", "--text", "--json"])
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+}

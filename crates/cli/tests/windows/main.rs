@@ -1,5 +1,6 @@
 #![cfg(all(target_os = "windows", target_arch = "x86_64"))]
 
+mod inspect;
 mod peer;
 
 use bagua::ipc::{Connection, Service};

@@ -58,4 +58,3 @@ total = 268435456
 
 [workspace]
 name = "workspace"
-cwd = "foreground"
