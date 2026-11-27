@@ -34,9 +34,11 @@ bagua --config /absolute/path/bagua.toml enter workspace
 Normal entry creates the exact named workspace if absent and requests control.
 After detaching, the same entry reconnects to its existing host and programs.
 `enter workspace --observe` requires an existing workspace and never acquires
-control. A default endpoint is discovered only for normal entry/serve/config;
-machine commands require an explicit socket or a profile containing `host.socket`.
-Never remove an unknown endpoint to make a connection succeed.
+control. CLI commands resolve the host socket in order `--socket` > explicit `--config`
+`host.socket` > `BAGUA_SOCKET` > discovered `host.socket` > default `host.sock`
+(`capabilities` stays local unless `--socket` is supplied), and spawned panes receive
+`BAGUA_SOCKET`, `BAGUA_SESSION`, `BAGUA_WINDOW` and `BAGUA_PANE`. Never remove an
+unknown endpoint to make a connection succeed.
 
 The example selects this profile; compiled defaults still use Ctrl-G:
 
@@ -257,7 +259,7 @@ only to a new invocation; they never restart a host or alter running programs.
 Each client owns its preferences, including an observer. Preferences grant no
 control; only a controller can adopt a header inset through a model operation. A disabled or undiscoverable source cannot reload.
 
-`host.socket` supplies an absolute socket path; --socket overrides it.
+`host.socket` supplies an absolute socket path; `--socket` overrides it, and `BAGUA_SOCKET` overrides a discovered default config's `host.socket`.
 `program` supplies the complete executable, argv, absolute cwd and explicit
 environment for interactive open/connect and later splits/windows. A complete
 CLI --executable/--cwd launch replaces that whole template, including argv and
@@ -321,9 +323,10 @@ index, role and refusal feedback before session/window labels.
 The default socket is `$XDG_RUNTIME_DIR/bagua/host.sock`, otherwise
 `$XDG_STATE_HOME/bagua/host.sock`, otherwise
 `$HOME/.local/state/bagua/host.sock`. Nonempty bases must be absolute. CLI
-`--socket` overrides `host.socket`, which overrides this default. Only normal
-entry and `serve` select it; machine operations do not silently discover a host.
-Bagua creates its managed directory privately and requires the endpoint parent
+`--socket` overrides explicit `--config` `host.socket`, which overrides `BAGUA_SOCKET`,
+which overrides discovered `host.socket`, which overrides this default for host and
+remote commands (`capabilities` stays local unless `--socket` is supplied). Bagua
+creates its managed directory privately and requires the endpoint parent
 to be canonical, owned by the current user and mode 0700. An explicit socket
 uses an already prepared private directory. Unknown files, stale sockets,
 symlinks and endpoints are never unlinked or replaced. Readonly entry does not

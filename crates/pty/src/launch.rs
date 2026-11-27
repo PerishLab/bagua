@@ -30,9 +30,9 @@ impl Launch {
                 "program and cwd must be explicit absolute paths",
             ));
         }
-        if self.args.len() > 256 || self.environment.values().len() > 256 {
+        if self.args.len() > 256 || self.environment.values().len() > 260 {
             return Err(Failure::Input(
-                "launch argument or environment count exceeds 256",
+                "launch argument or environment count exceeds limit",
             ));
         }
         let paths = [self.program.as_os_str(), self.cwd.as_os_str()];
@@ -52,8 +52,8 @@ impl Launch {
             }
             total += bytes.len();
         }
-        if total > 65_536 {
-            return Err(Failure::Input("launch data exceeds 65536 bytes"));
+        if total > 69_632 {
+            return Err(Failure::Input("launch data exceeds 69632 bytes"));
         }
         for (key, _) in self.environment.values() {
             if invalid(key) {
