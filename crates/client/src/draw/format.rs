@@ -61,7 +61,9 @@ fn width(spans: &[Span]) -> u16 {
 fn put(row: &mut Row, span: Range<u16>, spans: &[Span], theme: &Theme) {
     let mut x = span.start;
     for value in spans {
-        x = row.label(x..span.end, &value.text, theme.tone(value.tone));
+        let next = row.label(x..span.end, &value.text, theme.tone(value.tone));
+        row.mark(x..next, value.target);
+        x = next;
     }
 }
 
@@ -91,20 +93,36 @@ impl App {
         true
     }
 
-    pub(super) fn bars(&self) -> Vec<Row> {
-        let Some(layout) = &self.decor.status.layout else {
-            return vec![self.bar()];
+    pub(crate) fn bars(&self) -> Vec<Row> {
+        let mut rows = match &self.decor.status.layout {
+            Some(layout) => {
+                let mut rows: Vec<_> = layout.lines.iter().map(|line| self.line(line)).collect();
+                let system = self.system();
+                if !system.is_empty() {
+                    let mut row = Row::new(self.viewport.width());
+                    row.label(
+                        0..self.viewport.width(),
+                        &system,
+                        Theme::status(&self.decor.status).active,
+                    );
+                    rows[0] = row;
+                }
+                rows
+            }
+            None => vec![self.bar()],
         };
-        let mut rows: Vec<_> = layout.lines.iter().map(|line| self.line(line)).collect();
-        let system = self.system();
-        if !system.is_empty() {
+        if self.decor.status.separator {
             let mut row = Row::new(self.viewport.width());
             row.label(
                 0..self.viewport.width(),
-                &system,
-                Theme::status(&self.decor.status).active,
+                &"─".repeat(usize::from(self.viewport.width())),
+                tone(false, 0, false),
             );
-            rows[0] = row;
+            if self.decor.status.inset() > 0 {
+                rows.push(row);
+            } else {
+                rows.insert(0, row);
+            }
         }
         rows
     }

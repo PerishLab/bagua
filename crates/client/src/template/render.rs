@@ -4,6 +4,9 @@ use unicode_width::UnicodeWidthChar;
 pub trait Context: Sized {
     fn field(&self, field: Field) -> String;
     fn windows(&self) -> Vec<Self>;
+    fn target(&self) -> Option<workspace::Id> {
+        None
+    }
     fn width(&self) -> usize {
         8192
     }
@@ -20,6 +23,7 @@ pub enum Tone {
 pub struct Span {
     pub text: String,
     pub tone: Tone,
+    pub target: Option<workspace::Id>,
 }
 
 pub(super) fn render<C: Context>(nodes: &[Node], context: &C) -> Vec<Span> {
@@ -30,6 +34,7 @@ pub(super) fn segment<C: Context>(nodes: &[Node], context: &C, tone: Tone) -> Ve
     let mut sink = Sink {
         spans: Vec::new(),
         tone,
+        target: context.target(),
         remaining: 8192,
         columns: context.width().min(8192),
     };
@@ -40,6 +45,7 @@ pub(super) fn segment<C: Context>(nodes: &[Node], context: &C, tone: Tone) -> Ve
 struct Sink {
     spans: Vec<Span>,
     tone: Tone,
+    target: Option<workspace::Id>,
     remaining: usize,
     columns: usize,
 }
@@ -64,10 +70,13 @@ impl Sink {
                 self.nodes(nodes, context);
             }
             Node::Windows(nodes) => {
+                let saved = self.target;
                 for span in super::list::windows(nodes, context, self.columns, self.tone) {
                     self.tone = span.tone;
+                    self.target = span.target;
                     self.text(&span.text);
                 }
+                self.target = saved;
             }
         }
     }
@@ -96,12 +105,14 @@ impl Sink {
         }
         if let Some(last) = self.spans.last_mut()
             && last.tone == self.tone
+            && last.target == self.target
         {
             last.text.push_str(&value);
         } else {
             self.spans.push(Span {
                 text: value,
                 tone: self.tone,
+                target: self.target,
             });
         }
     }
