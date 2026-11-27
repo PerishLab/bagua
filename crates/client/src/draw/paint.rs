@@ -32,7 +32,7 @@ impl Paint {
         {
             return Vec::new();
         }
-        let mut output = String::from("\x1b[?25l");
+        let mut output = String::from("\x1b[?2026h\x1b[?25l");
         if previous.is_none_or(|old| old.tracking != self.tracking) {
             output.push_str(match self.tracking {
                 Tracking::Off => "\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l",
@@ -50,6 +50,7 @@ impl Paint {
         if let Some(point) = self.cursor {
             output.push_str(&format!("\x1b[{};{}H\x1b[?25h", point.y + 1, point.x + 1));
         }
+        output.push_str("\x1b[?2026l");
         output.into_bytes()
     }
 }

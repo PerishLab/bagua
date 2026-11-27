@@ -51,6 +51,14 @@ impl Engine {
                 .epoch
                 .checked_add(self.stream.process(&mut self.parser, bytes))
                 .ok_or(Failure::Revision)?;
+            let callbacks = self.parser.callbacks_mut();
+            if callbacks.synchronized {
+                callbacks.held = callbacks.held.saturating_add(bytes.len());
+                if callbacks.held > 65_536 {
+                    callbacks.synchronized = false;
+                    callbacks.held = 0;
+                }
+            }
             self.revision = revision;
         }
         Ok(self.parser.callbacks_mut().take(self.revision))
@@ -100,6 +108,10 @@ impl Engine {
         let mut modes = Modes::from(self.parser.screen());
         modes.keyboard = self.parser.callbacks().keyboard.flags(modes.alternate);
         modes
+    }
+
+    pub fn synchronized(&self) -> bool {
+        self.parser.callbacks().synchronized
     }
 
     pub fn encode(&self, input: Input<'_>) -> Result<Vec<u8>, Failure> {

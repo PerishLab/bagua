@@ -121,8 +121,7 @@ impl Host {
             .iter()
             .filter(|(id, pane)| {
                 client.wanted.contains_key(id)
-                    || (self.watching(actor, **id)
-                        && client.seen.get(id) != Some(&pane.engine.revision()))
+                    || (self.watching(actor, **id) && pane.dirty(client.seen.get(id)))
             })
             .map(|(id, _)| *id)
             .collect();
@@ -147,5 +146,77 @@ impl Host {
             self.complete(actor, request, Ok(()))?;
         }
         Ok(true)
+    }
+}
+
+#[cfg(test)]
+mod checks {
+    use super::*;
+    use protocol::{Command, Request};
+
+    fn drain(host: &mut Host, actor: Id) -> Vec<Message> {
+        let mut out = Vec::new();
+        while let Some(bytes) = host.output(actor) {
+            let len = bytes.len();
+            out.push(serde_json::from_slice(&bytes[4..]).unwrap());
+            host.consume(actor, len);
+        }
+        out
+    }
+
+    #[test]
+    fn synchronized() {
+        let mut host = Host::new();
+        let actor = host.connect().unwrap();
+        let pane = Id::new(3).unwrap();
+        for (id, command) in [
+            (1, Command::create(80, 24).unwrap()),
+            (
+                2,
+                Command::Workspace(workspace::Operation::Join {
+                    session: Id::new(1).unwrap(),
+                    viewport: workspace::Geometry::new(80, 24).unwrap(),
+                }),
+            ),
+            (
+                3,
+                Command::Subscribe {
+                    target: Target::Pane(pane),
+                    after: None,
+                },
+            ),
+        ] {
+            host.submit(actor, Request::identified(id, command).unwrap())
+                .unwrap();
+        }
+        host.tick().unwrap();
+        drain(&mut host, actor);
+        let target = host.panes.get_mut(&pane).unwrap();
+        target.engine.feed(b"\x1b[?2026hpartial").unwrap();
+        target.held = 1;
+        host.tick().unwrap();
+        assert!(
+            !drain(&mut host, actor)
+                .iter()
+                .any(|m| matches!(m, Message::Screen { .. }))
+        );
+        let target = host.panes.get_mut(&pane).unwrap();
+        target.engine.feed(b" complete\x1b[?2026l").unwrap();
+        target.held = 0;
+        host.tick().unwrap();
+        assert!(
+            drain(&mut host, actor)
+                .iter()
+                .any(|m| matches!(m, Message::Screen { .. }))
+        );
+        let target = host.panes.get_mut(&pane).unwrap();
+        target.engine.feed(b"\x1b[?2026hstuck").unwrap();
+        target.held = 9;
+        host.tick().unwrap();
+        assert!(
+            drain(&mut host, actor)
+                .iter()
+                .any(|m| matches!(m, Message::Screen { .. }))
+        );
     }
 }

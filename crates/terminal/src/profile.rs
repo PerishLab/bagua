@@ -18,6 +18,7 @@ pub const PROFILE: &[&str] = &[
     "typed Shift/Alt/Ctrl keys and unambiguous modified navigation/F1-F12",
     "X10/normal/drag/motion tracking with legacy or SGR mouse encoding",
     "primary device/status/cursor/character-size queries, explicit replies and bell counts",
+    "DECSET 2026 synchronized updates with bounded presentation hold",
 ];
 
 pub const EXCLUDED: &[&str] = &[

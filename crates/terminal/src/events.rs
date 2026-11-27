@@ -13,6 +13,8 @@ pub(crate) struct Events {
     pub history: crate::History,
     pub columns: u16,
     pub keyboard: crate::keyboard::Keyboard,
+    pub synchronized: bool,
+    pub held: usize,
     unsupported: u64,
     bells: u64,
     replies: Vec<u8>,
@@ -42,6 +44,11 @@ impl Events {
         params: &[&[u16]],
         action: char,
     ) {
+        if let Some(value) = synchronized(prefix, params, action) {
+            self.synchronized = value;
+            self.held = 0;
+            return;
+        }
         if action == 'u'
             && prefix.1.is_none()
             && let Some((reply, partial)) = prefix.0.and_then(|prefix| {
@@ -68,6 +75,17 @@ impl Events {
             bells: std::mem::take(&mut self.bells),
             replies: std::mem::take(&mut self.replies),
         }
+    }
+}
+
+fn synchronized(prefix: (Option<u8>, Option<u8>), params: &[&[u16]], action: char) -> Option<bool> {
+    if prefix != (Some(b'?'), None) || params != [&[2026][..]] {
+        return None;
+    }
+    match action {
+        'h' => Some(true),
+        'l' => Some(false),
+        _ => None,
     }
 }
 
