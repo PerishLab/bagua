@@ -68,8 +68,8 @@ impl Reader {
         self.eof
     }
 
-    pub fn event(&self) -> HANDLE {
-        self.slot.event.raw()
+    pub fn event(&self) -> Option<HANDLE> {
+        self.pending.then(|| self.slot.event.raw())
     }
 
     fn take(&mut self, buffer: &mut [u8]) -> Transfer {

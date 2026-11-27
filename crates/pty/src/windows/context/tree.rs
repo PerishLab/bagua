@@ -13,13 +13,25 @@ const CAP: usize = 256;
 struct Node {
     pid: u32,
     parent: u32,
+    name: Option<String>,
     ignored: bool,
 }
 
-pub(super) fn select(root: u32, baseline: u64) -> io::Result<Target> {
+struct Best {
+    depth: usize,
+    started: u64,
+    pid: u32,
+    target: Target,
+}
+
+pub(super) fn select(root: u32, baseline: u64) -> io::Result<(Target, Option<String>)> {
     let nodes = snapshot()?;
+    let names: HashMap<u32, String> = nodes
+        .iter()
+        .filter_map(|node| node.name.clone().map(|name| (node.pid, name)))
+        .collect();
     let candidates = descendants(&nodes, root);
-    let mut best: Option<(usize, u64, Target)> = None;
+    let mut best: Option<Best> = None;
     for (pid, depth) in candidates {
         let Ok(candidate) = Target::open(pid) else {
             continue;
@@ -33,14 +45,19 @@ pub(super) fn select(root: u32, baseline: u64) -> io::Result<Target> {
         let rank = (depth, stamp.started);
         if best
             .as_ref()
-            .is_none_or(|(height, started, _)| rank > (*height, *started))
+            .is_none_or(|current| rank > (current.depth, current.started))
         {
-            best = Some((depth, stamp.started, candidate));
+            best = Some(Best {
+                depth,
+                started: stamp.started,
+                pid,
+                target: candidate,
+            });
         }
     }
     match best {
-        Some((_, _, target)) => Ok(target),
-        None => Target::open(root),
+        Some(chosen) => Ok((chosen.target, names.get(&chosen.pid).cloned())),
+        None => Ok((Target::open(root)?, names.get(&root).cloned())),
     }
 }
 
@@ -53,10 +70,13 @@ fn snapshot() -> io::Result<Vec<Node>> {
         return Err(io::Error::last_os_error());
     }
     loop {
+        let name = exe(&entry.szExeFile);
+        let ignored = name.as_deref().is_some_and(console);
         items.push(Node {
             pid: entry.th32ProcessID,
             parent: entry.th32ParentProcessID,
-            ignored: ignored(&entry.szExeFile),
+            name,
+            ignored,
         });
         if unsafe { Process32NextW(handle.raw(), &mut entry) } == 0 {
             break;
@@ -65,14 +85,15 @@ fn snapshot() -> io::Result<Vec<Node>> {
     Ok(items)
 }
 
-fn ignored(wide: &[u16]) -> bool {
+fn exe(wide: &[u16]) -> Option<String> {
     let end = wide
         .iter()
         .position(|code| *code == 0)
         .unwrap_or(wide.len());
-    let Ok(name) = String::from_utf16(&wide[..end]) else {
-        return false;
-    };
+    String::from_utf16(&wide[..end]).ok()
+}
+
+fn console(name: &str) -> bool {
     name.eq_ignore_ascii_case("conhost.exe") || name.eq_ignore_ascii_case("openconsole.exe")
 }
 

@@ -417,7 +417,8 @@ Bindings, prefix and Escape delay are client-local and never restart the host.
 The outer decoder accepts bounded `CSI codepoint ; modifiers u` with optional
 press/repeat/release suffix `:1`/`:2`/`:3`; press is the default and repeat acts
 as a press. Releases are ignored rather than sent to applications. The modifier
-number is 1 plus Shift=1, Alt=2 and Ctrl=4. It also accepts xterm modified
+number is 1 plus Shift=1, Alt=2 and Ctrl=4, ignoring ambient CapsLock=64 and
+NumLock=128 state bits while refusing Super/Hyper/Meta bits. It also accepts xterm modified
 navigation/F1–F12. Unicode scalars, Enter/Tab/Backspace/Escape and the declared
 navigation/function keys are supported; C1 controls, surrogate values, other
 private function keys, lock/super/media/keypad keys, alternate-key fields and

@@ -49,6 +49,26 @@ impl Process {
         self.id
     }
 
+    pub fn readable(&self) -> bool {
+        self.reader.as_ref().is_some_and(Reader::ready)
+    }
+
+    pub fn writable(&self) -> bool {
+        self.writer.as_ref().is_some_and(Writer::ready)
+    }
+
+    pub fn events(&self, target: &mut Vec<HANDLE>, write: bool) {
+        if let Some(event) = self.reader.as_ref().and_then(Reader::event) {
+            target.push(event);
+        }
+        if write && let Some(event) = self.writer.as_ref().and_then(Writer::event) {
+            target.push(event);
+        }
+        if let Some(child) = &self.child {
+            target.push(child.raw());
+        }
+    }
+
     pub fn status(&self) -> Status {
         Status {
             exit: self.exit,
@@ -123,13 +143,20 @@ impl Process {
         }
         let mut handles: [HANDLE; 2] = [std::ptr::null_mut(); 2];
         let mut count = 0usize;
-        if matches!(interest, Interest::Read | Interest::Both) {
-            handles[count] = reader.event();
+        if matches!(interest, Interest::Read | Interest::Both)
+            && let Some(event) = reader.event()
+        {
+            handles[count] = event;
             count += 1;
         }
-        if matches!(interest, Interest::Write | Interest::Both) {
-            handles[count] = writer.event();
+        if matches!(interest, Interest::Write | Interest::Both)
+            && let Some(event) = writer.event()
+        {
+            handles[count] = event;
             count += 1;
+        }
+        if count == 0 {
+            return Ok(state(reader, writer, interest));
         }
         let millis = timeout.as_millis().min(1000) as u32;
         let waited = unsafe { WaitForMultipleObjects(count as u32, handles.as_ptr(), 0, millis) };

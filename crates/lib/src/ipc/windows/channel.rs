@@ -4,6 +4,7 @@ use protocol::{
     wire::{self, Decoder, Message},
 };
 use std::{collections::VecDeque, io};
+use windows_sys::Win32::System::Threading::WaitForMultipleObjects;
 
 pub struct Channel {
     stream: Duplex,
@@ -36,6 +37,7 @@ impl Channel {
     }
 
     pub fn flush(&mut self) -> io::Result<()> {
+        self.stream.flush()?;
         let Some((bytes, offset)) = self.queue.front_mut() else {
             return Ok(());
         };
@@ -81,6 +83,28 @@ impl Channel {
             Err(error) => return Err(error),
         }
         self.decoder.take().map_err(crate::ipc::error)
+    }
+
+    pub fn wait(&self, console: *mut std::ffi::c_void, timeout: std::time::Duration) {
+        if self.stream.ready() || !self.decoder.empty() {
+            return;
+        }
+        if !self.queue.is_empty() && !self.stream.writing() {
+            return;
+        }
+        let mut handles = Vec::with_capacity(4);
+        if !console.is_null() {
+            handles.push(console);
+        }
+        self.stream.events(&mut handles);
+        let millis = timeout.as_millis().min(1000) as u32;
+        if handles.is_empty() {
+            std::thread::sleep(timeout);
+            return;
+        }
+        unsafe {
+            WaitForMultipleObjects(handles.len() as u32, handles.as_ptr(), 0, millis);
+        }
     }
 }
 

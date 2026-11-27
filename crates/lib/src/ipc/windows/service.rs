@@ -7,6 +7,7 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
     time::{Duration, Instant},
 };
+use windows_sys::Win32::System::Threading::WaitForMultipleObjects;
 use workspace::Id;
 
 pub struct Service {
@@ -47,7 +48,7 @@ impl Service {
 
     pub fn run(&mut self, stop: &AtomicBool) -> io::Result<()> {
         while self.step(stop)? {
-            std::thread::sleep(Duration::from_millis(2));
+            self.wait();
         }
         Ok(())
     }
@@ -59,22 +60,9 @@ impl Service {
         if !self.host.stopped() {
             self.accept()?;
         }
-        let mut closed = Vec::new();
-        for (id, link) in &mut self.links {
-            match link.step(&mut self.host, *id) {
-                Ok(true) => {}
-                Ok(false) => closed.push(*id),
-                Err(error) => {
-                    eprintln!("bagua connection {} closed: {error}", id.value());
-                    closed.push(*id);
-                }
-            }
-        }
-        for id in closed {
-            self.links.remove(&id);
-            self.host.disconnect(id).map_err(crate::ipc::error)?;
-        }
+        self.pump(false)?;
         self.host.tick().map_err(crate::ipc::error)?;
+        self.pump(true)?;
         if !self.host.stopped() {
             return Ok(true);
         }
@@ -89,6 +77,57 @@ impl Service {
                 .map_err(|fault| io::Error::other(format!("{}: {}", fault.code, fault.message)))?;
         }
         Ok(running)
+    }
+
+    fn pump(&mut self, flush: bool) -> io::Result<()> {
+        let mut closed = Vec::new();
+        for (id, link) in &mut self.links {
+            let outcome = if flush {
+                link.flush(&mut self.host, *id)
+            } else {
+                link.step(&mut self.host, *id)
+            };
+            match outcome {
+                Ok(true) => {}
+                Ok(false) => closed.push(*id),
+                Err(error) => {
+                    eprintln!("bagua connection {} closed: {error}", id.value());
+                    closed.push(*id);
+                }
+            }
+        }
+        for id in closed {
+            self.links.remove(&id);
+            self.host.disconnect(id).map_err(crate::ipc::error)?;
+        }
+        Ok(())
+    }
+
+    fn wait(&self) {
+        if self.socket.ready() {
+            return;
+        }
+        let mut handles = Vec::with_capacity(64);
+        if let Some(event) = self.socket.event() {
+            handles.push(event);
+        }
+        for (id, link) in &self.links {
+            if link.ready(&self.host, *id) {
+                return;
+            }
+            link.events(&mut handles);
+        }
+        if self.host.wake(&mut handles) {
+            return;
+        }
+        let count = handles.len().min(64);
+        if count == 0 {
+            std::thread::sleep(Duration::from_millis(2));
+            return;
+        }
+        unsafe {
+            WaitForMultipleObjects(count as u32, handles.as_ptr(), 0, 16);
+        }
     }
 
     fn accept(&mut self) -> io::Result<()> {

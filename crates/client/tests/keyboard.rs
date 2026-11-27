@@ -133,8 +133,28 @@ fn modifiers() {
         client::translate(key, false).unwrap(),
         client::Gesture::Ignore
     );
+    for (bytes, expected, mods) in [
+        (b"\x1b[27;129u".as_slice(), KeyCode::Esc, KeyModifiers::NONE),
+        (
+            b"\x1b[13;130u".as_slice(),
+            KeyCode::Enter,
+            KeyModifiers::SHIFT,
+        ),
+        (b"\x1b[27;65u".as_slice(), KeyCode::Esc, KeyModifiers::NONE),
+        (
+            b"\x1b[113;197u".as_slice(),
+            KeyCode::Char('q'),
+            KeyModifiers::CONTROL,
+        ),
+    ] {
+        keyboard.push(bytes).unwrap();
+        assert!(
+            matches!(keyboard.next(now), Some(Ok(Event::Key(key))) if key.code == expected && key.modifiers == mods)
+        );
+    }
     for bytes in [
         b"\x1b[13;9u".as_slice(),
+        b"\x1b[27;137u",
         b"\x1b[55296;2u",
         b"\x1b[97;2;65u",
         b"\x1b[0u",

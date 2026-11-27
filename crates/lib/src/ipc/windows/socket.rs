@@ -6,6 +6,7 @@ use std::{io, mem::zeroed, path::Path, ptr};
 use windows_sys::Win32::{
     Foundation::{
         ERROR_IO_INCOMPLETE, ERROR_IO_PENDING, ERROR_PIPE_CONNECTED, GENERIC_READ, GENERIC_WRITE,
+        HANDLE,
     },
     Storage::FileSystem::{
         CREATE_NEW, CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_FLAG_DELETE_ON_CLOSE,
@@ -111,6 +112,14 @@ impl Socket {
             return Ok(None);
         }
         Ok(Some(accepted))
+    }
+
+    pub fn ready(&self) -> bool {
+        self.ready
+    }
+
+    pub fn event(&self) -> Option<HANDLE> {
+        self.waiting.then(|| self.pending.event.raw())
     }
 
     fn poll(&mut self) -> io::Result<bool> {

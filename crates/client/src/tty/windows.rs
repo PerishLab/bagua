@@ -118,6 +118,14 @@ impl Terminal {
         self.output.flush(&mut writer)
     }
 
+    pub fn handle(&self) -> *mut std::ffi::c_void {
+        self.input.0
+    }
+
+    pub fn ready(&self) -> bool {
+        !self.pending.is_empty()
+    }
+
     pub fn finish(&mut self) -> io::Result<()> {
         if !self.active {
             return Ok(());

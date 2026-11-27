@@ -8,6 +8,7 @@ use std::{
     io,
     time::{Duration, Instant},
 };
+use windows_sys::Win32::Foundation::HANDLE;
 use workspace::Id;
 
 pub(super) struct Link {
@@ -28,20 +29,8 @@ impl Link {
     }
 
     pub fn step(&mut self, host: &mut Host, actor: Id) -> io::Result<bool> {
-        if !host.connected(actor) {
+        if !self.flush(host, actor)? {
             return Ok(false);
-        }
-        if let Some(bytes) = host.output(actor) {
-            let length = bytes.len().min(65_536);
-            match self.stream.write(&bytes[..length]) {
-                Ok(0) => return Ok(false),
-                Ok(count) => {
-                    host.consume(actor, count);
-                    self.progress = Instant::now();
-                }
-                Err(error) if transient(&error) => {}
-                Err(error) => return Err(error),
-            }
         }
         if let Some(request) = self.read()? {
             host.submit(actor, request).map_err(crate::ipc::error)?;
@@ -60,6 +49,37 @@ impl Link {
             ));
         }
         Ok(true)
+    }
+
+    pub fn flush(&mut self, host: &mut Host, actor: Id) -> io::Result<bool> {
+        if !host.connected(actor) {
+            return Ok(false);
+        }
+        self.stream.flush()?;
+        if let Some(bytes) = host.output(actor) {
+            let length = bytes.len().min(65_536);
+            match self.stream.write(&bytes[..length]) {
+                Ok(0) => return Ok(false),
+                Ok(count) => {
+                    host.consume(actor, count);
+                    self.progress = Instant::now();
+                }
+                Err(error) if transient(&error) => {}
+                Err(error) => return Err(error),
+            }
+        }
+        Ok(true)
+    }
+
+    pub fn ready(&self, host: &Host, actor: Id) -> bool {
+        if self.stream.ready() || !self.decoder.empty() {
+            return true;
+        }
+        !self.stream.writing() && !host.idle(actor)
+    }
+
+    pub fn events(&self, target: &mut Vec<HANDLE>) {
+        self.stream.events(target);
     }
 
     fn read(&mut self) -> io::Result<Option<Request>> {

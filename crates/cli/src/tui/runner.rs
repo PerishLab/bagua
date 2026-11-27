@@ -150,6 +150,7 @@ impl Runner {
             }
             self.release();
             self.drain()?;
+            self.channel.flush()?;
             let size = terminal.size()?;
             if size != self.size {
                 self.size = size;
@@ -162,6 +163,9 @@ impl Runner {
                 painted = Instant::now();
             }
             terminal.flush()?;
+            #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+            self.pause(terminal, painted);
+            #[cfg(not(all(target_os = "windows", target_arch = "x86_64")))]
             std::thread::sleep(Duration::from_millis(2));
         }
         self.copies(terminal);
@@ -172,6 +176,26 @@ impl Runner {
             .into());
         }
         Ok(())
+    }
+
+    #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+    fn pause(&self, terminal: &Terminal, painted: Instant) {
+        if self.leaving.is_none() && terminal.ready() {
+            return;
+        }
+        let timeout = if self.app.dirty() && !self.suspended {
+            Duration::from_millis(16)
+                .saturating_sub(painted.elapsed())
+                .max(Duration::from_millis(1))
+        } else {
+            Duration::from_millis(16)
+        };
+        let console = if self.leaving.is_none() {
+            terminal.handle()
+        } else {
+            std::ptr::null_mut()
+        };
+        self.channel.wait(console, timeout);
     }
 
     fn copies(&mut self, terminal: &mut Terminal) {
