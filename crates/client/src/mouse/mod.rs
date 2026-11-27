@@ -13,13 +13,20 @@ impl App {
             self.cancel();
             return Ok(Vec::new());
         }
-        let Some(row) = event.row.checked_sub(self.decor.status.inset()) else {
+        if event.column >= self.viewport.width() {
             self.cancel();
             return Ok(Vec::new());
+        }
+        let Some(row) = event.row.checked_sub(self.decor.status.inset()) else {
+            self.cancel();
+            return Ok(self.tab(event, event.row));
         };
         let event = MouseEvent { row, ..event };
-        if event.column >= self.viewport.width() || event.row >= self.viewport.height() {
+        if event.row >= self.viewport.height() {
             self.cancel();
+            if self.decor.status.inset() == 0 {
+                return Ok(self.tab(event, event.row - self.viewport.height()));
+            }
             return Ok(Vec::new());
         }
         let point = Point {
@@ -55,6 +62,12 @@ impl App {
             if self.focus() != Some(place.pane) {
                 return Err(Failure::Target);
             }
+            if self
+                .screen(place.pane)
+                .is_some_and(|screen| screen.modes.alternate)
+            {
+                return Ok(Vec::new());
+            }
             return self.scroll(place.pane, rows);
         }
         let mut commands = Vec::new();
@@ -79,6 +92,23 @@ impl App {
         }
         commands.extend(self.application(place, point, event)?);
         Ok(commands)
+    }
+
+    fn tab(&self, event: MouseEvent, row: u16) -> Vec<Command> {
+        if event.kind != MouseEventKind::Down(MouseButton::Left) {
+            return Vec::new();
+        }
+        let Some(pane) = self
+            .bars()
+            .get(usize::from(row))
+            .and_then(|bar| bar.target(event.column))
+        else {
+            return Vec::new();
+        };
+        if self.controller() && self.focus() != Some(pane) {
+            return vec![Command::Workspace(Operation::Focus(pane))];
+        }
+        Vec::new()
     }
 
     fn heading(&self, event: MouseEvent, point: Point) -> Result<Option<Vec<Command>>, Failure> {
@@ -112,6 +142,12 @@ impl App {
         point: Point,
         event: MouseEvent,
     ) -> Result<Vec<Command>, Failure> {
+        if matches!(
+            event.kind,
+            MouseEventKind::ScrollLeft | MouseEventKind::ScrollRight
+        ) {
+            return Ok(Vec::new());
+        }
         if !self.controller() {
             return Err(Failure::Workspace(workspace::Failure::Observer));
         }

@@ -2,7 +2,10 @@ use std::{fmt::Write, ops::Range};
 use terminal::{Cell, Color, Style};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-pub(super) struct Row(Vec<Cell>);
+pub(crate) struct Row {
+    cells: Vec<Cell>,
+    targets: Vec<Option<workspace::Id>>,
+}
 
 pub(super) fn tone(color: bool, index: u8, active: bool) -> Style {
     Style {
@@ -22,26 +25,42 @@ pub(super) fn tone(color: bool, index: u8, active: bool) -> Style {
 
 impl Row {
     pub fn new(width: u16) -> Self {
-        Self(vec![
-            Cell {
-                text: String::new(),
-                width: 1,
-                style: tone(false, 0, false)
-            };
-            usize::from(width)
-        ])
+        Self {
+            cells: vec![
+                Cell {
+                    text: String::new(),
+                    width: 1,
+                    style: tone(false, 0, false)
+                };
+                usize::from(width)
+            ],
+            targets: vec![None; usize::from(width)],
+        }
     }
 
     pub fn fill(&mut self, range: Range<u16>, style: Style) {
         for x in range {
-            if let Some(cell) = self.0.get_mut(usize::from(x)) {
+            if let Some(cell) = self.cells.get_mut(usize::from(x)) {
                 *cell = Cell {
                     text: String::new(),
                     width: 1,
                     style,
                 };
+                self.targets[usize::from(x)] = None;
             }
         }
+    }
+
+    pub fn mark(&mut self, range: Range<u16>, target: Option<workspace::Id>) {
+        for x in range {
+            if let Some(slot) = self.targets.get_mut(usize::from(x)) {
+                *slot = target;
+            }
+        }
+    }
+
+    pub fn target(&self, column: u16) -> Option<workspace::Id> {
+        self.targets.get(usize::from(column)).copied().flatten()
     }
 
     pub fn label(&mut self, range: Range<u16>, text: &str, style: Style) -> u16 {
@@ -56,17 +75,17 @@ impl Row {
                 }
                 continue;
             }
-            if x + size > range.end || usize::from(x + size) > self.0.len() {
+            if x + size > range.end || usize::from(x + size) > self.cells.len() {
                 break;
             }
-            self.0[usize::from(x)] = Cell {
+            self.cells[usize::from(x)] = Cell {
                 text: c.to_string(),
                 width: size as u8,
                 style,
             };
             last = Some(usize::from(x));
             if size == 2 {
-                self.0[usize::from(x + 1)] = Cell {
+                self.cells[usize::from(x + 1)] = Cell {
                     text: String::new(),
                     width: 0,
                     style,
@@ -78,7 +97,7 @@ impl Row {
     }
 
     fn combine(&mut self, index: usize, value: char) {
-        let cell = &mut self.0[index];
+        let cell = &mut self.cells[index];
         if cell.text.len() + value.len_utf8() <= 22 {
             cell.text.push(value);
         }
@@ -86,27 +105,27 @@ impl Row {
 
     pub fn put(&mut self, index: u16, mut cell: Cell) {
         let index = usize::from(index);
-        if index >= self.0.len() {
+        if index >= self.cells.len() {
             return;
         }
         match cell.width {
-            0 if index == 0 || self.0[index - 1].width != 2 => {
+            0 if index == 0 || self.cells[index - 1].width != 2 => {
                 cell.width = 1;
                 cell.text.clear();
             }
-            2 if index + 1 == self.0.len() => {
+            2 if index + 1 == self.cells.len() => {
                 cell.width = 1;
                 cell.text.clear();
             }
             _ => {}
         }
-        self.0[index] = cell;
+        self.cells[index] = cell;
     }
 
     pub fn encode(&self, y: u16) -> String {
         let mut output = format!("\x1b[0m\x1b[{};1H\x1b[2K", y + 1);
         let mut previous = None;
-        for cell in &self.0 {
+        for cell in &self.cells {
             if cell.width == 0 {
                 continue;
             }

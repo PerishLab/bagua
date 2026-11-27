@@ -41,16 +41,28 @@ pub(super) fn parse(body: &[u8], finalizer: u8) -> Result<Event, Failure> {
     let kind = match report {
         Report {
             wheel: true,
-            motion: false,
             button: 0,
             release: false,
+            ..
         } => MouseEventKind::ScrollUp,
         Report {
             wheel: true,
-            motion: false,
             button: 1,
             release: false,
+            ..
         } => MouseEventKind::ScrollDown,
+        Report {
+            wheel: true,
+            button: 2,
+            release: false,
+            ..
+        } => MouseEventKind::ScrollLeft,
+        Report {
+            wheel: true,
+            button: 3,
+            release: false,
+            ..
+        } => MouseEventKind::ScrollRight,
         Report {
             wheel: false,
             motion: true,

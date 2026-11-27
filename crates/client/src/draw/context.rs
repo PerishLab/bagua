@@ -125,6 +125,11 @@ impl Context for Frame<'_> {
             .collect()
     }
 
+    fn target(&self) -> Option<Id> {
+        self.window?;
+        self.window().map(Window::focus)
+    }
+
     fn width(&self) -> usize {
         self.width
     }

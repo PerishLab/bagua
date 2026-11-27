@@ -63,6 +63,9 @@ impl App {
     }
 
     pub(crate) fn scroll(&mut self, pane: Id, rows: i32) -> Result<Vec<Command>, Failure> {
+        if self.past.request.is_some() {
+            return Ok(Vec::new());
+        }
         let mut read = Read::default();
         if let Some(view) = self.history(pane) {
             let top = view

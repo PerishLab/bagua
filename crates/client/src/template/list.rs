@@ -38,6 +38,7 @@ pub(super) fn windows<C: Context>(
         output.push(Span {
             text: "< ".into(),
             tone,
+            target: None,
         });
     }
     for (spans, _) in &items[start..end] {
@@ -47,6 +48,7 @@ pub(super) fn windows<C: Context>(
         output.push(Span {
             text: " >".into(),
             tone,
+            target: None,
         });
     }
     output

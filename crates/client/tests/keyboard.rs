@@ -41,6 +41,29 @@ fn streaming() {
     assert!(
         matches!(&events[6],Event::Key(key) if client::translate(*key,false) == Ok(client::Gesture::Leader))
     );
+    for (sequence, expected) in [
+        (
+            b"\x1b[<66;10;5M".as_slice(),
+            crossterm::event::MouseEventKind::ScrollLeft,
+        ),
+        (
+            b"\x1b[<67;10;5M".as_slice(),
+            crossterm::event::MouseEventKind::ScrollRight,
+        ),
+        (
+            b"\x1b[<96;10;5M".as_slice(),
+            crossterm::event::MouseEventKind::ScrollUp,
+        ),
+        (
+            b"\x1b[<97;10;5M".as_slice(),
+            crossterm::event::MouseEventKind::ScrollDown,
+        ),
+    ] {
+        keyboard.push(sequence).unwrap();
+        assert!(
+            matches!(keyboard.next(now), Some(Ok(Event::Mouse(mouse))) if mouse.kind == expected && mouse.column == 9 && mouse.row == 4)
+        );
+    }
 }
 
 #[test]

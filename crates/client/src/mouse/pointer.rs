@@ -138,7 +138,7 @@ impl App {
         point: Point,
     ) -> Result<Option<Vec<Command>>, Failure> {
         if matches!(event.kind, MouseEventKind::Down(_))
-            || (self.pointing() && super::wheel(event.kind).is_some())
+            || (self.pointing() && scrolling(event.kind))
         {
             self.cancel();
             return Ok(None);
@@ -252,4 +252,14 @@ impl App {
         }
         Ok(Vec::new())
     }
+}
+
+fn scrolling(kind: MouseEventKind) -> bool {
+    matches!(
+        kind,
+        MouseEventKind::ScrollUp
+            | MouseEventKind::ScrollDown
+            | MouseEventKind::ScrollLeft
+            | MouseEventKind::ScrollRight
+    )
 }
