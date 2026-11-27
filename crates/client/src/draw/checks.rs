@@ -51,6 +51,8 @@ fn minutes() {
         1
     );
     assert!(bytes.windows(5).any(|bytes| bytes == b"00:00"));
+    assert!(bytes.starts_with(b"\x1b[?2026h"));
+    assert!(bytes.ends_with(b"\x1b[?2026l"));
     assert!(bytes.len() < 200);
 }
 

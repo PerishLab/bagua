@@ -120,6 +120,10 @@ impl Pane {
                     self.cleanup = Some(error.clone());
                     self.fault = Some(error);
                 }
+            } else if self.engine.synchronized() {
+                self.held = self.held.saturating_add(1);
+            } else {
+                self.held = 0;
             }
         }
         match self.process.as_mut().unwrap().observe() {
@@ -197,33 +201,36 @@ impl Pane {
     }
 
     fn drain(&mut self) -> Result<(), Fault> {
-        self.respond();
-        if self.eof || self.replies.len() > 65_536 {
-            return Ok(());
-        }
         let mut bytes = [0; CHUNK];
-        match self
-            .process
-            .as_mut()
-            .unwrap()
-            .read(&mut bytes)
-            .map_err(super::effects::fault)?
-        {
-            Transfer::Bytes(count) => {
-                let report = self
-                    .engine
-                    .feed(&bytes[..count])
-                    .map_err(|_| Fault::from(Failure::Payload))?;
-                self.replies.extend(report.replies);
-                self.bytes = self.bytes.saturating_add(count as u64);
-                self.unsupported = self.unsupported.saturating_add(report.unsupported);
-                self.bells = self.bells.saturating_add(report.bells);
+        for _ in 0..8 {
+            self.respond();
+            if self.eof || self.replies.len() > 65_536 {
+                return Ok(());
             }
-            Transfer::Eof => {
-                self.eof = true;
-                self.reported = false;
+            match self
+                .process
+                .as_mut()
+                .unwrap()
+                .read(&mut bytes)
+                .map_err(super::effects::fault)?
+            {
+                Transfer::Bytes(count) => {
+                    let report = self
+                        .engine
+                        .feed(&bytes[..count])
+                        .map_err(|_| Fault::from(Failure::Payload))?;
+                    self.replies.extend(report.replies);
+                    self.bytes = self.bytes.saturating_add(count as u64);
+                    self.unsupported = self.unsupported.saturating_add(report.unsupported);
+                    self.bells = self.bells.saturating_add(report.bells);
+                }
+                Transfer::Eof => {
+                    self.eof = true;
+                    self.reported = false;
+                    return Ok(());
+                }
+                Transfer::Pending => return Ok(()),
             }
-            Transfer::Pending => {}
         }
         Ok(())
     }

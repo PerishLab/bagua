@@ -120,6 +120,26 @@ fn alternate() {
 }
 
 #[test]
+fn synchronized() {
+    let mut terminal = engine();
+    assert!(!terminal.synchronized());
+    let report = terminal.feed(b"\x1b[?2026hhello").unwrap();
+    assert_eq!(report.unsupported, 0);
+    assert!(terminal.synchronized());
+    assert_eq!(terminal.snapshot().contents(), "hello");
+    let report = terminal.feed(b"\x1b[?2026l").unwrap();
+    assert_eq!(report.unsupported, 0);
+    assert!(!terminal.synchronized());
+    terminal.feed(b"\x1b[?2026h\x1bc").unwrap();
+    assert!(!terminal.synchronized());
+    terminal.feed(b"\x1b[?2026h").unwrap();
+    for _ in 0..17 {
+        terminal.feed(&[b'a'; 4096]).unwrap();
+    }
+    assert!(!terminal.synchronized());
+}
+
+#[test]
 fn styles() {
     let mut terminal = engine();
     terminal.feed(b"\x1b[2;3;4;7mX\x1b[0mY\x1b[?25l").unwrap();
