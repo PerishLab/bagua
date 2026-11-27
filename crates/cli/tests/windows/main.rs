@@ -1,5 +1,6 @@
 #![cfg(all(target_os = "windows", target_arch = "x86_64"))]
 
+mod discovery;
 mod inspect;
 mod peer;
 

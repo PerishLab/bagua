@@ -155,7 +155,9 @@ Context adds verified bound release identity; absent identity stays unknown.
 Client request IDs belong to the actual connection Context carried into the TUI.
 Host native IDs remain under its own run; attaching an existing host invents no
 cross-process identity or cause. Self-start passes only its actual parent control;
-user programs keep their explicit launch environment.
+user programs keep their explicit launch environment, with the host injecting each
+spawned pane's authoritative `BAGUA_SOCKET` (when bound), `BAGUA_SESSION`,
+`BAGUA_WINDOW` and `BAGUA_PANE` variables.
 Events admit enum codes and numeric facts only; user text, argv/environment/cwd,
 terminal input/output/clipboard and raw error messages never enter them.
 Source tracing stays at function declarations, outside per-key/frame/poll paths.
@@ -245,8 +247,14 @@ Named entry is a source contract distinct from the v0.1.0 contract. Names are
 validated metadata; World retains sole identity allocation and atomic entry.
 Display indices are derived from current window order and never replace IDs.
 Normal entry alone may capture invocation shell/cwd/environment as an explicit
-complete Program; the background service receives a minimal startup environment.
-Default endpoint discovery belongs to CLI, with no unknown endpoint replacement.
+complete Program (stripping outer `BAGUA_*` pane variables); the background service
+receives a minimal startup environment, and the host injects `BAGUA_SOCKET` (when
+bound), `BAGUA_SESSION`, `BAGUA_WINDOW` and `BAGUA_PANE` into every spawned pane
+environment (preserving other user launch variables and updating across splits and
+windows). Default endpoint discovery belongs to CLI (`--socket` > `host.socket` from explicit
+`--config` > `BAGUA_SOCKET` > `host.socket` from discovered config > default platform
+`host.sock` for host and remote commands, while `capabilities` stays local unless
+`--socket` is supplied), with no unknown endpoint replacement.
 Self-start uses the running executable (`/proc/self/exe` on Linux;
 `current_exe()` with detached console creation flags on Windows) and checks
 native file identity (`dev`/`ino` on Linux; `GetFileInformationByHandle`

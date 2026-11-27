@@ -27,6 +27,10 @@ pub(crate) fn strip(path: PathBuf) -> PathBuf {
     runtime::strip(path)
 }
 
+pub(crate) fn reserved(key: &str) -> bool {
+    runtime::reserved(key)
+}
+
 pub(crate) struct Loaded {
     path: Option<PathBuf>,
     explicit: bool,
@@ -35,6 +39,7 @@ pub(crate) struct Loaded {
     keys: client::Keys,
     decor: client::Decor,
     delay: Duration,
+    environment: Option<PathBuf>,
     runtime: Option<PathBuf>,
     #[cfg(any(
         all(target_os = "linux", target_arch = "x86_64"),
@@ -85,14 +90,15 @@ pub(crate) fn validate(args: &Args) -> Result<(), Error> {
 
 pub(crate) fn load(args: &Args, get: &dyn Fn(&str) -> Option<OsString>) -> Result<Loaded, Error> {
     let mut loaded = discover(args, get)?;
-    let normal = matches!(
-        args.selected(),
-        crate::args::Action::Enter { .. }
-            | crate::args::Action::Serve { .. }
-            | crate::args::Action::Config
-    );
-    if normal && args.socket.is_none() && loaded.config.host.socket.is_none() {
-        loaded.runtime = runtime::path(get)?;
+    let pinned = loaded.explicit && loaded.config.host.socket.is_some();
+    if !matches!(args.selected(), crate::args::Action::Capabilities)
+        && args.socket.is_none()
+        && !pinned
+    {
+        loaded.environment = runtime::environment(get)?;
+        if loaded.environment.is_none() && loaded.config.host.socket.is_none() {
+            loaded.runtime = runtime::path(get)?;
+        }
     }
     Ok(loaded)
 }
@@ -171,6 +177,7 @@ impl Loaded {
             keys,
             decor,
             delay,
+            environment: None,
             runtime: None,
             #[cfg(any(
                 all(target_os = "linux", target_arch = "x86_64"),
@@ -238,6 +245,7 @@ impl Loaded {
             return Err(Error::config("no configuration source selected"));
         }
         let mut next = Self::read(self.path.clone(), true)?;
+        next.environment = self.environment.clone();
         next.runtime = self.runtime.clone();
         #[cfg(any(
             all(target_os = "linux", target_arch = "x86_64"),

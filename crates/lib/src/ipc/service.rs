@@ -45,7 +45,9 @@ impl Service {
         }
         Ok(Self {
             socket: Socket::bind(path)?,
-            host: Host::identified(scope, history, identity).map_err(super::error)?,
+            host: Host::identified(scope, history, identity)
+                .map_err(super::error)?
+                .bound(path.to_path_buf()),
             links: BTreeMap::new(),
             drain: None,
         })

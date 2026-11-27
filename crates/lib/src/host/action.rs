@@ -43,7 +43,8 @@ impl Host {
 
     fn start(&mut self, actor: Id, request: u64, data: (Id, Program)) -> Result<(), Failure> {
         let (id, program) = data;
-        let (session, _) = self.world.location(Target::Pane(id))?;
+        let (session, window) = self.world.location(Target::Pane(id))?;
+        let window = window.ok_or(Failure::Target)?;
         self.world.session(session).unwrap().require(actor)?;
         if self.world.pane(id).unwrap().state() != State::Pending {
             return Err(Failure::Pending);
@@ -54,15 +55,22 @@ impl Host {
         }
         self.reply(actor, request, Ok(Status::Admitted))?;
         let size = pty::Size::new(extent.width(), extent.height()).unwrap();
+        let mut environment: Vec<(std::ffi::OsString, std::ffi::OsString)> = program
+            .environment
+            .into_iter()
+            .filter(|(key, _)| !reserved(key))
+            .map(|(k, v)| (k.into(), v.into()))
+            .collect();
+        if let Some(socket) = &self.socket {
+            environment.push(("BAGUA_SOCKET".into(), socket.as_os_str().into()));
+        }
+        environment.push(("BAGUA_SESSION".into(), session.value().to_string().into()));
+        environment.push(("BAGUA_WINDOW".into(), window.value().to_string().into()));
+        environment.push(("BAGUA_PANE".into(), id.value().to_string().into()));
         let mut launch = pty::Launch::new(
             program.executable.into(),
             program.cwd.into(),
-            radicula_process::Environment::new(
-                program
-                    .environment
-                    .into_iter()
-                    .map(|(k, v)| (k.into(), v.into())),
-            ),
+            radicula_process::Environment::new(environment),
             size,
         );
         launch.args = program.args.into_iter().map(Into::into).collect();
@@ -144,4 +152,20 @@ impl Host {
         }
         Ok(())
     }
+}
+
+fn reserved(key: &str) -> bool {
+    const NAMES: [&str; 4] = [
+        "BAGUA_SOCKET",
+        "BAGUA_SESSION",
+        "BAGUA_WINDOW",
+        "BAGUA_PANE",
+    ];
+    NAMES.iter().any(|name| {
+        if cfg!(windows) {
+            key.eq_ignore_ascii_case(name)
+        } else {
+            key == *name
+        }
+    })
 }

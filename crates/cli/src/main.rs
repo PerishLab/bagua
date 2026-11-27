@@ -189,6 +189,9 @@ fn defaults(args: &mut Args, config: &config::Loaded) -> Result<(), Error> {
         let key = key
             .into_string()
             .map_err(|_| Error::config("interactive default environment key must be UTF-8"))?;
+        if config::reserved(&key) {
+            continue;
+        }
         if cfg!(windows) && (key.is_empty() || key.contains('=')) {
             continue;
         }
@@ -229,12 +232,7 @@ fn execute(args: &Args, config: config::Loaded) -> Result<(), Error> {
         println!("{}", config.report(args));
         return Ok(());
     }
-    if args.socket.is_some()
-        || matches!(
-            args.selected(),
-            args::Action::Serve { .. } | args::Action::Control
-        )
-    {
+    if args.socket.is_some() || !matches!(args.selected(), args::Action::Capabilities) {
         return remote::execute(args, config);
     }
     let command = command::parse(args.selected())?;
