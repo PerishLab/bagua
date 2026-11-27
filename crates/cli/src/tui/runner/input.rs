@@ -65,7 +65,7 @@ impl Runner {
                 Some(Err(error)) => {
                     self.leader = false;
                     self.app.prefix(None);
-                    self.app.error(error.message());
+                    self.app.error(notice(error));
                 }
                 None => break,
             }
@@ -74,5 +74,12 @@ impl Runner {
             }
         }
         Ok(())
+    }
+}
+
+fn notice(error: Failure) -> &'static str {
+    match error {
+        Failure::Unavailable => "Unsupported key sequence",
+        other => other.message(),
     }
 }

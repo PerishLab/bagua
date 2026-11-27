@@ -32,18 +32,21 @@ pub(super) fn parse(body: &[u8]) -> Result<Event, Failure> {
 }
 
 pub(super) fn modifiers(text: &str) -> Result<KeyModifiers, Failure> {
-    let value = text.parse::<u8>().map_err(|_| Failure::Payload)?;
-    if !(1..=8).contains(&value) {
+    let value = text.parse::<u16>().map_err(|_| Failure::Payload)?;
+    if !(1..=256).contains(&value) {
         return Err(Failure::Unavailable);
     }
-    let value = value - 1;
+    let mask = value - 1;
+    if mask & 0x38 != 0 {
+        return Err(Failure::Unavailable);
+    }
     let mut modifiers = KeyModifiers::NONE;
-    for (mask, flag) in [
+    for (bit, flag) in [
         (1, KeyModifiers::SHIFT),
         (2, KeyModifiers::ALT),
         (4, KeyModifiers::CONTROL),
     ] {
-        if value & mask != 0 {
+        if mask & bit != 0 {
             modifiers |= flag;
         }
     }

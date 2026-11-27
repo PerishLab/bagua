@@ -79,6 +79,24 @@ impl Host {
         self.observer = Some(Box::new(observer));
     }
 
+    #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+    pub(crate) fn wake(&self, target: &mut Vec<*mut std::ffi::c_void>) -> bool {
+        if !self.closing.is_empty() {
+            return true;
+        }
+        for pane in self.panes.values() {
+            let Some(process) = &pane.process else {
+                continue;
+            };
+            let writing = !pane.input.is_empty() || !pane.replies.is_empty();
+            if process.readable() || (writing && process.writable()) {
+                return true;
+            }
+            process.events(target, writing);
+        }
+        false
+    }
+
     fn emit(&mut self, event: Event) {
         if let Some(observer) = &mut self.observer {
             observer(event);

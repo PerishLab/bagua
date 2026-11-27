@@ -126,11 +126,7 @@ impl App {
         self.status(format!(
             "Copied {} bytes locally{}",
             self.clipboard.len(),
-            if self.copying.outer {
-                "; OSC52 pending, OS clipboard unverified"
-            } else {
-                "; use the configured paste binding"
-            }
+            if self.copying.outer { " (OSC52)" } else { "" }
         ));
         Ok(())
     }

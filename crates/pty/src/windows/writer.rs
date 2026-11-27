@@ -77,11 +77,13 @@ impl Writer {
     }
 
     pub fn ready(&self) -> bool {
-        !self.pending || unsafe { WaitForSingleObject(self.slot.event.raw(), 0) } == WAIT_OBJECT_0
+        !self.closed
+            && (!self.pending
+                || unsafe { WaitForSingleObject(self.slot.event.raw(), 0) } == WAIT_OBJECT_0)
     }
 
-    pub fn event(&self) -> HANDLE {
-        self.slot.event.raw()
+    pub fn event(&self) -> Option<HANDLE> {
+        self.pending.then(|| self.slot.event.raw())
     }
 
     fn harvest(&mut self) -> io::Result<()> {

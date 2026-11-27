@@ -16,9 +16,16 @@ pub(super) fn read(process: &Process) -> io::Result<Context> {
     proc::alive(child.raw())?;
     let root = proc::Target::open(process.id)?;
     let base = root.stamp()?;
-    let target = tree::select(process.id, base.started)?;
+    let (target, image) = tree::select(process.id, base.started)?;
     let before = target.stamp()?;
-    let command = target.command()?;
+    let command = match image
+        .as_deref()
+        .map(proc::stem)
+        .filter(|name| !name.is_empty() && name.len() <= 256)
+    {
+        Some(name) => name.into(),
+        None => target.command()?,
+    };
     let cwd = target.cwd()?;
     if target.stamp()? != before || root.stamp()? != base || proc::alive(child.raw()).is_err() {
         return Err(io::Error::other(

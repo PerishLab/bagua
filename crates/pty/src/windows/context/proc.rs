@@ -232,7 +232,7 @@ fn words(handle: HANDLE, address: *const c_void, count: usize) -> io::Result<Vec
     Ok(buffer)
 }
 
-fn stem(text: &str) -> &str {
+pub(super) fn stem(text: &str) -> &str {
     if text.len() > 4 && text[text.len() - 4..].eq_ignore_ascii_case(".exe") {
         return &text[..text.len() - 4];
     }

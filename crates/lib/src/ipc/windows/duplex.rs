@@ -72,6 +72,23 @@ impl Duplex {
         })
     }
 
+    pub fn ready(&self) -> bool {
+        self.offset < self.ready || self.eof
+    }
+
+    pub fn writing(&self) -> bool {
+        self.writing
+    }
+
+    pub fn events(&self, target: &mut Vec<HANDLE>) {
+        if self.reading {
+            target.push(self.incoming.event.raw());
+        }
+        if self.writing {
+            target.push(self.outgoing.event.raw());
+        }
+    }
+
     pub fn read(&mut self, target: &mut [u8]) -> io::Result<usize> {
         self.harvest()?;
         if self.offset < self.ready {
@@ -139,6 +156,7 @@ impl Duplex {
         if self.offset == self.ready {
             self.offset = 0;
             self.ready = 0;
+            let _ = self.arm();
         }
         count
     }
@@ -209,7 +227,7 @@ impl Duplex {
         }
     }
 
-    fn flush(&mut self) -> io::Result<()> {
+    pub fn flush(&mut self) -> io::Result<()> {
         if !self.writing {
             return Ok(());
         }
