@@ -22,6 +22,7 @@ pub(crate) struct Session {
     pub created: Vec<workspace::Target>,
     pub entered: Option<workspace::Id>,
     pub identity: Option<protocol::wire::Image>,
+    pub drift: bool,
     pub next: u64,
     json: bool,
     pub scope: Option<locus::Context>,
@@ -63,6 +64,7 @@ impl Session {
             created: Vec::new(),
             entered: None,
             identity,
+            drift: false,
             next: args.request,
             json: args.json,
         })

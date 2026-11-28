@@ -97,6 +97,7 @@ pub(super) fn prepare(
         .call(Command::Workspace(Operation::Read), false)?
         .ok_or(Failure::Payload)?;
     let mut app = client::App::new(rpc.actor, session, viewport);
+    app.drift(rpc.drift);
     app.catalog(snapshot)?;
     rpc.call(
         Command::Subscribe {

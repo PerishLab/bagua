@@ -65,6 +65,60 @@ fn image() {
 }
 
 #[test]
+fn drift() {
+    let mut fixture = Fixture::cold();
+    fixture.foreign();
+    let path = fixture.path();
+    fs::DirBuilder::new()
+        .recursive(true)
+        .mode(0o700)
+        .create(path.parent().unwrap())
+        .unwrap();
+    let copied = path.parent().unwrap().join("bagua-copy");
+    fs::copy(env!("CARGO_BIN_EXE_bagua"), &copied).unwrap();
+    let mut host = std::process::Command::new(&copied)
+        .args(["--no-config", "--socket"])
+        .arg(&path)
+        .args(["serve", "--orphan"])
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while bagua::ipc::Connection::connect(&path).is_err() {
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    let mut allowed = Peer::ordinary(
+        &fixture,
+        &["--no-config", "--allow-host-drift", "enter", "work"],
+        Size::new(100, 30).unwrap(),
+    );
+    allowed.until("[unqualified-drift]");
+    allowed.send(b"\x07!");
+    allowed.until("RESTORED:0");
+    let mut client = bagua::ipc::Connection::connect(&path).unwrap();
+    client.receive().unwrap();
+    client
+        .send(&protocol::Request::new(protocol::Command::Shutdown))
+        .unwrap();
+    loop {
+        if matches!(
+            client.receive().unwrap(),
+            protocol::wire::Message::Finished {
+                request: 1,
+                result: Ok(())
+            }
+        ) {
+            break;
+        }
+    }
+    drop(client);
+    assert!(host.wait().unwrap().success());
+}
+
+#[test]
 fn absent() {
     let mut fixture = Fixture::cold();
     fixture.foreign();

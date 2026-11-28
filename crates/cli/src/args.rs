@@ -48,6 +48,12 @@ pub(crate) struct Args {
     pub take: bool,
     #[arg(long, global = true, conflicts_with_all = ["take", "control", "observer"], help = "Enter an interactive read-only observer")]
     pub observe: bool,
+    #[arg(
+        long = "allow-host-drift",
+        global = true,
+        help = "Allow attaching to an existing host with a different executable file"
+    )]
+    pub drift: bool,
     #[command(subcommand)]
     pub action: Option<Action>,
 }

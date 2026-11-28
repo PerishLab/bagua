@@ -165,6 +165,9 @@ impl App {
         if !self.notice.is_empty() {
             values.push(self.notice.clone());
         }
+        if self.drift {
+            values.push("[unqualified-drift]".into());
+        }
         values.join(" | ")
     }
 }
