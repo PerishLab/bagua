@@ -209,3 +209,22 @@ fn tabs() {
     app.status("busy");
     assert!(app.mouse(click(1, 9)).unwrap().is_empty());
 }
+
+#[test]
+fn drift() {
+    let (mut app, _) = setup();
+    app.drift(true);
+    assert!(picture(&app).contents().contains("[unqualified-drift]"));
+    app.decorate(Decor {
+        header: Header::format(Some("")).unwrap(),
+        status: Status::default(),
+    });
+    assert!(picture(&app).contents().contains("[unqualified-drift]"));
+    app.recovering(true);
+    app.resize(Extent::new(24, 8).unwrap());
+    let text = picture(&app).contents();
+    assert!(
+        text.contains("Recovering"),
+        "mode hidden on narrow viewport: {text:?}"
+    );
+}

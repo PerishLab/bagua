@@ -92,6 +92,7 @@ impl Entry<'_, '_> {
                 session,
                 terminal::Extent::new(viewport.columns(), viewport.rows()).unwrap(),
             );
+            app.drift(self.rpc.drift);
             app.catalog(snapshot.clone())?;
             app.decorate(self.config.decor().clone());
             let caption = format!(

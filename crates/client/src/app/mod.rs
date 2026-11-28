@@ -27,6 +27,7 @@ pub struct App {
     pub(super) clipboard: String,
     pub(super) notice: String,
     pub(super) urgent: bool,
+    pub(super) drift: bool,
     pub(super) expires: Option<std::time::Instant>,
     pub(super) recovering: bool,
     pub(super) done: bool,
@@ -59,6 +60,7 @@ impl App {
             clipboard: String::new(),
             notice: "Ready".into(),
             urgent: false,
+            drift: false,
             expires: Some(std::time::Instant::now() + std::time::Duration::from_secs(2)),
             recovering: false,
             done: false,
@@ -93,6 +95,15 @@ impl App {
     }
     pub fn clean(&mut self) {
         self.dirty = false;
+    }
+    pub fn drift(&mut self, value: bool) {
+        if self.drift != value {
+            self.drift = value;
+            self.dirty = true;
+        }
+    }
+    pub fn drifted(&self) -> bool {
+        self.drift
     }
     pub fn screen(&self, pane: Id) -> Option<&Screen> {
         if let Some(selection) = &self.selection

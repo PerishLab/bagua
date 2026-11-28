@@ -68,11 +68,14 @@ pub(crate) fn connect(path: &Path, args: &Args, config: &Loaded) -> Result<Sessi
 
 fn adopt(connection: Connection, args: &Args, invocation: &Invocation) -> Result<Session, Error> {
     connection.bounded(Duration::from_secs(2))?;
-    let session = Session::adopt(connection, args)?;
+    let mut session = Session::adopt(connection, args)?;
     if session.identity != Some(invocation.image) {
-        return Err(Error::endpoint(
-            "host uses a different executable file; endpoint was not replaced",
-        ));
+        if !args.drift {
+            return Err(Error::endpoint(
+                "host uses a different executable file; endpoint was not replaced",
+            ));
+        }
+        session.drift = true;
     }
     session.bounded(Duration::from_secs(10))?;
     Ok(session)

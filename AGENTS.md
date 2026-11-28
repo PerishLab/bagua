@@ -370,6 +370,5 @@ remains bounded visible-pane sampling, with missing/expired values empty and no
 render-time IO. Automatic window titles use available focused-program metadata;
 explicitly renamed windows retain their names. Unknown background metadata falls
 back to actual window names rather than inventing a current process. Source wire9
-carries explicit header edges and the automatic-name flag; matching executable
-identity still guards host/client attachment. Formal qualification and installed
+carries explicit header edges and the automatic-name flag; default `enter` attachment still enforces matching executable identity on unqualified wire9, while an explicit `--allow-host-drift` opt-in permits attaching when OS peer authentication and `protocol::VERSION` match and surfaces an `[unqualified-drift]` client status indicator. Formal qualification and installed
 consumption belong to the release parent and independent Seatrial Scene.
