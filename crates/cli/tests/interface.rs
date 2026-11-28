@@ -31,6 +31,7 @@ fn routing() {
     ];
     for args in commands {
         let output = Command::new(env!("CARGO_BIN_EXE_bagua"))
+            .env_clear()
             .arg("--no-config")
             .args(args)
             .args(["--json", "--request", "17"])
@@ -71,6 +72,7 @@ fn refusal() {
 #[test]
 fn unavailable() {
     let output = Command::new(env!("CARGO_BIN_EXE_bagua"))
+        .env_clear()
         .arg("--no-config")
         .args(["new", "--json"])
         .output()
@@ -79,6 +81,50 @@ fn unavailable() {
     assert!(output.stdout.is_empty());
     let error: serde_json::Value = serde_json::from_slice(&output.stderr).unwrap();
     assert_eq!(error["error"], "unavailable");
+}
+
+#[test]
+fn discovery() {
+    let home = tempfile::tempdir().unwrap();
+    let mut command = Command::new(env!("CARGO_BIN_EXE_bagua"));
+    command.env_clear();
+    if cfg!(windows) {
+        command
+            .env("LOCALAPPDATA", home.path())
+            .env("USERPROFILE", home.path())
+            .env(
+                "SYSTEMROOT",
+                std::env::var_os("SYSTEMROOT").unwrap_or_else(|| r"C:\Windows".into()),
+            );
+    } else {
+        command
+            .env("HOME", home.path())
+            .env("XDG_RUNTIME_DIR", home.path());
+    }
+    let output = command
+        .args(["--no-config", "--json", "list"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    let error: serde_json::Value = serde_json::from_slice(&output.stderr).unwrap();
+    assert_eq!(error["error"], "io");
+
+    let mut invalid = Command::new(env!("CARGO_BIN_EXE_bagua"));
+    invalid.env_clear();
+    if cfg!(windows) {
+        invalid.env(
+            "SYSTEMROOT",
+            std::env::var_os("SYSTEMROOT").unwrap_or_else(|| r"C:\Windows".into()),
+        );
+    }
+    let output = invalid
+        .env("BAGUA_SOCKET", "relative.sock")
+        .args(["--no-config", "--json", "list"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    let error: serde_json::Value = serde_json::from_slice(&output.stderr).unwrap();
+    assert_eq!(error["error"], "configuration");
 }
 
 #[test]

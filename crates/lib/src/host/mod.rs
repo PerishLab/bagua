@@ -45,6 +45,7 @@ pub struct Host {
     scope: [u8; 16],
     history: crate::config::History,
     identity: Option<protocol::wire::Image>,
+    socket: Option<std::path::PathBuf>,
     observer: Option<Box<dyn FnMut(Event) + Send>>,
 }
 
@@ -73,6 +74,11 @@ impl Host {
         let mut host = Self::configured(scope, history)?;
         host.identity = identity;
         Ok(host)
+    }
+
+    pub fn bound(mut self, socket: std::path::PathBuf) -> Self {
+        self.socket = Some(socket);
+        self
     }
 
     pub fn events(&mut self, observer: impl FnMut(Event) + Send + 'static) {

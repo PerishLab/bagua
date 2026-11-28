@@ -5,6 +5,37 @@ use crate::{
 };
 use std::{collections::BTreeMap, ffi::OsString, path::PathBuf};
 
+pub(super) fn environment(
+    get: &dyn Fn(&str) -> Option<OsString>,
+) -> Result<Option<PathBuf>, Error> {
+    let Some(value) = get("BAGUA_SOCKET").filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    let path = PathBuf::from(value);
+    if !path.is_absolute() {
+        return Err(Error::config(
+            "BAGUA_SOCKET: default host socket must be absolute",
+        ));
+    }
+    Ok(Some(path))
+}
+
+pub(super) fn reserved(key: &str) -> bool {
+    const NAMES: [&str; 4] = [
+        "BAGUA_SOCKET",
+        "BAGUA_SESSION",
+        "BAGUA_WINDOW",
+        "BAGUA_PANE",
+    ];
+    NAMES.iter().any(|name| {
+        if cfg!(windows) {
+            key.eq_ignore_ascii_case(name)
+        } else {
+            key == *name
+        }
+    })
+}
+
 #[cfg(not(windows))]
 pub(super) fn path(get: &dyn Fn(&str) -> Option<OsString>) -> Result<Option<PathBuf>, Error> {
     for key in ["XDG_RUNTIME_DIR", "XDG_STATE_HOME", "HOME"] {
@@ -119,15 +150,18 @@ pub(super) fn strip(path: PathBuf) -> PathBuf {
 
 impl Loaded {
     pub(super) fn socket(&self, args: &mut Args) {
-        if args.socket.is_some() {
+        if args.socket.is_some() || matches!(args.selected(), Action::Capabilities) {
             return;
         }
-        args.socket = self.config.host.socket.clone();
-        if args.socket.is_none()
-            && matches!(args.selected(), Action::Enter { .. } | Action::Serve { .. })
-        {
-            args.socket = self.runtime.clone();
+        if self.explicit && self.config.host.socket.is_some() {
+            args.socket = self.config.host.socket.clone();
+            return;
         }
+        args.socket = self
+            .environment
+            .clone()
+            .or_else(|| self.config.host.socket.clone())
+            .or_else(|| self.runtime.clone());
     }
 
     pub fn runtime(&self) -> Option<&std::path::Path> {

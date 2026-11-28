@@ -36,7 +36,9 @@ impl Service {
         random(&mut scope)?;
         Ok(Self {
             socket: Socket::bind(path)?,
-            host: Host::identified(scope, history, identity).map_err(crate::ipc::error)?,
+            host: Host::identified(scope, history, identity)
+                .map_err(crate::ipc::error)?
+                .bound(path.to_path_buf()),
             links: BTreeMap::new(),
             drain: None,
         })

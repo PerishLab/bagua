@@ -20,7 +20,8 @@ pub(crate) fn run(path: &Path, args: &Args, config: crate::config::Loaded) -> Re
     let connection = if matches!(args.selected(), crate::args::Action::Enter { .. }) {
         crate::startup::connect(path, args, &config)
     } else {
-        crate::session::Session::connect(path, args)
+        let resolved = crate::startup::location(path, config.runtime().is_some(), false)?;
+        crate::session::Session::connect(&resolved, args)
     };
     let result = connection
         .and_then(|rpc| {

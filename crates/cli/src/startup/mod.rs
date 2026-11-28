@@ -125,6 +125,6 @@ fn configure(command: &mut Command, path: &Path) {
         .creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
 }
 
-pub(crate) fn directory(path: &Path, managed: bool) -> Result<PathBuf, Error> {
-    Ok(directory::location(path, managed, true)?)
+pub(crate) fn location(path: &Path, managed: bool, create: bool) -> Result<PathBuf, Error> {
+    Ok(directory::location(path, managed, create)?)
 }

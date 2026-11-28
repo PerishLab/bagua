@@ -241,3 +241,5 @@ fn templates() {
     assert!(config.decor().status.layout.is_none());
     assert_eq!(config.decor().status.rows(), 2);
 }
+
+mod socket;
