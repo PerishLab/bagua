@@ -56,6 +56,9 @@ impl Default for Config {
 pub struct Mouse {
     pub enabled: bool,
     pub resize: bool,
+    #[serde(rename = "drag_select")]
+    #[cascade(name = "drag_select")]
+    pub drag: bool,
     #[serde(rename = "copy_on_release")]
     #[cascade(name = "copy_on_release")]
     pub release: bool,
@@ -66,6 +69,7 @@ impl Default for Mouse {
         Self {
             enabled: true,
             resize: true,
+            drag: true,
             release: true,
         }
     }

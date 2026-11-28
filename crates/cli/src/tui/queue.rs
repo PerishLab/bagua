@@ -65,6 +65,22 @@ fn append(pending: &mut Command, next: &Command) -> Option<usize> {
             text.push_str(extra);
             Some(extra.len())
         }
+        (
+            Command::Send {
+                pane: previous,
+                input: protocol::Input::Mouse(current),
+            },
+            Command::Send {
+                pane,
+                input: protocol::Input::Mouse(latest),
+            },
+        ) if previous == pane
+            && current.action == terminal::Action::Move(None)
+            && latest.action == terminal::Action::Move(None) =>
+        {
+            *current = *latest;
+            Some(0)
+        }
         _ => None,
     }
 }

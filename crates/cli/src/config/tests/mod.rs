@@ -164,7 +164,7 @@ fn pointer() {
         assert_eq!(config.clipboard(), client::Clipboard::default());
         assert_eq!(config.mouse(), client::Mouse::default());
     }
-    fs::write(&path, "[client]\nprefix='C-a'\n[mouse]\nenabled=false\nresize=false\ncopy_on_release=false\n[clipboard]\ntarget='osc52'\nlimit=8192\n").unwrap();
+    fs::write(&path, "[client]\nprefix='C-a'\n[mouse]\nenabled=false\nresize=false\ndrag_select=false\ncopy_on_release=false\n[clipboard]\ntarget='osc52'\nlimit=8192\n").unwrap();
     config.reload().unwrap();
     assert_eq!(config.prefix(), "C-a");
     assert_eq!(
@@ -176,6 +176,7 @@ fn pointer() {
         client::Mouse {
             enabled: false,
             resize: false,
+            drag: false,
             release: false
         }
     );

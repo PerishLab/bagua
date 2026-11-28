@@ -1,13 +1,16 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use protocol::Failure;
 
-pub(super) fn parse(bytes: &[u8]) -> Option<(usize, Result<Event, Failure>)> {
+pub(super) fn parse(bytes: &[u8]) -> Option<(usize, Result<Option<Event>, Failure>)> {
     let prefix = *bytes.get(1)?;
     if prefix != b'[' && prefix != b'O' {
         if prefix == 27 {
             return Some((
                 1,
-                Ok(Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE))),
+                Ok(Some(Event::Key(KeyEvent::new(
+                    KeyCode::Esc,
+                    KeyModifiers::NONE,
+                )))),
             ));
         }
         let length = match prefix {
@@ -27,10 +30,10 @@ pub(super) fn parse(bytes: &[u8]) -> Option<(usize, Result<Event, Failure>)> {
         }
         return Some((
             1 + character.len_utf8(),
-            Ok(Event::Key(KeyEvent::new(
+            Ok(Some(Event::Key(KeyEvent::new(
                 KeyCode::Char(character),
                 KeyModifiers::ALT,
-            ))),
+            )))),
         ));
     }
     let end = bytes
@@ -47,7 +50,7 @@ pub(super) fn parse(bytes: &[u8]) -> Option<(usize, Result<Event, Failure>)> {
     let event = if body.starts_with(b"<") {
         super::mouse::parse(body, finalizer)
     } else {
-        key(body, finalizer, prefix)
+        key(body, finalizer, prefix).map(Some)
     };
     Some((end + 1, event))
 }

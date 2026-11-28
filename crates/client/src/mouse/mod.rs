@@ -76,7 +76,9 @@ impl App {
                 commands.push(Command::Workspace(Operation::Focus(place.pane)));
             }
             if local || !self.controller() {
-                self.arm(place, point);
+                if self.mouse.drag || event.modifiers.contains(KeyModifiers::SHIFT) {
+                    self.arm(place, point);
+                }
                 return Ok(commands);
             }
         }

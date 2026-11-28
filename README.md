@@ -1041,8 +1041,10 @@ this never substitutes client-only geometry for application size. Observers
 cannot resize. Shift bypasses divider capture.
 
 Selection freezes one pane snapshot while the host and live replica continue.
-Release copies and exits selection by default; `[mouse] copy_on_release=false`
-retains manual selection. Arrows extend a manual selection, Escape cancels,
+Release copies and exits selection by default; `[mouse] drag_select=false`
+requires Shift-drag for local mouse selection (preventing accidental touchscreen
+drag selection), and `[mouse] copy_on_release=false` retains manual selection.
+Arrows extend a manual selection, Escape cancels,
 and the configured copy binding copies (prefix c by default). Copy includes a
 whole wide cell when either column is selected, omits continuation cells and
 physical row padding, joins soft wraps and preserves hard row breaks. It covers
@@ -1052,6 +1054,7 @@ the current live or frozen history page, without spanning unloaded pages.
 [mouse]
 enabled = true
 resize = true
+drag_select = true
 copy_on_release = true
 
 [clipboard]

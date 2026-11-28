@@ -49,10 +49,28 @@ impl App {
         if !(status || header && self.session().is_some_and(|s| s.header())) {
             return Vec::new();
         }
-        self.placements()
+        let mut panes: Vec<Id> = self
+            .placements()
             .unwrap_or_default()
             .into_iter()
             .map(|place| place.pane)
+            .collect();
+        if status {
+            for pane in self
+                .session()
+                .into_iter()
+                .flat_map(|session| session.windows())
+                .take(32)
+                .filter(|window| window.automatic())
+                .map(workspace::Window::focus)
+            {
+                if !panes.contains(&pane) {
+                    panes.push(pane);
+                }
+            }
+        }
+        panes
+            .into_iter()
             .filter(|pane| self.running(*pane))
             .filter(|pane| {
                 self.records.get(pane).is_none_or(|record| {
