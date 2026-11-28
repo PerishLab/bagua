@@ -42,6 +42,9 @@ impl App {
         {
             x = row.label(x..end, &format!(" | {}", self.notice), style);
         }
+        if self.drift {
+            x = row.label(x..end, " | [unqualified-drift]", style);
+        }
         for component in &status.components {
             match component {
                 Component::Session => {

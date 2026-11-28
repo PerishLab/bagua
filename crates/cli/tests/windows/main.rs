@@ -203,3 +203,47 @@ fn interactive() {
     assert_eq!(peer::catalog(&socket).sessions().count(), 0);
     peer::shutdown(&socket);
 }
+
+#[test]
+fn drift() {
+    let home = tempfile::tempdir().unwrap();
+    let runtime = home.path().join("bagua").join("runtime");
+    fs::create_dir_all(&runtime).unwrap();
+    bagua::ipc::secure(&runtime).unwrap();
+    let socket = runtime.join("host.sock");
+    let copied = home.path().join("bagua-copy.exe");
+    fs::copy(env!("CARGO_BIN_EXE_bagua"), &copied).unwrap();
+    let mut host = Exec::new(&copied)
+        .args(["--no-config", "--socket"])
+        .arg(&socket)
+        .args(["serve", "--orphan"])
+        .env("LOCALAPPDATA", home.path())
+        .env("USERPROFILE", home.path())
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while Connection::connect(&socket).is_err() {
+        assert!(Instant::now() < deadline, "copied host did not bind");
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    let mut refused = peer::Peer::spawn(
+        home.path(),
+        &["--no-config", "enter", "work"],
+        Size::new(80, 24).unwrap(),
+    );
+    refused.until("different executable file");
+    assert_ne!(refused.finish(), 0);
+    let mut allowed = peer::Peer::spawn(
+        home.path(),
+        &["--no-config", "--allow-host-drift", "enter", "work"],
+        Size::new(100, 30).unwrap(),
+    );
+    allowed.until("[unqualified-drift]");
+    allowed.send(b"\x07!");
+    assert_eq!(allowed.finish(), 0);
+    peer::shutdown(&socket);
+    let _ = host.wait();
+}
