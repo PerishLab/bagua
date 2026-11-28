@@ -22,6 +22,7 @@ pub(super) struct Pane {
     pub bytes: u64,
     pub unsupported: u64,
     pub bells: u64,
+    pub held: u8,
     pub retiring: bool,
     pub reported: bool,
 }
@@ -41,9 +42,18 @@ impl Pane {
             bytes: 0,
             unsupported: 0,
             bells: 0,
+            held: 0,
             retiring: false,
             reported: false,
         })
+    }
+
+    pub fn holding(&self) -> bool {
+        self.engine.synchronized() && self.held <= 8
+    }
+
+    pub fn dirty(&self, seen: Option<&terminal::Revision>) -> bool {
+        !self.holding() && seen != Some(&self.engine.revision())
     }
 
     pub fn facts(&self) -> [bool; 5] {

@@ -20,6 +20,8 @@ impl Stream {
                 }
                 if reset.reset {
                     target.callbacks_mut().keyboard = Default::default();
+                    target.callbacks_mut().synchronized = false;
+                    target.callbacks_mut().held = 0;
                 }
                 reset = Reset::default();
             }

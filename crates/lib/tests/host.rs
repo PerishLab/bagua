@@ -145,3 +145,30 @@ fn backpressure() {
         .unwrap();
     driver.until(|d| d.contains("LEN:65536"));
 }
+
+#[test]
+fn burst() {
+    let mut driver = Driver::new();
+    driver.create();
+    driver.start(
+        "[Console]::Write('READY'); [void][Console]::ReadLine(); [Console]::Write(('A' * 12288) + 'BURSTEND'); Start-Sleep -Seconds 5",
+    );
+    driver.until(|d| d.contains("READY"));
+    driver.messages.clear();
+    driver
+        .call(Command::Send {
+            pane: id(3),
+            input: Input::Key(terminal::Key::Enter),
+        })
+        .unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(250));
+    driver.messages.clear();
+    driver.drive();
+    assert!(driver.contains("BURSTEND"));
+    assert!(
+        driver
+            .messages
+            .iter()
+            .any(|m| matches!(m, Message::Screen { state, .. } if state.bytes > 4096))
+    );
+}
