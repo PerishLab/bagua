@@ -31,19 +31,6 @@ impl App {
             body.push(row);
         }
         let mut bars = self.bars();
-        if self.decor.status.separator {
-            let mut row = Row::new(self.viewport.width());
-            row.label(
-                0..self.viewport.width(),
-                &"─".repeat(usize::from(self.viewport.width())),
-                tone(false, 0, false),
-            );
-            if self.decor.status.inset() > 0 {
-                bars.push(row);
-            } else {
-                bars.insert(0, row);
-            }
-        }
         let rows = if self.decor.status.inset() > 0 {
             bars.extend(body);
             bars

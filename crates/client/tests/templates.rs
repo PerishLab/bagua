@@ -163,3 +163,49 @@ fn navigation() {
         .collect();
     assert!(row.contains("1:codex"), "navigation hidden: {row:?}");
 }
+
+#[test]
+fn tabs() {
+    let (mut app, mut world) = setup();
+    let first = Id::new(3).unwrap();
+    world
+        .apply(app.actor(), Operation::Window(app.target()))
+        .unwrap();
+    app.catalog(world.snapshot()).unwrap();
+    let second = app.focus().unwrap();
+    assert_ne!(first, second);
+    let click = |column: u16, row: u16| crossterm::event::MouseEvent {
+        kind: crossterm::event::MouseEventKind::Down(crossterm::event::MouseButton::Left),
+        column,
+        row,
+        modifiers: crossterm::event::KeyModifiers::NONE,
+    };
+    assert_eq!(
+        app.mouse(click(15, 1)).unwrap(),
+        vec![Command::Workspace(Operation::Focus(first))]
+    );
+    assert!(app.mouse(click(25, 1)).unwrap().is_empty());
+    let mut status = Status::format(
+        Some(vec![
+            Line::new("{{#windows}} {{window.index}} {{/windows}}", "", "").unwrap(),
+        ]),
+        "Asia/Shanghai",
+        15,
+    )
+    .unwrap();
+    status.edge = Edge::Bottom;
+    status.separator = true;
+    app.decorate(Decor {
+        header: Header::format(None).unwrap(),
+        status,
+    });
+    let now = Instant::now() + Duration::from_secs(10);
+    app.tick(now, UNIX_EPOCH);
+    assert!(app.mouse(click(1, 8)).unwrap().is_empty());
+    assert_eq!(
+        app.mouse(click(1, 9)).unwrap(),
+        vec![Command::Workspace(Operation::Focus(first))]
+    );
+    app.status("busy");
+    assert!(app.mouse(click(1, 9)).unwrap().is_empty());
+}

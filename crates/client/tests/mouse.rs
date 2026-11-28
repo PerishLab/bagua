@@ -243,3 +243,46 @@ fn policy() {
     assert!(!app.pointing());
     assert!(app.handle(Gesture::Copy).is_err());
 }
+
+#[test]
+fn scrolling() {
+    let (mut app, mut world) = setup();
+    let first = Id::new(3).unwrap();
+    world
+        .apply(app.actor(), Operation::Window(app.target()))
+        .unwrap();
+    app.catalog(world.snapshot()).unwrap();
+    install(&mut app, "hello");
+    let click = mouse(MouseEventKind::Down(MouseButton::Left), 40, 25, false);
+    assert_eq!(
+        app.mouse(click).unwrap(),
+        vec![Command::Workspace(Operation::Focus(first))]
+    );
+    let up = mouse(MouseEventKind::ScrollUp, 0, 0, false);
+    let commands = app.mouse(up).unwrap();
+    let [Command::History { pane, read }] = commands.as_slice() else {
+        panic!("expected history command")
+    };
+    app.bind(7, *pane, read);
+    assert!(app.mouse(up).unwrap().is_empty());
+    app.accept(Message::Finished {
+        request: 7,
+        result: Ok(()),
+    })
+    .unwrap();
+    assert!(matches!(
+        app.mouse(up).unwrap().as_slice(),
+        [Command::History { .. }]
+    ));
+    install(&mut app, "\x1b[?1049hAlternate");
+    for event in [
+        up,
+        mouse(MouseEventKind::ScrollUp, 0, 0, true),
+        mouse(MouseEventKind::ScrollLeft, 0, 0, false),
+    ] {
+        assert!(app.mouse(event).unwrap().is_empty());
+    }
+    install(&mut app, "\x1b[?1000h\x1b[?1006hTracked");
+    let right = mouse(MouseEventKind::ScrollRight, 0, 0, false);
+    assert!(app.mouse(right).unwrap().is_empty());
+}

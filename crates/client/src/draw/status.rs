@@ -74,15 +74,21 @@ impl App {
                 } else {
                     format!("{}:{} ", index + 1, window.name())
                 };
-                (text, selected)
+                (text, selected, window.focus())
             })
             .collect();
-        let range = visible(&labels, end.saturating_sub(x));
+        let widths: Vec<_> = labels
+            .iter()
+            .map(|(text, selected, _)| (text.clone(), *selected))
+            .collect();
+        let range = visible(&widths, end.saturating_sub(x));
         if range.start > 0 {
             x = row.label(x..end, "< ", styles.0);
         }
-        for (text, selected) in &labels[range.clone()] {
-            x = row.label(x..end, text, if *selected { styles.1 } else { styles.0 });
+        for (text, selected, target) in &labels[range.clone()] {
+            let next = row.label(x..end, text, if *selected { styles.1 } else { styles.0 });
+            row.mark(x..next, Some(*target));
+            x = next;
         }
         if range.end < labels.len() {
             x = row.label(x..end, ">", styles.0);
