@@ -104,7 +104,7 @@ fn awareness() {
     )
     .unwrap();
     let socket = home.path().join("bagua").join("runtime").join("host.sock");
-    let mut peer = peer::Peer::spawn(home.path(), &["enter", "work"], Size::new(120, 30).unwrap());
+    let (_login, mut peer) = super::job::session(home.path(), Size::new(120, 30).unwrap());
     peer.until("control");
     let expected = fs::canonicalize(socket.parent().unwrap())
         .unwrap()
