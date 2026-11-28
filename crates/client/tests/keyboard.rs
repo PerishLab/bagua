@@ -210,3 +210,35 @@ fn cancellation() {
         }
     }
 }
+
+#[test]
+fn framing() {
+    let now = Instant::now();
+    let mut keyboard = Keyboard::new(Duration::ZERO);
+    keyboard.push(b"\x1b[").unwrap();
+    assert!(keyboard.next(now).is_none());
+    let rest = b"<0;12;30M";
+    for byte in &rest[..rest.len() - 1] {
+        keyboard.push(&[*byte]).unwrap();
+        assert!(keyboard.next(now).is_none());
+    }
+    keyboard.push(&rest[rest.len() - 1..]).unwrap();
+    assert!(matches!(
+        keyboard.next(now),
+        Some(Ok(Event::Mouse(mouse)))
+            if mouse.kind == crossterm::event::MouseEventKind::Down(crossterm::event::MouseButton::Left)
+                && mouse.column == 11
+                && mouse.row == 29
+    ));
+    keyboard
+        .push(b"\x1b[<64;10;5m\x1b[<35;10;5m\x1b[<32;10;5m")
+        .unwrap();
+    assert!(matches!(
+        keyboard.next(now),
+        Some(Ok(Event::Mouse(mouse)))
+            if mouse.kind == crossterm::event::MouseEventKind::Up(crossterm::event::MouseButton::Left)
+                && mouse.column == 9
+                && mouse.row == 4
+    ));
+    assert!(keyboard.next(now).is_none());
+}

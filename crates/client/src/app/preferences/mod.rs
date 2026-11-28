@@ -161,6 +161,7 @@ fn components(values: &[String], allowed: &[Component]) -> Result<Vec<Component>
 pub struct Mouse {
     pub enabled: bool,
     pub resize: bool,
+    pub drag: bool,
     pub release: bool,
 }
 
@@ -169,6 +170,7 @@ impl Default for Mouse {
         Self {
             enabled: true,
             resize: true,
+            drag: true,
             release: true,
         }
     }

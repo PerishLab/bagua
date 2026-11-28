@@ -1,6 +1,6 @@
 use crossterm::event::{Event, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use protocol::Failure;
-pub(super) fn parse(body: &[u8], finalizer: u8) -> Result<Event, Failure> {
+pub(super) fn parse(body: &[u8], finalizer: u8) -> Result<Option<Event>, Failure> {
     let text = std::str::from_utf8(&body[1..]).map_err(|_| Failure::Payload)?;
     let values: Vec<u16> = text
         .split(';')
@@ -64,6 +64,17 @@ pub(super) fn parse(body: &[u8], finalizer: u8) -> Result<Event, Failure> {
             ..
         } => MouseEventKind::ScrollRight,
         Report {
+            wheel: true,
+            release: true,
+            ..
+        }
+        | Report {
+            wheel: false,
+            button: 3,
+            release: true,
+            ..
+        } => return Ok(None),
+        Report {
             wheel: false,
             motion: true,
             button: 3,
@@ -83,18 +94,18 @@ pub(super) fn parse(body: &[u8], finalizer: u8) -> Result<Event, Failure> {
         } => MouseEventKind::Down(button),
         Report {
             wheel: false,
-            motion: false,
             button: 0..=2,
             release: true,
+            ..
         } => MouseEventKind::Up(button),
         _ => return Err(Failure::Unavailable),
     };
-    Ok(Event::Mouse(MouseEvent {
+    Ok(Some(Event::Mouse(MouseEvent {
         kind,
         column: column - 1,
         row: row - 1,
         modifiers,
-    }))
+    })))
 }
 
 struct Report {
