@@ -16,6 +16,7 @@ Alt-q = "detach"
 [mouse]
 enabled = true
 resize = true
+drag_select = true
 copy_on_release = true
 
 [clipboard]

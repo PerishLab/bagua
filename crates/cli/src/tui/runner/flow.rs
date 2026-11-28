@@ -79,16 +79,7 @@ impl Runner {
             Event::Paste(text) => self
                 .stage(Gesture::Input(protocol::Input::Paste(text)))
                 .map(|()| Vec::new()),
-            Event::Mouse(mouse) => {
-                self.drain()?;
-                if self.fenced() || self.recovery.is_some() || !self.intents.is_empty() {
-                    self.app.cancel();
-                    self.app
-                        .error("Layout pending or recovering; mouse gesture was not admitted");
-                    return Ok(());
-                }
-                self.app.mouse(mouse)
-            }
+            Event::Mouse(mouse) => self.mouse(mouse)?,
             Event::Resize(columns, rows) => {
                 let Some(extent) =
                     crate::tui::extent(columns, rows, self.config.decor().status.rows())
@@ -106,6 +97,25 @@ impl Runner {
             _ => return Ok(()),
         };
         self.commands(commands)
+    }
+
+    fn mouse(
+        &mut self,
+        mouse: crossterm::event::MouseEvent,
+    ) -> Result<Result<Vec<Command>, Failure>, Error> {
+        self.drain()?;
+        if !(self.fenced() || self.recovery.is_some() || !self.intents.is_empty()) {
+            return Ok(self.app.mouse(mouse));
+        }
+        self.app.cancel();
+        if !matches!(
+            mouse.kind,
+            crossterm::event::MouseEventKind::Up(_) | crossterm::event::MouseEventKind::Moved
+        ) {
+            self.app
+                .error("Layout pending or recovering; mouse gesture was not admitted");
+        }
+        Ok(Ok(Vec::new()))
     }
 
     pub(super) fn commands(

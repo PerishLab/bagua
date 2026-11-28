@@ -150,6 +150,7 @@ impl Runner {
             }
             self.release();
             self.drain()?;
+            self.pending()?;
             self.channel.flush()?;
             let size = terminal.size()?;
             if size != self.size {

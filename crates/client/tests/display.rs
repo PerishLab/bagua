@@ -237,3 +237,41 @@ fn feedback() {
     app.tick(now + Duration::from_secs(30), wall);
     assert!(picture(&app).contents().contains("Observe"));
 }
+
+#[test]
+fn background() {
+    let (mut app, mut world) = setup();
+    let first = Id::new(3).unwrap();
+    let second = match world
+        .apply(app.actor(), Operation::Window(app.target()))
+        .unwrap()
+    {
+        workspace::Outcome::Changed(change) => change
+            .created
+            .into_iter()
+            .find_map(|target| match target {
+                workspace::Target::Pane(pane) => Some(pane),
+                _ => None,
+            })
+            .unwrap(),
+        _ => panic!("expected created pane"),
+    };
+    world.observe(second, State::Running).unwrap();
+    world.apply(app.actor(), Operation::Focus(first)).unwrap();
+    app.catalog(world.snapshot()).unwrap();
+    let decor = Decor {
+        status: client::Status::format(
+            Some(vec![
+                client::Line::new("{{#windows}}{{window.title}} {{/windows}}", "", "").unwrap(),
+            ]),
+            "UTC",
+            15,
+        )
+        .unwrap(),
+        ..Default::default()
+    };
+    app.decorate(decor);
+    let now = Instant::now();
+    app.tick(now, UNIX_EPOCH);
+    assert_eq!(app.needing(), vec![first, second]);
+}

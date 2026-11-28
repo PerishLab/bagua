@@ -128,9 +128,14 @@ impl Keyboard {
         if let Some((length, event)) = sequence::parse(&data) {
             self.bytes.drain(..length);
             self.escape = None;
-            return Some(event);
+            return match event {
+                Ok(Some(event)) => Some(Ok(event)),
+                Ok(None) => self.parse(now),
+                Err(error) => Some(Err(error)),
+            };
         }
-        if timed && data.len() == 2 {
+        let framing = matches!(data.get(1), Some(b'[' | b'O'));
+        if !framing && timed && data.len() == 2 {
             self.bytes.drain(..2);
             self.escape = None;
             return Some(Ok(Event::Key(KeyEvent::new(
@@ -138,7 +143,12 @@ impl Keyboard {
                 KeyModifiers::ALT,
             ))));
         }
-        if data.len() >= 64 || timed {
+        let expired = if framing {
+            now.saturating_duration_since(started) >= self.delay.max(Duration::from_millis(50))
+        } else {
+            timed
+        };
+        if data.len() >= 64 || expired {
             self.discard = data.starts_with(b"\x1b[");
             self.bytes.drain(..data.len());
             self.escape = None;

@@ -217,6 +217,18 @@ fn policy() {
     app.handle(Gesture::Copy).unwrap();
     app.preferences(
         client::Mouse {
+            drag: false,
+            release: false,
+            ..Default::default()
+        },
+        client::Clipboard::default(),
+    );
+    select(&mut app, false);
+    assert!(!app.pointing() && app.handle(Gesture::Copy).is_err());
+    select(&mut app, true);
+    app.handle(Gesture::Copy).unwrap();
+    app.preferences(
+        client::Mouse {
             enabled: false,
             ..Default::default()
         },

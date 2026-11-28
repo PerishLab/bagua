@@ -220,6 +220,7 @@ impl Loaded {
         client::Mouse {
             enabled: self.config.mouse.enabled,
             resize: self.config.mouse.resize,
+            drag: self.config.mouse.drag,
             release: self.config.mouse.release,
         }
     }
