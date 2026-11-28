@@ -164,9 +164,11 @@ establish complete distribution or installed verification for a release.
     owner-only ACL directory.
   - Optional Locus spool: `%LOCALAPPDATA%\bagua\state\locus` (refuses
     pre-existing unsafe directories without modifying their ACLs).
-  - Self-start launches the running executable (`current_exe()`) detached from
-    the console (`CREATE_NO_WINDOW | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP`)
-    and verifies native file identity via `GetFileInformationByHandle`.
+  - Self-start launches the running executable detached from the console and requests
+    Windows job breakaway so the host and panes survive the originating OpenSSH
+    login. Reconnect with `bagua enter --existing <name>`. A job policy that
+    denies breakaway can refuse a new host startup. Connection to an existing
+    host still verifies native file identity via `GetFileInformationByHandle`.
   - Without a `[program]` template or explicit CLI launch flags, `bagua enter`
     selects `pwsh.exe` on `PATH` and falls back to
     `%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe` with

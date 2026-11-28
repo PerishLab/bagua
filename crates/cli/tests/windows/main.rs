@@ -2,6 +2,7 @@
 
 mod discovery;
 mod inspect;
+mod job;
 mod peer;
 
 use bagua::ipc::{Connection, Service};
@@ -169,7 +170,7 @@ fn interactive() {
     )
     .unwrap();
     let socket = home.path().join("bagua").join("runtime").join("host.sock");
-    let mut first = peer::Peer::spawn(home.path(), &["enter", "work"], Size::new(100, 30).unwrap());
+    let (_login, mut first) = job::session(home.path(), Size::new(100, 30).unwrap());
     first.until("control");
     assert!(bagua::ipc::private(socket.parent().unwrap()).unwrap());
     first.send(b"Write-Output 'BAGUA_WIN_OK'\r");

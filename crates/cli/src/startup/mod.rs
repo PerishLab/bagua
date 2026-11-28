@@ -100,7 +100,17 @@ fn start(path: &Path, config: &Loaded, invocation: &Invocation) -> Result<(), Er
         .stdout(Stdio::null())
         .stderr(Stdio::null());
     crate::observation::parent(&mut command, context.as_ref());
-    let mut child = command.spawn()?;
+    let child = command.spawn();
+    #[cfg(windows)]
+    let child = child.map_err(|error| {
+        if error.raw_os_error() == Some(windows_sys::Win32::Foundation::ERROR_ACCESS_DENIED as i32) {
+            return io::Error::new(error.kind(), format!(
+                "persistent host startup denied; check executable access and whether the Windows job permits breakaway: {error}"
+            ));
+        }
+        error
+    });
+    let mut child = child?;
     drop(
         std::thread::Builder::new()
             .name("bagua-host".into())
@@ -120,12 +130,12 @@ fn configure(command: &mut Command, path: &Path) {
 fn configure(command: &mut Command, path: &Path) {
     use std::os::windows::process::CommandExt;
     use windows_sys::Win32::System::Threading::{
-        CREATE_NEW_PROCESS_GROUP, CREATE_NO_WINDOW, DETACHED_PROCESS,
+        CREATE_BREAKAWAY_FROM_JOB, CREATE_NEW_PROCESS_GROUP, CREATE_NO_WINDOW, DETACHED_PROCESS,
     };
     let cwd = path.parent().unwrap_or_else(|| Path::new("."));
-    command
-        .current_dir(cwd)
-        .creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
+    command.current_dir(cwd).creation_flags(
+        CREATE_NO_WINDOW | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB,
+    );
 }
 
 pub(crate) fn location(path: &Path, managed: bool, create: bool) -> Result<PathBuf, Error> {

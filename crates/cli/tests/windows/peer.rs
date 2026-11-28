@@ -70,6 +70,14 @@ pub struct Peer {
 
 impl Peer {
     pub fn spawn(home: &Path, args: &[&str], size: Size) -> Self {
+        Self::launch(home, env!("CARGO_BIN_EXE_bagua").into(), args, size)
+    }
+
+    pub fn id(&self) -> u32 {
+        self.process.id()
+    }
+
+    pub fn launch(home: &Path, executable: PathBuf, args: &[&str], size: Size) -> Self {
         let mut values = Vec::new();
         for key in [
             "SYSTEMROOT",
@@ -87,7 +95,7 @@ impl Peer {
         values.push(("LOCALAPPDATA".into(), home.as_os_str().into()));
         values.push(("USERPROFILE".into(), home.as_os_str().into()));
         let mut launch = Launch::new(
-            PathBuf::from(env!("CARGO_BIN_EXE_bagua")),
+            executable,
             home.to_path_buf(),
             Environment::new(values),
             size,
